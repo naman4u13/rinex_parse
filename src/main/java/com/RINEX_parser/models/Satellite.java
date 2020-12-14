@@ -6,11 +6,14 @@ public class Satellite extends SatelliteModel {
 
 	private double[] ECEF;
 	private double SatClkOff;
+	// Note this Satellite signal transmission time including the bias
+	private double tSV;
 
-	public Satellite(int SVID, double pseudorange, double[] eCEF, double satClkOff) {
+	public Satellite(int SVID, double pseudorange, double[] eCEF, double satClkOff, double tSV) {
 		super(SVID, pseudorange);
 		ECEF = eCEF;
 		SatClkOff = satClkOff;
+		this.tSV = tSV;
 	}
 
 	public double[] getECEF() {
@@ -29,9 +32,18 @@ public class Satellite extends SatelliteModel {
 		SatClkOff = satClkOff;
 	}
 
+	public double gettSV() {
+		return tSV;
+	}
+
+	public void settSV(double tSV) {
+		this.tSV = tSV;
+	}
+
 	@Override
 	public String toString() {
-		return super.toString() + " Satellite [ECEF=" + Arrays.toString(ECEF) + ", SatClkOff=" + SatClkOff + "]";
+		return super.toString() + "Satellite [ECEF=" + Arrays.toString(ECEF) + ", SatClkOff=" + SatClkOff + ", tSV="
+				+ tSV + "]";
 	}
 
 }

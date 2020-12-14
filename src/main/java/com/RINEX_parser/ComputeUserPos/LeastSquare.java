@@ -1,18 +1,42 @@
 package com.RINEX_parser.ComputeUserPos;
 
 import java.util.ArrayList;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.ejml.simple.SimpleMatrix;
 
+import com.RINEX_parser.helper.ComputeAzmEle;
+import com.RINEX_parser.helper.ComputeIonoCorr;
+import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.Satellite;
+import com.RINEX_parser.utility.ECEFtoLatLon;
 
 public class LeastSquare {
+	static double SpeedofLight = 299792458;
 
-	public static double[] compute(ArrayList<Satellite> SV) {
-		double SpeedofLight = 299792458;
+	public static double[] compute(ArrayList<Satellite> SV, IonoCoeff ionoCoeff) {
+
 		// Removed satellite clock offset error from pseudorange
 		double[] PR = SV.stream().mapToDouble(x -> x.getPseudorange() + (SpeedofLight * x.getSatClkOff())).toArray();
+		double[] approxECEF = trilateration(SV, PR);
+		double[] approxLatLon = ECEFtoLatLon.ecef2lla(approxECEF);
+
+		// After we get the user ECEF, we can now calculate Azm&Ele angle which will in
+		// turn help us to calculate and remove iono error
+		ArrayList<double[]> AzmEle = (ArrayList<double[]>) SV.stream()
+				.map(x -> ComputeAzmEle.computeAzmEle(approxECEF, x.getECEF())).collect(Collectors.toList());
+		double[] ionoCorr = IntStream
+				.range(0, SV.size()).mapToDouble(x -> ComputeIonoCorr.computeIonoCorr(AzmEle.get(x)[0],
+						AzmEle.get(x)[1], approxLatLon[0], approxLatLon[1], (long) SV.get(x).gettSV(), ionoCoeff))
+				.toArray();
+		double[] ionoCorrPR = IntStream.range(0, PR.length).mapToDouble(x -> PR[x] - ionoCorr[x]).toArray();
+		double[] ionoCorrECEF = trilateration(SV, ionoCorrPR);
+		return ionoCorrECEF;
+
+	}
+
+	public static double[] trilateration(ArrayList<Satellite> SV, double[] PR) {
 		int SVcount = SV.size();
 		if (SVcount >= 4) {
 			double[] approxECEF = new double[] { 0, 0, 0 };
@@ -58,7 +82,5 @@ public class LeastSquare {
 		}
 		System.out.println("Satellite count is less than 4, can't compute user position");
 		return new double[] { -999 };
-
 	}
-
 }

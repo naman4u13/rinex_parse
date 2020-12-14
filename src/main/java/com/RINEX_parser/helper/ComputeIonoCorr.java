@@ -7,7 +7,7 @@ public class ComputeIonoCorr {
 	final static double max_electron_density = 350000;// in meter
 	final static double SpeedofLight = 299792458;
 
-	public static void computeIonoCorr(double ElevAng_deg, double AzmAng_deg, double userLat_deg, double userLong_deg,
+	public static double computeIonoCorr(double ElevAng_deg, double AzmAng_deg, double userLat_deg, double userLong_deg,
 			long tSV, IonoCoeff ionoCoeff) {
 
 		/*
@@ -90,35 +90,30 @@ public class ComputeIonoCorr {
 			iono_time = obliquity_factor * 5E-9;
 		}
 		double iono_corr = iono_time * SpeedofLight;
-		double temp_iono_time;
-		if (Math.abs(temp_phase) < 1.57) {
-			temp_iono_time = obliquity_factor
-					* (5E-9 + (temp_AMP * (1 - (Math.pow(temp_phase, 2) / 2) + (Math.pow(temp_phase, 4) / 24))));
-		} else {
-			temp_iono_time = obliquity_factor * 5E-9;
-		}
-		double temp_iono_corr = temp_iono_time * SpeedofLight;
-
-		temp_earth_central_angle = temp_earth_central_angle * 180;
-		temp_IPP_lat = temp_IPP_lat * 180;
-		temp_IPP_long = temp_IPP_long * 180;
-		earth_central_angle = earth_central_angle * (180 / Math.PI);
-		IPP_lat = IPP_lat * (180 / Math.PI);
-		IPP_long = IPP_long * (180 / Math.PI);
-		geomagnetic_lat = geomagnetic_lat * 180;
-		temp_geomagnetic_lat = temp_geomagnetic_lat * 180;
-
-		System.out.println("  temp_earth_central_angle " + temp_earth_central_angle);
-		System.out.println("  earth_central_angle " + earth_central_angle);
-		System.out.println("  temp_IPP_lat " + temp_IPP_lat);
-		System.out.println("  IPP_lat " + IPP_lat);
-		System.out.println("  temp_IPP_long " + temp_IPP_long);
-		System.out.println("  IPP_long " + IPP_long);
-		System.out.println("  temp_geomagnetic_lat  " + temp_geomagnetic_lat);
-		System.out.println("  geomagnetic_lat  " + geomagnetic_lat);
-		System.out.println("  temp_local_time  " + temp_local_time);
-		System.out.println("  local_time  " + local_time);
-		System.out.println(1E4);
+		return iono_corr;
+		/*
+		 * double temp_iono_time; if (Math.abs(temp_phase) < 1.57) { temp_iono_time =
+		 * obliquity_factor (5E-9 + (temp_AMP * (1 - (Math.pow(temp_phase, 2) / 2) +
+		 * (Math.pow(temp_phase, 4) / 24)))); } else { temp_iono_time = obliquity_factor
+		 * * 5E-9; } double temp_iono_corr = temp_iono_time * SpeedofLight;
+		 * 
+		 * temp_earth_central_angle = temp_earth_central_angle * 180; temp_IPP_lat =
+		 * temp_IPP_lat * 180; temp_IPP_long = temp_IPP_long * 180; earth_central_angle
+		 * = earth_central_angle * (180 / Math.PI); IPP_lat = IPP_lat * (180 / Math.PI);
+		 * IPP_long = IPP_long * (180 / Math.PI); geomagnetic_lat = geomagnetic_lat *
+		 * 180; temp_geomagnetic_lat = temp_geomagnetic_lat * 180;
+		 * 
+		 * System.out.println("  temp_earth_central_angle " + temp_earth_central_angle);
+		 * System.out.println("  earth_central_angle " + earth_central_angle);
+		 * System.out.println("  temp_IPP_lat " + temp_IPP_lat);
+		 * System.out.println("  IPP_lat " + IPP_lat);
+		 * System.out.println("  temp_IPP_long " + temp_IPP_long);
+		 * System.out.println("  IPP_long " + IPP_long);
+		 * System.out.println("  temp_geomagnetic_lat  " + temp_geomagnetic_lat);
+		 * System.out.println("  geomagnetic_lat  " + geomagnetic_lat);
+		 * System.out.println("  temp_local_time  " + temp_local_time);
+		 * System.out.println("  local_time  " + local_time); System.out.println(1E4);
+		 */
 //6.691617002417778
 	}
 

@@ -35,7 +35,7 @@ public class MainApp {
 		String obs_path = "C:\\Users\\Naman\\Downloads\\TWTF00TWN_R_20201000000_01D_30S_MO.rnx\\TWTF00TWN_R_20201000000_01D_30S_MO.rnx";
 
 		Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path);
-		File output = new File("C:\\Users\\Naman\\Desktop\\output_TWTF_BRDC.txt");
+		File output = new File("C:\\Users\\Naman\\Desktop\\output_iono_TWTF_BRDC.txt");
 		PrintStream stream;
 		try {
 			stream = new PrintStream(output);
@@ -88,15 +88,16 @@ public class MainApp {
 				double tSV = tRX - (sat.getPseudorange() / SpeedofLight);
 				double PseudoRange = obsvMsg.getObsvSat().get(i).getPseudorange();
 				double[] ECEF_SatClkOff = ComputeSatPos.computeSatPos(NavMsgs.get(SVID).get(order[i]), tSV);
-				SV.add(new Satellite(SVID, PseudoRange, Arrays.copyOfRange(ECEF_SatClkOff, 0, 3), ECEF_SatClkOff[3]));
+				SV.add(new Satellite(SVID, PseudoRange, Arrays.copyOfRange(ECEF_SatClkOff, 0, 3), ECEF_SatClkOff[3],
+						tSV));
 				double[] _ECEF_SatClkOff = ComputeSatPos.computeSatPos(NavMsgs.get(SVID).get(_order[i]), tSV);
-				_SV.add(new Satellite(SVID, PseudoRange, Arrays.copyOfRange(_ECEF_SatClkOff, 0, 3),
-						_ECEF_SatClkOff[3]));
+				_SV.add(new Satellite(SVID, PseudoRange, Arrays.copyOfRange(_ECEF_SatClkOff, 0, 3), _ECEF_SatClkOff[3],
+						tSV));
 
 			}
 
-			double[] computedECEF = LeastSquare.compute(SV);
-			double[] _computedECEF = LeastSquare.compute(_SV);
+			double[] computedECEF = LeastSquare.compute(SV, ionoCoeff);
+			double[] _computedECEF = LeastSquare.compute(_SV, ionoCoeff);
 			if (computedECEF.length == 3) {
 				double Error = Math.sqrt(IntStream.range(0, 3).mapToDouble(x -> userECEF[x] - computedECEF[x])
 						.map(x -> Math.pow(x, 2)).reduce(0, (a, b) -> a + b));
