@@ -30,7 +30,7 @@ public class ComputeAzmEle {
 			ElevAngle *= -1;
 		}
 		double AzmAngle = Math.abs(Math.atan(E / N));
-		AzmAngle += E > 0 ? (N < 0 ? Math.PI : 0) : (N < 0 ? Math.PI : (2 * Math.PI) - (2 * AzmAngle));
+		AzmAngle += E > 0 ? (N < 0 ? Math.PI - (2 * AzmAngle) : 0) : (N < 0 ? Math.PI : (2 * Math.PI) - (2 * AzmAngle));
 
 		return new double[] { ElevAngle, AzmAngle };
 
