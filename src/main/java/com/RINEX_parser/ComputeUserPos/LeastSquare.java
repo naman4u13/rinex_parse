@@ -1,6 +1,7 @@
 package com.RINEX_parser.ComputeUserPos;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -15,7 +16,7 @@ import com.RINEX_parser.utility.ECEFtoLatLon;
 public class LeastSquare {
 	static double SpeedofLight = 299792458;
 
-	public static double[] compute(ArrayList<Satellite> SV, IonoCoeff ionoCoeff) {
+	public static ArrayList<Object> compute(ArrayList<Satellite> SV, IonoCoeff ionoCoeff) {
 
 		// Removed satellite clock offset error from pseudorange
 		double[] PR = SV.stream().mapToDouble(x -> x.getPseudorange() + (SpeedofLight * x.getSatClkOff())).toArray();
@@ -25,14 +26,23 @@ public class LeastSquare {
 		// After we get the user ECEF, we can now calculate Azm&Ele angle which will in
 		// turn help us to calculate and remove iono error
 		ArrayList<double[]> AzmEle = (ArrayList<double[]>) SV.stream()
-				.map(x -> ComputeAzmEle.computeAzmEle(approxECEF, x.getECEF())).collect(Collectors.toList());
+				.map(i -> ComputeAzmEle.computeAzmEle(approxECEF, i.getECEF())).collect(Collectors.toList());
+
+		ArrayList<double[]> AzmEle_temp = (ArrayList<double[]>) AzmEle.stream()
+				.map(x -> new double[] { Math.toDegrees(x[0]), Math.toDegrees(x[1]) }).collect(Collectors.toList());
 		double[] ionoCorr = IntStream
 				.range(0, SV.size()).mapToDouble(x -> ComputeIonoCorr.computeIonoCorr(AzmEle.get(x)[0],
-						AzmEle.get(x)[1], approxLatLon[0], approxLatLon[1], (long) SV.get(x).gettSV(), ionoCoeff))
+						AzmEle.get(x)[1], approxLatLon[0], approxLatLon[1], (long) SV.get(x).gettSV(), ionoCoeff)[0])
 				.toArray();
+		System.out.println("IONO corrections");
+		IntStream.range(0, ionoCorr.length)
+				.forEach(i -> System.out.print("GPS" + SV.get(i).getSVID() + " - " + ionoCorr[i] + "  "));
+		// Arrays.stream(ionoCorr).forEach(x -> System.out.print(x + " "));
+		System.out.println("");
 		double[] ionoCorrPR = IntStream.range(0, PR.length).mapToDouble(x -> PR[x] - ionoCorr[x]).toArray();
+
 		double[] ionoCorrECEF = trilateration(SV, ionoCorrPR);
-		return ionoCorrECEF;
+		return new ArrayList<Object>(Arrays.asList(approxECEF, ionoCorrECEF));
 
 	}
 
@@ -74,7 +84,7 @@ public class LeastSquare {
 				SimpleMatrix _HtHinv = HtHinv;
 				double GDOP = Math
 						.sqrt(IntStream.range(0, 3).mapToDouble(x -> _HtHinv.get(x, x)).reduce(0, (a, b) -> a + b));
-				System.out.println(GDOP);
+				System.out.println("GDOP - " + GDOP);
 			}
 
 			return approxECEF;

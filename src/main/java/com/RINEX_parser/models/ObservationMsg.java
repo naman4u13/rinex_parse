@@ -2,7 +2,7 @@ package com.RINEX_parser.models;
 
 import java.util.ArrayList;
 
-import com.RINEX_parser.utility.GPSTime;
+import com.RINEX_parser.utility.Time;
 
 public class ObservationMsg {
 
@@ -18,6 +18,7 @@ public class ObservationMsg {
 	private int ObsvSatCount;
 	private ArrayList<SatelliteModel> obsvSat = new ArrayList<SatelliteModel>();
 	private long tRX;
+	private long weekNo;
 
 	public void setObsvSat(ArrayList<SatelliteModel> obsvSat) {
 		this.obsvSat = obsvSat;
@@ -37,8 +38,9 @@ public class ObservationMsg {
 		hour = Integer.parseInt(RxTime[3]);
 		minute = Integer.parseInt(RxTime[4]);
 		second = Double.parseDouble(RxTime[5]);
-		tRX = GPSTime.getGPSTime(year, month - 1, day, hour, minute, (int) second);
-
+		long[] GPStime = Time.getGPSTime(year, month - 1, day, hour, minute, (int) second);
+		tRX = GPStime[0];
+		weekNo = GPStime[1];
 	}
 
 	public int getYear() {
@@ -92,4 +94,7 @@ public class ObservationMsg {
 		return tRX;
 	}
 
+	public long getWeekNo() {
+		return weekNo;
+	}
 }

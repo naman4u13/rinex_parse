@@ -1,6 +1,6 @@
 package com.RINEX_parser.models;
 
-import com.RINEX_parser.utility.GPSTime;
+import com.RINEX_parser.utility.Time;
 
 public class NavigationMsg {
 
@@ -78,7 +78,7 @@ public class NavigationMsg {
 		TGD = Double.parseDouble(arr[32].replace('D', 'E'));
 		IODC = Double.parseDouble(arr[33].replace('D', 'E'));
 		transmission_time_of_msg = Double.parseDouble(arr[34].replace('D', 'E'));
-		TOC = GPSTime.getGPSTime(year, month - 1, day, hour, minute, (int) second);
+		TOC = Time.getGPSTime(year, month - 1, day, hour, minute, (int) second)[0];
 		// fit_interval = Double.parseDouble(arr[35].replace('D', 'E'));
 		// TODO Auto-generated constructor stub
 	}
