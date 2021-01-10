@@ -13,16 +13,17 @@ import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.Satellite;
 import com.RINEX_parser.utility.ECEFtoLatLon;
 
-public class LeastSquare {
+public class WLS {
 	static double SpeedofLight = 299792458;
 
 	public static ArrayList<Object> compute(ArrayList<Satellite> SV, IonoCoeff ionoCoeff, double[] userECEF) {
 
 		// Removed satellite clock offset error from pseudorange
 		double[] PR = SV.stream().mapToDouble(x -> x.getPseudorange() + (SpeedofLight * x.getSatClkOff())).toArray();
-		double[] approxECEF = trilateration(SV, PR);
+		double[] approxECEF = LeastSquare.trilateration(SV, PR);
 		double[] approxLatLon = ECEFtoLatLon.ecef2lla(approxECEF);
 		double[] userLatLon = ECEFtoLatLon.ecef2lla(userECEF);
+		int SVcount = SV.size();
 		// After we get the user ECEF, we will be able to calculate Azm&Ele angle which
 		// will in
 		// turn help us to calculate and remove iono error
@@ -42,12 +43,19 @@ public class LeastSquare {
 		System.out.println("");
 		double[] ionoCorrPR = IntStream.range(0, PR.length).mapToDouble(x -> PR[x] - ionoCorr[x]).toArray();
 
-		double[] ionoCorrECEF = trilateration(SV, ionoCorrPR);
-		return new ArrayList<Object>(Arrays.asList(approxECEF, ionoCorrECEF));
+		// Computing weight matrix
+		double[][] Weight = new double[SVcount][SVcount];
+		IntStream.range(0, SVcount)
+				.forEach(i -> Weight[i][i] = 1 / computeCoVariance(SV.get(i).getCNo(), AzmEle.get(i)[0]));
+
+		double[] ionoCorrECEF = trilateration(SV, ionoCorrPR, Weight);
+
+		double[] approxWLS_ECEF = trilateration(SV, PR, Weight);
+		return new ArrayList<Object>(Arrays.asList(approxWLS_ECEF, ionoCorrECEF));
 
 	}
 
-	public static double[] trilateration(ArrayList<Satellite> SV, double[] PR) {
+	public static double[] trilateration(ArrayList<Satellite> SV, double[] PR, double[][] Weight) {
 		int SVcount = SV.size();
 		if (SVcount >= 4) {
 			double[] approxECEF = new double[] { 0, 0, 0 };
@@ -74,9 +82,10 @@ public class LeastSquare {
 				}
 				SimpleMatrix H = new SimpleMatrix(coeffA);
 				SimpleMatrix Ht = H.transpose();
-				HtHinv = (Ht.mult(H)).invert();
+				SimpleMatrix W = new SimpleMatrix(Weight);
+				HtHinv = (Ht.mult(W).mult(H)).invert();
 				SimpleMatrix DeltaPR = new SimpleMatrix(deltaPR);
-				SimpleMatrix DeltaX = HtHinv.mult(Ht).mult(DeltaPR);
+				SimpleMatrix DeltaX = HtHinv.mult(Ht).mult(W).mult(DeltaPR);
 				IntStream.range(0, 3).forEach(x -> approxECEF[x] = approxECEF[x] + DeltaX.get(x, 0));
 				approxUserClkOff += (-DeltaX.get(3, 0)) / SpeedofLight;
 
@@ -93,5 +102,21 @@ public class LeastSquare {
 		}
 		System.out.println("Satellite count is less than 4, can't compute user position");
 		return new double[] { -999 };
+	}
+
+	public static double computeCoVariance(double CNo, double ElevAng) {
+		double var = Math.pow(10, -(CNo / 10)) / Math.pow(Math.sin(ElevAng), 2);
+		return var;
+	}
+
+	public static double[][] normalize(double[][] W) {
+		double sum = 0;
+		int n = W.length;
+		for (int i = 0; i < W.length; i++) {
+			sum += W[i][i];
+		}
+		final double fSum = sum;
+		IntStream.range(0, n).forEach(i -> W[i][i] = W[i][i] / fSum);
+		return W;
 	}
 }

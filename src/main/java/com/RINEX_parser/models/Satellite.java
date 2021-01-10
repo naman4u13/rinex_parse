@@ -9,8 +9,8 @@ public class Satellite extends SatelliteModel {
 	// Note this Satellite signal transmission time including the bias
 	private double tSV;
 
-	public Satellite(int SVID, double pseudorange, double[] eCEF, double satClkOff, double tSV) {
-		super(SVID, pseudorange);
+	public Satellite(int SVID, double pseudorange, double CNo, double[] eCEF, double satClkOff, double tSV) {
+		super(SVID, pseudorange, CNo);
 		ECEF = eCEF;
 		SatClkOff = satClkOff;
 		this.tSV = tSV;

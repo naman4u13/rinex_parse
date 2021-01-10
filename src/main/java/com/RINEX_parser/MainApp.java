@@ -14,7 +14,7 @@ import java.util.stream.IntStream;
 
 import org.jfree.ui.RefineryUtilities;
 
-import com.RINEX_parser.ComputeUserPos.LeastSquare;
+import com.RINEX_parser.ComputeUserPos.WLS;
 import com.RINEX_parser.fileParser.NavigationRNX;
 import com.RINEX_parser.fileParser.ObservationRNX;
 import com.RINEX_parser.helper.ComputeAzmEle;
@@ -47,16 +47,16 @@ public class MainApp {
 
 		String nav_path = "C:\\Users\\Naman\\Downloads\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
-		String obs_path = "C:\\Users\\Naman\\Downloads\\TWTF00TWN_R_20201000000_01D_30S_MO.rnx\\TWTF00TWN_R_20201000000_01D_30S_MO.rnx";
+		String obs_path = "C:\\Users\\Naman\\Downloads\\NYA100NOR_S_20201000000_01D_30S_MO.rnx\\NYA100NOR_S_20201000000_01D_30S_MO.rnx";
 
 		Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path);
-		File output = new File("C:\\Users\\Naman\\Desktop\\rinex_parse_files\\output_iono_TWTF_BRDC.txt");
+		File output = new File("C:\\Users\\Naman\\Desktop\\rinex_parse_files\\output_iono_WLS_NYA_BRDC.txt");
 		PrintStream stream;
+
 		try {
 			stream = new PrintStream(output);
 			System.setOut(stream);
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
+		} catch (FileNotFoundException e) { // TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
@@ -102,22 +102,17 @@ public class MainApp {
 				SatelliteModel sat = obsvMsg.getObsvSat().get(i);
 				int SVID = sat.getSVID();
 				double tSV = tRX - (sat.getPseudorange() / SpeedofLight);
-				double PseudoRange = obsvMsg.getObsvSat().get(i).getPseudorange();
 
 				double[] ECEF_SatClkOff = ComputeSatPos.computeSatPos(NavMsgs.get(SVID).get(order[i]), tSV);
-				SV.add(new Satellite(SVID, PseudoRange, Arrays.copyOfRange(ECEF_SatClkOff, 0, 3), ECEF_SatClkOff[3],
-						tSV));
+				SV.add(new Satellite(SVID, sat.getPseudorange(), sat.getCNo(), Arrays.copyOfRange(ECEF_SatClkOff, 0, 3),
+						ECEF_SatClkOff[3], tSV));
 				if (doIonoPlot) {
 
 					double[] AzmEle = ComputeAzmEle.computeAzmEle(userECEF, Arrays.copyOfRange(ECEF_SatClkOff, 0, 3));
 
-					double[] ionoCorr_timeDiff = ComputeIonoCorr.computeIonoCorr(AzmEle[0], AzmEle[1], userLatLon[0],
+					double ionoCorr = ComputeIonoCorr.computeIonoCorr(AzmEle[0], AzmEle[1], userLatLon[0],
 							userLatLon[1], (long) tSV, ionoCoeff);
-					double ionoCorr = ionoCorr_timeDiff[0];
-					double timeDiff = ionoCorr_timeDiff[1];
-					long unixTime = Time.getUnixTimefromEpoch(obsvMsg.getYear(), obsvMsg.getMonth() - 1,
-							obsvMsg.getDay(), obsvMsg.getHour(), obsvMsg.getMinute(), (int) obsvMsg.getSecond());
-					long local_time = unixTime + (long) timeDiff;
+
 					ionoValueMap.computeIfAbsent(SVID, k -> new ArrayList<IonoValue>())
 							.add(new IonoValue(time.getTime(), ionoCorr, SVID));
 
@@ -125,7 +120,7 @@ public class MainApp {
 
 			}
 
-			ArrayList<Object> computedECEF = LeastSquare.compute(SV, ionoCoeff);
+			ArrayList<Object> computedECEF = WLS.compute(SV, ionoCoeff, userECEF);
 			double[] nonIonoECEF = (double[]) computedECEF.get(0);
 			double[] IonoECEF = (double[]) computedECEF.get(1);
 			if (IonoECEF.length == 3) {
@@ -137,8 +132,11 @@ public class MainApp {
 				double[] nonIonoLatLon = ECEFtoLatLon.ecef2lla(nonIonoECEF);
 				double[] ionoLatLon = ECEFtoLatLon.ecef2lla(IonoECEF);
 
-				double nonIonoDiff = LatLonDiff.distance(nonIonoLatLon, userLatLon);
-				double ionoDiff = LatLonDiff.distance(ionoLatLon, userLatLon);
+				double nonIonoDiff = LatLonDiff.getHaversineDistance(nonIonoLatLon, userLatLon);
+				double ionoDiff = LatLonDiff.getHaversineDistance(ionoLatLon, userLatLon);
+				// double nonIonoDiff = LatLonDiff.getVincentyDistance(nonIonoLatLon,
+				// userLatLon);
+				// double ionoDiff = LatLonDiff.getVincentyDistance(ionoLatLon, userLatLon);
 				SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/YYYY hh:mm:ss");
 
 				System.out

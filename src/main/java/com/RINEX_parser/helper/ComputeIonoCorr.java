@@ -7,8 +7,8 @@ public class ComputeIonoCorr {
 	final static double max_electron_density = 350000;// in meter
 	final static double SpeedofLight = 299792458;
 
-	public static double[] computeIonoCorr(double ElevAng_rad, double AzmAng_rad, double userLat_deg,
-			double userLong_deg, long tSV, IonoCoeff ionoCoeff) {
+	public static double computeIonoCorr(double ElevAng_rad, double AzmAng_rad, double userLat_deg, double userLong_deg,
+			long tSV, IonoCoeff ionoCoeff) {
 
 		/*
 		 * double Central_Angle = (0.0137/(ElevAng+0.11))-0.022; double IPP_Lat =
@@ -99,7 +99,7 @@ public class ComputeIonoCorr {
 			temp_iono_time = obliquity_factor * 5E-9;
 		}
 		double temp_iono_corr = temp_iono_time * SpeedofLight;
-		return new double[] { iono_corr, local_time - tSV };
+		return iono_corr;
 
 		/*
 		 * temp_earth_central_angle = temp_earth_central_angle * 180; temp_IPP_lat =

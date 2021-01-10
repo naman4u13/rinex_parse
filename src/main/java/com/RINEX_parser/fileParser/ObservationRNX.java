@@ -16,6 +16,7 @@ public class ObservationRNX {
 		ArrayList<ObservationMsg> ObsvMsgs = new ArrayList<ObservationMsg>();
 		try {
 			Scanner input = new Scanner(file);
+
 			input.useDelimiter("HEADER");
 
 			Scanner header = new Scanner(input.next());
@@ -35,21 +36,40 @@ public class ObservationRNX {
 			}
 
 			int GPSindex = obs_types.indexOf("G");
-			int L1C_index = obs_types.subList(GPSindex + 2, GPSindex + Integer.parseInt(obs_types.get(GPSindex + 1)))
-					.indexOf("C1C");
+			int C1C_index = 0;
+			int S1C_index = 0;
+			for (int i = 0; i < Integer.parseInt(obs_types.get(GPSindex + 1)); i++) {
+				String type = obs_types.get(GPSindex + 2 + i).trim();
+
+				if (type.equals("C1C")) {
+					C1C_index = i;
+				} else if (type.equals("S1C")) {
+					S1C_index = i;
+				}
+			}
 
 			String[] obsv_msgs = input.next().trim().split(">");
 			for (String msg : obsv_msgs) {
 				if (msg.isBlank()) {
 					continue;
 				}
+
 				ArrayList<SatelliteModel> SV = new ArrayList<SatelliteModel>();
 				ObservationMsg Msg = new ObservationMsg();
 				msg = msg.trim();
-				String[] msgTokens = msg.split("\\R+");
 
-				Arrays.stream(msgTokens).skip(1).filter(x -> x.trim().charAt(0) == 'G').map(x -> x.trim().split("\\s+"))
-						.forEach(x -> SV.add(new SatelliteModel(x[0], x[1 + L1C_index])));
+				String[] msgTokens = msg.split("\\R+");
+				for (int i = 1; i < msgTokens.length; i++) {
+					String token = msgTokens[i];
+					String SVID = token.substring(0, 3);
+					if (token.trim().charAt(0) == 'G') {
+						token = token.substring(3);
+						String[] tokenArray = token.split("(?<=\\G.{16})");
+						tokenArray = Arrays.stream(tokenArray).map(x -> new String(x.trim())).toArray(String[]::new);
+
+						SV.add(new SatelliteModel(SVID, tokenArray[C1C_index], tokenArray[S1C_index]));
+					}
+				}
 
 				Msg.set_ECEF_XYZ(ECEF_XYZ);
 				Msg.set_RxTime(msgTokens[0].trim().split("\\s+"));
