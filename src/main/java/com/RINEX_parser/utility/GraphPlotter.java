@@ -1,6 +1,7 @@
 package com.RINEX_parser.utility;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 
 import org.jfree.chart.ChartFactory;
@@ -10,8 +11,6 @@ import org.jfree.chart.ui.ApplicationFrame;
 import org.jfree.data.time.Second;
 import org.jfree.data.time.TimePeriodValues;
 import org.jfree.data.time.TimePeriodValuesCollection;
-import org.jfree.data.time.TimeSeries;
-import org.jfree.data.time.TimeSeriesCollection;
 
 import com.RINEX_parser.models.IonoValue;
 
@@ -22,7 +21,7 @@ public class GraphPlotter extends ApplicationFrame {
 		// TODO Auto-generated constructor stub
 
 		final JFreeChart chart = ChartFactory.createTimeSeriesChart(chartTitle, "Time of the Day", "Iono Corr Value",
-				createDataset(data), true, true, false);
+				createDatasetIono(data), true, true, false);
 
 		final ChartPanel chartPanel = new ChartPanel(chart);
 		chartPanel.setPreferredSize(new java.awt.Dimension(560, 370));
@@ -32,7 +31,23 @@ public class GraphPlotter extends ApplicationFrame {
 
 	}
 
-	private TimePeriodValuesCollection createDataset(HashMap<Integer, ArrayList<IonoValue>> data) {
+	public GraphPlotter(String applicationTitle, String chartTitle, ArrayList<Calendar> timeList,
+			HashMap<String, ArrayList<Double>> ErrMap) {
+		super(applicationTitle);
+		// TODO Auto-generated constructor stub
+
+		final JFreeChart chart = ChartFactory.createTimeSeriesChart(chartTitle, "Time of the Day", "Position Error",
+				createDatasetError(timeList, ErrMap), true, true, false);
+
+		final ChartPanel chartPanel = new ChartPanel(chart);
+		chartPanel.setPreferredSize(new java.awt.Dimension(560, 370));
+		chartPanel.setMouseZoomable(true, false);
+
+		setContentPane(chartPanel);
+
+	}
+
+	private TimePeriodValuesCollection createDatasetIono(HashMap<Integer, ArrayList<IonoValue>> data) {
 		TimePeriodValuesCollection coll = new TimePeriodValuesCollection();
 		for (int SVID : data.keySet()) {
 			TimePeriodValues series = new TimePeriodValues(String.valueOf(SVID));
@@ -49,16 +64,19 @@ public class GraphPlotter extends ApplicationFrame {
 
 	}
 
-	private TimeSeriesCollection createDataset2(ArrayList<IonoValue> data) {
-		final TimeSeries series = new TimeSeries("GPS DATA");
-		for (IonoValue value : data) {
-			System.out.println(
-					value.getSVID() + "  " + value.getTime().toString() + "  iono corr " + value.getIonoCorr());
+	private TimePeriodValuesCollection createDatasetError(ArrayList<Calendar> timeList,
+			HashMap<String, ArrayList<Double>> ErrMap) {
+		TimePeriodValuesCollection coll = new TimePeriodValuesCollection();
+		for (String ErrType : ErrMap.keySet()) {
+			TimePeriodValues series = new TimePeriodValues(ErrType);
+			ArrayList<Double> ErrList = ErrMap.get(ErrType);
+			for (int i = 0; i < ErrList.size(); i++) {
 
-			series.add(new Second(value.getTime()), value.getIonoCorr());
+				series.add(new Second(timeList.get(i).getTime()), ErrList.get(i));
+			}
+
+			coll.addSeries(series);
 		}
-
-		return new TimeSeriesCollection(series);
+		return coll;
 	}
-
 }

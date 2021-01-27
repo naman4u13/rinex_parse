@@ -104,6 +104,11 @@ public class WLS {
 		return new double[] { -999 };
 	}
 
+	// Sarab Tay and Juliette Marais -
+	// https://www.researchgate.net/publication/260200581_Weighting_models_for_GPS_Pseudorange_observations_for_land_transportation_in_urban_canyons
+	// Hybrid WLS estimator combines both Carrier to Noise ratio and Elevation angle
+	// info to compute weighing matrix, Intial results show its the superior
+	// estimator in comparison to standalone estimator based on CNo or Elev angle.
 	public static double computeCoVariance(double CNo, double ElevAng) {
 		double var = Math.pow(10, -(CNo / 10)) / Math.pow(Math.sin(ElevAng), 2);
 		return var;

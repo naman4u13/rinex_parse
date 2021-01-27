@@ -7,6 +7,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -14,6 +15,7 @@ import java.util.stream.IntStream;
 
 import org.jfree.ui.RefineryUtilities;
 
+import com.RINEX_parser.ComputeUserPos.LeastSquare;
 import com.RINEX_parser.ComputeUserPos.WLS;
 import com.RINEX_parser.fileParser.NavigationRNX;
 import com.RINEX_parser.fileParser.ObservationRNX;
@@ -37,20 +39,20 @@ public class MainApp {
 
 	public static void main(String[] args) {
 
-		posEstimate(true);
+		posEstimate(true, true, 3);
 	}
 
-	public static void posEstimate(boolean doIonoPlot) {
+	public static void posEstimate(boolean doIonoPlot, boolean doPosErrPlot, int estimatorType) {
 
 		HashMap<Integer, ArrayList<IonoValue>> ionoValueMap = new HashMap<Integer, ArrayList<IonoValue>>();
 		double SpeedofLight = 299792458;
 
 		String nav_path = "C:\\Users\\Naman\\Downloads\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
-		String obs_path = "C:\\Users\\Naman\\Downloads\\NYA100NOR_S_20201000000_01D_30S_MO.rnx\\NYA100NOR_S_20201000000_01D_30S_MO.rnx";
+		String obs_path = "C:\\Users\\Naman\\Downloads\\TWTF00TWN_R_20201000000_01D_30S_MO.rnx\\TWTF00TWN_R_20201000000_01D_30S_MO.rnx";
 
 		Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path);
-		File output = new File("C:\\Users\\Naman\\Desktop\\rinex_parse_files\\output_iono_WLS_NYA_BRDC.txt");
+		File output = new File("C:\\Users\\Naman\\Desktop\\rinex_parse_files\\output_iono_WLS_test.txt");
 		PrintStream stream;
 
 		try {
@@ -67,19 +69,11 @@ public class MainApp {
 		TimeCorrection timeCorr = (TimeCorrection) NavMsgComp.get("timeCorr");
 
 		ArrayList<ObservationMsg> ObsvMsgs = ObservationRNX.rinex_obsv_process(obs_path);
-		double minErr = Double.MAX_VALUE;
 
-		double avgErr = 0;
+		HashMap<String, ArrayList<double[]>> ErrMap = new HashMap<String, ArrayList<double[]>>();
 
-		double minLLdiff = Double.MAX_VALUE;
-		double avgLLdiff = 0;
+		ArrayList<Calendar> timeList = new ArrayList<Calendar>();
 
-		double IONminErr = Double.MAX_VALUE;
-
-		double IONavgErr = 0;
-
-		double IONminLLdiff = Double.MAX_VALUE;
-		double IONavgLLdiff = 0;
 		for (ObservationMsg obsvMsg : ObsvMsgs) {
 
 			long tRX = obsvMsg.getTRX();
@@ -120,48 +114,59 @@ public class MainApp {
 
 			}
 
-			ArrayList<Object> computedECEF = WLS.compute(SV, ionoCoeff, userECEF);
-			double[] nonIonoECEF = (double[]) computedECEF.get(0);
-			double[] IonoECEF = (double[]) computedECEF.get(1);
-			if (IonoECEF.length == 3) {
-
-				double nonIonoError = Math.sqrt(IntStream.range(0, 3).mapToDouble(x -> userECEF[x] - nonIonoECEF[x])
-						.map(x -> Math.pow(x, 2)).reduce(0, (a, b) -> a + b));
-				double ionoError = Math.sqrt(IntStream.range(0, 3).mapToDouble(x -> userECEF[x] - IonoECEF[x])
-						.map(x -> Math.pow(x, 2)).reduce(0, (a, b) -> a + b));
-				double[] nonIonoLatLon = ECEFtoLatLon.ecef2lla(nonIonoECEF);
-				double[] ionoLatLon = ECEFtoLatLon.ecef2lla(IonoECEF);
-
-				double nonIonoDiff = LatLonDiff.getHaversineDistance(nonIonoLatLon, userLatLon);
-				double ionoDiff = LatLonDiff.getHaversineDistance(ionoLatLon, userLatLon);
-				// double nonIonoDiff = LatLonDiff.getVincentyDistance(nonIonoLatLon,
-				// userLatLon);
-				// double ionoDiff = LatLonDiff.getVincentyDistance(ionoLatLon, userLatLon);
-				SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/YYYY hh:mm:ss");
-
-				System.out
-						.println(sdf.format(time.getTime()) + " non Iono ECEF diff " + nonIonoError + " Iono ECEF diff "
-								+ ionoError + " non Iono  LL Diff - " + nonIonoDiff + " Iono  LL Diff - " + ionoDiff);
-				minErr = Math.min(nonIonoError, minErr);
-
-				avgErr += nonIonoError;
-
-				minLLdiff = Math.min(nonIonoDiff, minLLdiff);
-				avgLLdiff += nonIonoDiff;
-				IONminErr = Math.min(ionoError, IONminErr);
-
-				IONavgErr += ionoError;
-
-				IONminLLdiff = Math.min(ionoDiff, IONminLLdiff);
-				IONavgLLdiff += ionoDiff;
-
+			switch (estimatorType) {
+			case 1:
+				ArrayList<Object> computedECEF = LeastSquare.compute(SV, ionoCoeff, userECEF);
+				ErrMap.computeIfAbsent("LS", k -> new ArrayList<double[]>())
+						.add(estimateError(computedECEF, userECEF, time));
+				break;
+			case 2:
+				computedECEF = WLS.compute(SV, ionoCoeff, userECEF);
+				ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
+						.add(estimateError(computedECEF, userECEF, time));
+				break;
+			case 3:
+				computedECEF = LeastSquare.compute(SV, ionoCoeff, userECEF);
+				ErrMap.computeIfAbsent("LS", k -> new ArrayList<double[]>())
+						.add(estimateError(computedECEF, userECEF, time));
+				computedECEF = WLS.compute(SV, ionoCoeff, userECEF);
+				ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
+						.add(estimateError(computedECEF, userECEF, time));
+				break;
 			}
+			timeList.add(time);
 
 		}
 		int totalObsCount = ObsvMsgs.size();
-		System.out.println(minErr + "  " + minLLdiff + " ION - " + IONminErr + "  " + IONminLLdiff);
-		System.out.println(avgErr / totalObsCount + "  " + avgLLdiff / totalObsCount + " ION - "
-				+ IONavgErr / totalObsCount + "  " + IONavgLLdiff / totalObsCount);
+		HashMap<String, ArrayList<Double>> GraphErrMap = new HashMap<String, ArrayList<Double>>();
+		for (String key : ErrMap.keySet()) {
+			ArrayList<Double> ErrList = (ArrayList<Double>) ErrMap.get(key).stream().map(i -> i[0])
+					.collect(Collectors.toList());
+			ArrayList<Double> IonErrList = (ArrayList<Double>) ErrMap.get(key).stream().map(i -> i[1])
+					.collect(Collectors.toList());
+			ArrayList<Double> LLdiffList = (ArrayList<Double>) ErrMap.get(key).stream().map(i -> i[2])
+					.collect(Collectors.toList());
+			ArrayList<Double> IonLLdiffList = (ArrayList<Double>) ErrMap.get(key).stream().map(i -> i[3])
+					.collect(Collectors.toList());
+			double minErr = Collections.min(ErrList);
+			double avgErr = ErrList.stream().mapToDouble(x -> x).average().orElse(Double.NaN);
+			double minLLdiff = Collections.min(LLdiffList);
+			double avgLLdiff = LLdiffList.stream().mapToDouble(x -> x).average().orElse(Double.NaN);
+			double IONminErr = Collections.min(IonErrList);
+			double IONavgErr = IonErrList.stream().mapToDouble(x -> x).average().orElse(Double.NaN);
+			double IONminLLdiff = Collections.min(IonLLdiffList);
+			double IONavgLLdiff = IonLLdiffList.stream().mapToDouble(x -> x).average().orElse(Double.NaN);
+
+			System.out.println(minErr + "  " + minLLdiff + " ION - " + IONminErr + "  " + IONminLLdiff);
+			System.out.println(avgErr + "  " + avgLLdiff + " ION - " + IONavgErr + "  " + IONavgLLdiff);
+
+			GraphErrMap.put(key + " ECEF Offset", ErrList);
+			GraphErrMap.put(key + " Iono corrected ECEF Offset", IonErrList);
+			GraphErrMap.put(key + " LL Offset", LLdiffList);
+			GraphErrMap.put(key + " Iono corrected LL Offset", IonLLdiffList);
+
+		}
+
 		if (doIonoPlot) {
 
 			GraphPlotter chart = new GraphPlotter("GPS IONO - ", "Iono Correction", ionoValueMap);
@@ -171,5 +176,40 @@ public class MainApp {
 			chart.setVisible(true);
 
 		}
+		if (doPosErrPlot) {
+
+			GraphPlotter chart = new GraphPlotter("GPS PVT Error - ", "Error Estimate", timeList, GraphErrMap);
+
+			chart.pack();
+			RefineryUtilities.positionFrameRandomly(chart);
+			chart.setVisible(true);
+
+		}
+
+	}
+
+	public static double[] estimateError(ArrayList<Object> computedECEF, double[] userECEF, Calendar time) {
+		double[] nonIonoECEF = (double[]) computedECEF.get(0);
+		double[] IonoECEF = (double[]) computedECEF.get(1);
+		double[] userLatLon = ECEFtoLatLon.ecef2lla(userECEF);
+
+		double nonIonoError = Math.sqrt(IntStream.range(0, 3).mapToDouble(x -> userECEF[x] - nonIonoECEF[x])
+				.map(x -> Math.pow(x, 2)).reduce(0, (a, b) -> a + b));
+		double ionoError = Math.sqrt(IntStream.range(0, 3).mapToDouble(x -> userECEF[x] - IonoECEF[x])
+				.map(x -> Math.pow(x, 2)).reduce(0, (a, b) -> a + b));
+		double[] nonIonoLatLon = ECEFtoLatLon.ecef2lla(nonIonoECEF);
+		double[] ionoLatLon = ECEFtoLatLon.ecef2lla(IonoECEF);
+
+		double nonIonoDiff = LatLonDiff.getHaversineDistance(nonIonoLatLon, userLatLon);
+		double ionoDiff = LatLonDiff.getHaversineDistance(ionoLatLon, userLatLon);
+		// double nonIonoDiff = LatLonDiff.getVincentyDistance(nonIonoLatLon,
+		// userLatLon);
+		// double ionoDiff = LatLonDiff.getVincentyDistance(ionoLatLon, userLatLon);
+		SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/YYYY hh:mm:ss");
+
+		System.out.println(sdf.format(time.getTime()) + " non Iono ECEF diff " + nonIonoError + " Iono ECEF diff "
+				+ ionoError + " non Iono  LL Diff - " + nonIonoDiff + " Iono  LL Diff - " + ionoDiff);
+
+		return new double[] { nonIonoError, ionoError, nonIonoDiff, ionoDiff };
 	}
 }

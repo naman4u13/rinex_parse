@@ -58,21 +58,30 @@ public class ObservationRNX {
 				ObservationMsg Msg = new ObservationMsg();
 				msg = msg.trim();
 
-				String[] msgTokens = msg.split("\\R+");
-				for (int i = 1; i < msgTokens.length; i++) {
-					String token = msgTokens[i];
-					String SVID = token.substring(0, 3);
-					if (token.trim().charAt(0) == 'G') {
-						token = token.substring(3);
-						String[] tokenArray = token.split("(?<=\\G.{16})");
-						tokenArray = Arrays.stream(tokenArray).map(x -> new String(x.trim())).toArray(String[]::new);
+				String[] msgLines = msg.split("\\R+");
+				for (int i = 1; i < msgLines.length; i++) {
+					String msgLine = msgLines[i];
+					String SVID = msgLine.substring(0, 3);
+					if (msgLine.trim().charAt(0) == 'G') {
+						msgLine = msgLine.substring(3);
+						String[] tokens = msgLine.split("(?<=\\G.{16})");
+						ArrayList<String> satInfo = new ArrayList<String>();
+						for (String token : tokens) {
+							token = token.trim();
+							if (token.isBlank()) {
+								satInfo.add("");
+							} else {
+								satInfo.add(token.split("\\s+")[0].trim());
+							}
 
-						SV.add(new SatelliteModel(SVID, tokenArray[C1C_index], tokenArray[S1C_index]));
+						}
+
+						SV.add(new SatelliteModel(SVID, satInfo.get(C1C_index), satInfo.get(S1C_index)));
 					}
 				}
 
 				Msg.set_ECEF_XYZ(ECEF_XYZ);
-				Msg.set_RxTime(msgTokens[0].trim().split("\\s+"));
+				Msg.set_RxTime(msgLines[0].trim().split("\\s+"));
 				Msg.setObsvSat(SV);
 
 				ObsvMsgs.add(Msg);
