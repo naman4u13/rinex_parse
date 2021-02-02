@@ -52,7 +52,8 @@ public class WLS {
 
 		double[] approxWLS_ECEF = trilateration(SV, PR, Weight);
 
-		SV.stream().forEach(i -> computeRcvrClkDrift(i, ionoCorrECEF));
+		// SV.stream().forEach(i -> computeRcvrClkDrift(i, ionoCorrECEF));
+		computeRcvrClkDriftStatic(SV, userECEF, Weight);
 		return new ArrayList<Object>(Arrays.asList(approxWLS_ECEF, ionoCorrECEF));
 
 	}
@@ -127,17 +128,80 @@ public class WLS {
 		return W;
 	}
 
-	public static double computeRcvrClkDrift(Satellite sat, double[] userECEF) {
-		// Line of Sight vector
-		double[] LOS = IntStream.range(0, 3).mapToDouble(i -> sat.getECEF()[i] - userECEF[i]).toArray();
-		double GeometricRange = Math.sqrt(Arrays.stream(LOS).map(i -> i * i).reduce(0.0, (i, j) -> i + j));
-		// Converting LOS to unit vector
-		double[] LOSunit = Arrays.stream(LOS).map(i -> i / GeometricRange).toArray();
-		double RangeRate = IntStream.range(0, 3).mapToDouble(i -> sat.getSatVel()[i] * LOSunit[i]).reduce(0.0,
-				(i, j) -> i + j);
-		double RcvrClkDrift = (sat.getPseudoRangeRate() - RangeRate + (sat.getSatClkDrift() * SpeedofLight))
-				/ SpeedofLight;
-		System.out.println(" SVID " + sat.getSVID() + " RcvrClkDrift " + RcvrClkDrift);
-		return RcvrClkDrift;
+	public static double computeRcvrClkDriftStatic(ArrayList<Satellite> SV, double[] userECEF, double[][] Weight) {
+
+		int n = SV.size();
+
+		double[][] D = new double[n][1];
+		double[][] h = new double[n][1];
+		for (int x = 0; x < n; x++) {
+			Satellite sat = SV.get(x);
+			// Line of Sight vector
+			double[] LOS = IntStream.range(0, 3).mapToDouble(i -> sat.getECEF()[i] - userECEF[i]).toArray();
+			double GeometricRange = Math.sqrt(Arrays.stream(LOS).map(i -> i * i).reduce(0.0, (i, j) -> i + j));
+			// Converting LOS to unit vector
+			double[] LOSunit = Arrays.stream(LOS).map(i -> i / GeometricRange).toArray();
+			double RangeRate = IntStream.range(0, 3).mapToDouble(i -> sat.getSatVel()[i] * LOSunit[i]).reduce(0.0,
+					(i, j) -> i + j);
+			D[x][0] = -(sat.getPseudoRangeRate() - RangeRate + (sat.getSatClkDrift() * SpeedofLight));
+			h[x][0] = 1;
+
+		}
+		SimpleMatrix d = new SimpleMatrix(D);
+		SimpleMatrix H = new SimpleMatrix(h);
+		SimpleMatrix Ht = H.transpose();
+		SimpleMatrix HtHinv = (Ht.mult(H)).invert();
+		SimpleMatrix LS_g = HtHinv.mult(Ht).mult(d);
+		SimpleMatrix W = new SimpleMatrix(Weight);
+		HtHinv = (Ht.mult(W).mult(H)).invert();
+		SimpleMatrix WLS_g = HtHinv.mult(Ht).mult(W).mult(d);
+		double ls_g = -LS_g.get(0) / SpeedofLight;
+
+		double wls_g = -WLS_g.get(0) / SpeedofLight;
+
+		System.out.println("  LS RcvrClkDrift  " + ls_g + "  WLS RcvrClkDrift  " + wls_g);
+		return wls_g;
 	}
+
+	public static double computeRcvrClkDriftDynamic(ArrayList<Satellite> SV, double[] userECEF, double[][] Weight) {
+
+		int n = SV.size();
+		double[][] LOSunit = new double[n][4];
+		double[][] D = new double[n][1];
+		for (int x = 0; x < n; x++) {
+			Satellite sat = SV.get(x);
+			// Line of Sight vector
+			double[] LOS = IntStream.range(0, 3).mapToDouble(i -> sat.getECEF()[i] - userECEF[i]).toArray();
+			double GeometricRange = Math.sqrt(Arrays.stream(LOS).map(i -> i * i).reduce(0.0, (i, j) -> i + j));
+			// Converting LOS to unit vector
+			final int index = x;
+			IntStream.range(0, 3).forEach(i -> LOSunit[index][i] = LOS[i] / GeometricRange);
+			LOSunit[x][3] = 1;
+			double RangeRate = IntStream.range(0, 3).mapToDouble(i -> sat.getSatVel()[i] * LOSunit[index][i])
+					.reduce(0.0, (i, j) -> i + j);
+			D[x][0] = -(sat.getPseudoRangeRate() - RangeRate + (sat.getSatClkDrift() * SpeedofLight));
+
+		}
+		SimpleMatrix d = new SimpleMatrix(D);
+		SimpleMatrix H = new SimpleMatrix(LOSunit);
+		SimpleMatrix Ht = H.transpose();
+		SimpleMatrix HtHinv = (Ht.mult(H)).invert();
+		SimpleMatrix LS_g = HtHinv.mult(Ht).mult(d);
+		SimpleMatrix W = new SimpleMatrix(Weight);
+		HtHinv = (Ht.mult(W).mult(H)).invert();
+		SimpleMatrix WLS_g = HtHinv.mult(Ht).mult(W).mult(d);
+		double[] ls_g = IntStream.range(0, 4).mapToDouble(i -> LS_g.get(i)).toArray();
+		ls_g[3] = -ls_g[3] / SpeedofLight;
+		double ls_rv = Math
+				.sqrt(IntStream.range(0, 3).mapToDouble(i -> ls_g[i] * ls_g[i]).reduce(0.0, (k, l) -> k + l));
+		double[] wls_g = IntStream.range(0, 4).mapToDouble(i -> WLS_g.get(i)).toArray();
+		wls_g[3] = -wls_g[3] / SpeedofLight;
+		double wls_rv = Math
+				.sqrt(IntStream.range(0, 3).mapToDouble(i -> wls_g[i] * wls_g[i]).reduce(0.0, (k, l) -> k + l));
+		System.out.println(" LS RcvrClkDrift " + Arrays.toString(ls_g) + "   " + ls_rv + " WLS RcvrClkDrift "
+				+ Arrays.toString(wls_g) + "   " + wls_rv);
+		return wls_g[3];
+
+	}
+
 }

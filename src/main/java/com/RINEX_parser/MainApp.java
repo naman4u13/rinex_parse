@@ -73,8 +73,7 @@ public class MainApp {
 		HashMap<String, ArrayList<double[]>> ErrMap = new HashMap<String, ArrayList<double[]>>();
 
 		ArrayList<Calendar> timeList = new ArrayList<Calendar>();
-		long oldtRX = 0;
-		double oldRcvrClkOff = 0.0;
+
 		for (ObservationMsg obsvMsg : ObsvMsgs) {
 
 			long tRX = obsvMsg.getTRX();
@@ -129,10 +128,7 @@ public class MainApp {
 				computedECEF = WLS.compute(SV, ionoCoeff, userECEF);
 				ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
 						.add(estimateError(computedECEF, userECEF, time));
-				double[] temp = (double[]) computedECEF.get(1);
-				System.out.println("tRX - " + tRX + "  Rcvr Clock offset - " + temp[3] + "  Rcvr Clock Drift  - "
-						+ (temp[3] - oldRcvrClkOff) / (tRX - oldtRX));
-				oldRcvrClkOff = temp[3];
+
 				break;
 			case 3:
 				computedECEF = LeastSquare.compute(SV, ionoCoeff, userECEF);
@@ -144,7 +140,6 @@ public class MainApp {
 				break;
 			}
 			timeList.add(time);
-			oldtRX = tRX;
 
 		}
 		int totalObsCount = ObsvMsgs.size();
