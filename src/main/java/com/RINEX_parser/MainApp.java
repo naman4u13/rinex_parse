@@ -39,7 +39,7 @@ public class MainApp {
 
 	public static void main(String[] args) {
 
-		posEstimate(true, true, 3);
+		posEstimate(false, false, 2);
 	}
 
 	public static void posEstimate(boolean doIonoPlot, boolean doPosErrPlot, int estimatorType) {
@@ -49,7 +49,7 @@ public class MainApp {
 
 		String nav_path = "C:\\Users\\Naman\\Downloads\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
-		String obs_path = "C:\\Users\\Naman\\Downloads\\TWTF00TWN_R_20201000000_01D_30S_MO.rnx\\TWTF00TWN_R_20201000000_01D_30S_MO.rnx";
+		String obs_path = "C:\\Users\\Naman\\Downloads\\NYA100NOR_S_20201000000_01D_30S_MO.rnx\\NYA100NOR_S_20201000000_01D_30S_MO.rnx";
 
 		Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path);
 		File output = new File("C:\\Users\\Naman\\Desktop\\rinex_parse_files\\output_iono_WLS_test.txt");
@@ -73,7 +73,8 @@ public class MainApp {
 		HashMap<String, ArrayList<double[]>> ErrMap = new HashMap<String, ArrayList<double[]>>();
 
 		ArrayList<Calendar> timeList = new ArrayList<Calendar>();
-
+		long oldtRX = 0;
+		double oldRcvrClkOff = 0.0;
 		for (ObservationMsg obsvMsg : ObsvMsgs) {
 
 			long tRX = obsvMsg.getTRX();
@@ -97,9 +98,13 @@ public class MainApp {
 				int SVID = sat.getSVID();
 				double tSV = tRX - (sat.getPseudorange() / SpeedofLight);
 
-				double[] ECEF_SatClkOff = ComputeSatPos.computeSatPos(NavMsgs.get(SVID).get(order[i]), tSV);
-				SV.add(new Satellite(SVID, sat.getPseudorange(), sat.getCNo(), Arrays.copyOfRange(ECEF_SatClkOff, 0, 3),
-						ECEF_SatClkOff[3], tSV));
+				Object[] SatParams = ComputeSatPos.computeSatPos(NavMsgs.get(SVID).get(order[i]), tSV);
+				double[] ECEF_SatClkOff = (double[]) SatParams[0];
+				double[] SatVel = (double[]) SatParams[1];
+				// Note this Clock Drift is derived, it not what we get from Ephemeris
+				double SatClkDrift = (double) SatParams[2];
+				SV.add(new Satellite(sat, Arrays.copyOfRange(ECEF_SatClkOff, 0, 3), ECEF_SatClkOff[3], tSV, SatVel,
+						SatClkDrift));
 				if (doIonoPlot) {
 
 					double[] AzmEle = ComputeAzmEle.computeAzmEle(userECEF, Arrays.copyOfRange(ECEF_SatClkOff, 0, 3));
@@ -124,6 +129,10 @@ public class MainApp {
 				computedECEF = WLS.compute(SV, ionoCoeff, userECEF);
 				ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
 						.add(estimateError(computedECEF, userECEF, time));
+				double[] temp = (double[]) computedECEF.get(1);
+				System.out.println("tRX - " + tRX + "  Rcvr Clock offset - " + temp[3] + "  Rcvr Clock Drift  - "
+						+ (temp[3] - oldRcvrClkOff) / (tRX - oldtRX));
+				oldRcvrClkOff = temp[3];
 				break;
 			case 3:
 				computedECEF = LeastSquare.compute(SV, ionoCoeff, userECEF);
@@ -135,6 +144,7 @@ public class MainApp {
 				break;
 			}
 			timeList.add(time);
+			oldtRX = tRX;
 
 		}
 		int totalObsCount = ObsvMsgs.size();
@@ -157,8 +167,8 @@ public class MainApp {
 			double IONminLLdiff = Collections.min(IonLLdiffList);
 			double IONavgLLdiff = IonLLdiffList.stream().mapToDouble(x -> x).average().orElse(Double.NaN);
 
-			System.out.println(minErr + "  " + minLLdiff + " ION - " + IONminErr + "  " + IONminLLdiff);
-			System.out.println(avgErr + "  " + avgLLdiff + " ION - " + IONavgErr + "  " + IONavgLLdiff);
+			System.out.println(minErr + " " + minLLdiff + " ION - " + IONminErr + " " + IONminLLdiff);
+			System.out.println(avgErr + " " + avgLLdiff + " ION - " + IONavgErr + " " + IONavgLLdiff);
 
 			GraphErrMap.put(key + " ECEF Offset", ErrList);
 			GraphErrMap.put(key + " Iono corrected ECEF Offset", IonErrList);
@@ -208,7 +218,7 @@ public class MainApp {
 		SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/YYYY hh:mm:ss");
 
 		System.out.println(sdf.format(time.getTime()) + " non Iono ECEF diff " + nonIonoError + " Iono ECEF diff "
-				+ ionoError + " non Iono  LL Diff - " + nonIonoDiff + " Iono  LL Diff - " + ionoDiff);
+				+ ionoError + " non Iono LL Diff - " + nonIonoDiff + " Iono LL Diff - " + ionoDiff);
 
 		return new double[] { nonIonoError, ionoError, nonIonoDiff, ionoDiff };
 	}

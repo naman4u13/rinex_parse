@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Scanner;
 
 import com.RINEX_parser.models.ObservationMsg;
@@ -34,18 +35,13 @@ public class ObservationRNX {
 					obs_types.addAll(Arrays.asList(line.replaceAll("SYS / # / OBS TYPES", "").split("\\s+")));
 				}
 			}
-
+			HashMap<String, Integer> type_index = new HashMap<String, Integer>();
 			int GPSindex = obs_types.indexOf("G");
-			int C1C_index = 0;
-			int S1C_index = 0;
+
 			for (int i = 0; i < Integer.parseInt(obs_types.get(GPSindex + 1)); i++) {
 				String type = obs_types.get(GPSindex + 2 + i).trim();
 
-				if (type.equals("C1C")) {
-					C1C_index = i;
-				} else if (type.equals("S1C")) {
-					S1C_index = i;
-				}
+				type_index.put(type, i);
 			}
 
 			String[] obsv_msgs = input.next().trim().split(">");
@@ -76,14 +72,14 @@ public class ObservationRNX {
 
 						}
 
-						SV.add(new SatelliteModel(SVID, satInfo.get(C1C_index), satInfo.get(S1C_index)));
+						SV.add(new SatelliteModel(SVID, satInfo.get(type_index.get("C1C")),
+								satInfo.get(type_index.get("S1C")), satInfo.get(type_index.get("D1C"))));
 					}
 				}
 
 				Msg.set_ECEF_XYZ(ECEF_XYZ);
 				Msg.set_RxTime(msgLines[0].trim().split("\\s+"));
 				Msg.setObsvSat(SV);
-
 				ObsvMsgs.add(Msg);
 
 			}

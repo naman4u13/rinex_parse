@@ -1,11 +1,15 @@
 package com.RINEX_parser.helper;
 
+import java.util.Arrays;
 import java.util.TimeZone;
+import java.util.stream.IntStream;
+
+import org.ejml.simple.SimpleMatrix;
 
 import com.RINEX_parser.models.NavigationMsg;
 
 public class ComputeSatPos {
-	public static double[] computeSatPos(NavigationMsg Sat, double tSV) {
+	public static Object[] computeSatPos(NavigationMsg Sat, double tSV) {
 		TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
 		double Mu = 3.986005E14; // WGS-84 value of the Earth's universal gravitational parameter
 		long NumberSecondsWeek = 604800;
@@ -97,24 +101,89 @@ public class ComputeSatPos {
 		double xk_orbital = rk * Math.cos(uk);
 		double yk_orbital = rk * Math.sin(uk);
 
-		double corrected_longitude_of_ascending_node = Sat.getOMEGA0() + ((Sat.getOMEGA_DOT() - OMEGA_E_DOT) * tk)
-				- (OMEGA_E_DOT * Sat.getTOE());
+		double ascNode = Sat.getOMEGA0() + ((Sat.getOMEGA_DOT() - OMEGA_E_DOT) * tk) - (OMEGA_E_DOT * Sat.getTOE());// Corrected
+																													// longitude
+																													// of
+																													// ascending
+																													// node
 
-		double xk_ECEF = (xk_orbital * Math.cos(corrected_longitude_of_ascending_node))
-				- (yk_orbital * Math.cos(ik) * Math.sin(corrected_longitude_of_ascending_node));
-		double yk_ECEF = (xk_orbital * Math.sin(corrected_longitude_of_ascending_node))
-				+ (yk_orbital * Math.cos(ik) * Math.cos(corrected_longitude_of_ascending_node));
+		double xk_ECEF = (xk_orbital * Math.cos(ascNode)) - (yk_orbital * Math.cos(ik) * Math.sin(ascNode));
+		double yk_ECEF = (xk_orbital * Math.sin(ascNode)) + (yk_orbital * Math.cos(ik) * Math.cos(ascNode));
 		double zk_ECEF = yk_orbital * Math.sin(ik);
 
-		// double[] LatLon = ECEFtoLatLon.ecef2lla(xk_ECEF, yk_ECEF, zk_ECEF);
+		// Deriving SV_clock_drift
+		// Source - The study of GPS Time Transfer based on extended Kalman filter -
+		// https://ieeexplore.ieee.org/document/6702097
+		double Ek_dot = n / (1 - (Sat.getE() * Math.cos(Ek)));
+		double relativistic_error_dot = F * Sat.getE() * Sat.getSqrt_A() * Math.cos(Ek) * Ek_dot;
+		double SV_clock_drift_derived = Sat.getSV_clock_drift() + (2 * Sat.getSV_clock_drift_rate() * (t - TOC))
+				+ relativistic_error_dot;
 
-		// System.out.println(Sat.SVID + " " + xk_ECEF + " " + yk_ECEF + " " + zk_ECEF +
-		// " ");
-		// System.out.println("LATLON " + LatLon[0] + " " + LatLon[1] + " " + LatLon[2]
-		// + " \n\n ");
+		// Deriving Satellite Velocity Vector
+		// Source -
+		// https://www.researchgate.net/publication/228995031_GPS_Satellite_Velocity_and_Acceleration_Determination_using_the_Broadcast_Ephemeris
 
+		// RotMatrix is defined as the rotation matrix from the ICDorb to the ECEF.
+		// orbital coordinate system used in the ICD-GPS-200c (ICDorb) is different from
+		// the ‘‘natural ’’orbital system.
+
+		double[][] _RotMartix = {
+				{ Math.cos(ascNode), -Math.sin(ascNode) * Math.cos(ik), Math.sin(ascNode) * Math.sin(ik) },
+				{ Math.sin(ascNode), Math.cos(ascNode) * Math.cos(ik), -Math.cos(ascNode) * Math.sin(ik) },
+				{ 0, Math.sin(ik), Math.cos(ik) } };
+		double ascNode_dot = Sat.getOMEGA_DOT() - OMEGA_E_DOT;
+		double[][] _RotMatrixDot = {
+				{ -Math.sin(ascNode) * ascNode_dot, -Math.cos(ascNode) * Math.cos(ik) * ascNode_dot,
+						Math.cos(ascNode) * Math.sin(ik) * ascNode_dot },
+				{ Math.cos(ascNode) * ascNode_dot, -Math.sin(ascNode) * Math.cos(ik) * ascNode_dot,
+						Math.sin(ascNode) * Math.sin(ik) * ascNode_dot },
+				{ 0, 0, 0 } };
+		double[][] _rICDorb = { { rk * Math.cos(uk) }, { rk * Math.sin(uk) }, { 0 } };
+		double Vk_dot = (A * A * Math.sqrt(1 - (Sat.getE() * Sat.getE())) * n) / (rk * rk);
+		double radius_corr_dot = -2 * ((Sat.getCrc() * Math.sin(2 * argument_of_latitude))
+				- (Sat.getCrs() * Math.cos(2 * argument_of_latitude))) * Vk_dot;
+		double rk_dot = (A * Sat.getE() * Math.sin(Ek) * Ek_dot) + radius_corr_dot;
+		double argument_of_latitude_correction_dot = -2 * ((Sat.getCuc() * Math.sin(2 * argument_of_latitude))
+				- (Sat.getCus() * Math.cos(2 * argument_of_latitude))) * Vk_dot;
+		double uk_dot = Vk_dot + argument_of_latitude_correction_dot;
+		double[][] _rICDorbDot = { { (rk_dot * Math.cos(uk)) - (rk * Math.sin(uk) * uk_dot) },
+				{ (rk_dot * Math.sin(uk)) + (rk * Math.cos(uk) * uk_dot) }, { 0 } };
+
+		SimpleMatrix RotMatrix = new SimpleMatrix(_RotMartix);
+		SimpleMatrix RotMatrixDot = new SimpleMatrix(_RotMatrixDot);
+		SimpleMatrix rICDorb = new SimpleMatrix(_rICDorb);
+		SimpleMatrix rICDorbDot = new SimpleMatrix(_rICDorbDot);
+
+		SimpleMatrix _SV_velocity = (RotMatrixDot.mult(rICDorb)).plus(RotMatrix.mult(rICDorbDot));
+		double[] SV_velocity = IntStream.range(0, 3).mapToDouble(i -> _SV_velocity.get(i, 0)).toArray();
+		double modVel = Arrays.stream(SV_velocity).map(i -> i * i).reduce(0.0, (i, j) -> i + j);
+		modVel = Math.sqrt(modVel);
 		double[] ECEF_SatClkOff = new double[] { xk_ECEF, yk_ECEF, zk_ECEF, SatClockOffset };
-		return ECEF_SatClkOff;
+
+		double Vk_dot2 = (Ek_dot * Math.sqrt(1 - (Sat.getE() * Sat.getE()))) / (1 - (Sat.getE() * Math.cos(Ek)));
+		double Vk_dot3 = Math.sin(Ek) * Ek_dot * (1.0 + (Sat.getE() * Math.cos(Vk)))
+				/ (Math.sin(Vk) * (1.0 - (Sat.getE() * Math.cos(Ek))));
+		double ik_dot2 = Sat.getIDOT() + (2 * Vk_dot2 * ((Sat.getCis() * Math.cos(2 * argument_of_latitude))
+				- (Sat.getCic() * Math.sin(2 * argument_of_latitude))));
+		double uk_dot2 = Vk_dot2 - (2 * ((Sat.getCuc() * Math.sin(2 * argument_of_latitude))
+				- (Sat.getCus() * Math.cos(2 * argument_of_latitude))) * Vk_dot2);
+		double rk_dot2 = (A * Sat.getE() * Math.sin(Ek) * Ek_dot)
+				+ (-2 * ((Sat.getCrc() * Math.sin(2 * argument_of_latitude))
+						- (Sat.getCrs() * Math.cos(2 * argument_of_latitude))) * Vk_dot2);
+		double ascNode_dot2 = Sat.getOMEGA_DOT() - OMEGA_E_DOT;
+		double vxplane = (rk_dot2 * Math.cos(uk)) - (rk * Math.sin(uk) * uk_dot2);
+		double vyplane = (rk_dot2 * Math.sin(uk)) + (rk * Math.cos(uk) * uk_dot2);
+		double vx2 = (-xk_orbital * ascNode_dot2 * Math.sin(ascNode)) + (vxplane * Math.cos(ascNode))
+				- (vyplane * Math.sin(ascNode) * Math.cos(ik))
+				- (yk_orbital * ((ascNode_dot2 * Math.cos(ascNode) * Math.cos(ik))
+						- (ik_dot2 * Math.sin(ascNode) * Math.sin(ik))));
+		double vy2 = (xk_orbital * ascNode_dot2 * Math.cos(ascNode)) + (vxplane * Math.sin(ascNode))
+				+ (vyplane * Math.cos(ascNode) * Math.cos(ik))
+				- (yk_orbital * ((ascNode_dot2 * Math.sin(ascNode) * Math.cos(ik))
+						+ (ik_dot2 * Math.cos(ascNode) * Math.sin(ik))));
+		double vz2 = (yk_orbital * ik_dot2 * Math.cos(ik)) + (vyplane * Math.sin(ik));
+		double[] SV_velocity2 = { vx2, vy2, vz2 };
+		return new Object[] { ECEF_SatClkOff, SV_velocity, SV_clock_drift_derived };
 
 	}
 

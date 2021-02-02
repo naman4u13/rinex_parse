@@ -8,13 +8,9 @@ public class Satellite extends SatelliteModel {
 	private double SatClkOff;
 	// Note this Satellite signal transmission time including the bias
 	private double tSV;
-
-	public Satellite(int SVID, double pseudorange, double CNo, double[] eCEF, double satClkOff, double tSV) {
-		super(SVID, pseudorange, CNo);
-		ECEF = eCEF;
-		SatClkOff = satClkOff;
-		this.tSV = tSV;
-	}
+	private double[] SatVel;
+	// Note this Clock Drift is derived, its not what we get from Ephemeris
+	private double SatClkDrift;
 
 	public double[] getECEF() {
 		return ECEF;
@@ -22,6 +18,26 @@ public class Satellite extends SatelliteModel {
 
 	public void setECEF(double[] eCEF) {
 		ECEF = eCEF;
+	}
+
+	public Satellite(int SVID, double pseudorange, double CNo, double doppler, double[] eCEF, double satClkOff,
+			double tSV, double[] satVel, double satClkDrift) {
+		super(SVID, pseudorange, CNo, doppler);
+		ECEF = eCEF;
+		SatClkOff = satClkOff;
+		this.tSV = tSV;
+		SatVel = satVel;
+		SatClkDrift = satClkDrift;
+	}
+
+	public Satellite(SatelliteModel satModel, double[] eCEF, double satClkOff, double tSV, double[] satVel,
+			double satClkDrift) {
+		super(satModel);
+		ECEF = eCEF;
+		SatClkOff = satClkOff;
+		this.tSV = tSV;
+		SatVel = satVel;
+		SatClkDrift = satClkDrift;
 	}
 
 	public double getSatClkOff() {
@@ -43,7 +59,23 @@ public class Satellite extends SatelliteModel {
 	@Override
 	public String toString() {
 		return super.toString() + "Satellite [ECEF=" + Arrays.toString(ECEF) + ", SatClkOff=" + SatClkOff + ", tSV="
-				+ tSV + "]";
+				+ tSV + ", SatVel=" + Arrays.toString(SatVel) + ", SatClkDrift=" + SatClkDrift + "]";
+	}
+
+	public double[] getSatVel() {
+		return SatVel;
+	}
+
+	public void setSatVel(double[] satVel) {
+		SatVel = satVel;
+	}
+
+	public double getSatClkDrift() {
+		return SatClkDrift;
+	}
+
+	public void setSatClkDrift(double satClkDrift) {
+		SatClkDrift = satClkDrift;
 	}
 
 }

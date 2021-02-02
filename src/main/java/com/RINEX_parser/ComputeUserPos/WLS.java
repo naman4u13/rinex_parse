@@ -38,8 +38,8 @@ public class WLS {
 				.toArray();
 		System.out.println("IONO corrections");
 		IntStream.range(0, ionoCorr.length)
-				.forEach(i -> System.out.print("GPS" + SV.get(i).getSVID() + " - " + ionoCorr[i] + "  "));
-		// Arrays.stream(ionoCorr).forEach(x -> System.out.print(x + " "));
+				.forEach(i -> System.out.print("GPS" + SV.get(i).getSVID() + " - " + ionoCorr[i] + " "));
+
 		System.out.println("");
 		double[] ionoCorrPR = IntStream.range(0, PR.length).mapToDouble(x -> PR[x] - ionoCorr[x]).toArray();
 
@@ -51,6 +51,8 @@ public class WLS {
 		double[] ionoCorrECEF = trilateration(SV, ionoCorrPR, Weight);
 
 		double[] approxWLS_ECEF = trilateration(SV, PR, Weight);
+
+		SV.stream().forEach(i -> computeRcvrClkDrift(i, ionoCorrECEF));
 		return new ArrayList<Object>(Arrays.asList(approxWLS_ECEF, ionoCorrECEF));
 
 	}
@@ -97,7 +99,7 @@ public class WLS {
 				System.out.println("GDOP - " + GDOP);
 			}
 
-			return approxECEF;
+			return new double[] { approxECEF[0], approxECEF[1], approxECEF[2], approxUserClkOff };
 
 		}
 		System.out.println("Satellite count is less than 4, can't compute user position");
@@ -123,5 +125,19 @@ public class WLS {
 		final double fSum = sum;
 		IntStream.range(0, n).forEach(i -> W[i][i] = W[i][i] / fSum);
 		return W;
+	}
+
+	public static double computeRcvrClkDrift(Satellite sat, double[] userECEF) {
+		// Line of Sight vector
+		double[] LOS = IntStream.range(0, 3).mapToDouble(i -> sat.getECEF()[i] - userECEF[i]).toArray();
+		double GeometricRange = Math.sqrt(Arrays.stream(LOS).map(i -> i * i).reduce(0.0, (i, j) -> i + j));
+		// Converting LOS to unit vector
+		double[] LOSunit = Arrays.stream(LOS).map(i -> i / GeometricRange).toArray();
+		double RangeRate = IntStream.range(0, 3).mapToDouble(i -> sat.getSatVel()[i] * LOSunit[i]).reduce(0.0,
+				(i, j) -> i + j);
+		double RcvrClkDrift = (sat.getPseudoRangeRate() - RangeRate + (sat.getSatClkDrift() * SpeedofLight))
+				/ SpeedofLight;
+		System.out.println(" SVID " + sat.getSVID() + " RcvrClkDrift " + RcvrClkDrift);
+		return RcvrClkDrift;
 	}
 }
