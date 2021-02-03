@@ -71,7 +71,7 @@ public class MainApp {
 		ArrayList<ObservationMsg> ObsvMsgs = ObservationRNX.rinex_obsv_process(obs_path);
 
 		HashMap<String, ArrayList<double[]>> ErrMap = new HashMap<String, ArrayList<double[]>>();
-
+		HashMap<String, ArrayList<Double>> RcvrClkMap = new HashMap<String, ArrayList<Double>>();
 		ArrayList<Calendar> timeList = new ArrayList<Calendar>();
 
 		for (ObservationMsg obsvMsg : ObsvMsgs) {
@@ -128,7 +128,10 @@ public class MainApp {
 				computedECEF = WLS.compute(SV, ionoCoeff, userECEF);
 				ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
 						.add(estimateError(computedECEF, userECEF, time));
-
+				double rcvrClkOff = ((double[]) computedECEF.get(1))[3];
+				double rcvrClkDrift = (double) computedECEF.get(2);
+				RcvrClkMap.computeIfAbsent("Receiver Clock Offset", k -> new ArrayList<Double>()).add(rcvrClkOff);
+				RcvrClkMap.computeIfAbsent("Receiver Clock Drift", k -> new ArrayList<Double>()).add(rcvrClkDrift);
 				break;
 			case 3:
 				computedECEF = LeastSquare.compute(SV, ionoCoeff, userECEF);
@@ -189,6 +192,13 @@ public class MainApp {
 			RefineryUtilities.positionFrameRandomly(chart);
 			chart.setVisible(true);
 
+		}
+		if (estimatorType == 2) {
+			GraphPlotter chart = new GraphPlotter("GPS Receiver Clock - ", "GPS Receiver Clock", timeList, RcvrClkMap);
+
+			chart.pack();
+			RefineryUtilities.positionFrameRandomly(chart);
+			chart.setVisible(true);
 		}
 
 	}

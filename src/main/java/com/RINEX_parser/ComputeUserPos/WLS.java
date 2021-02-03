@@ -53,8 +53,8 @@ public class WLS {
 		double[] approxWLS_ECEF = trilateration(SV, PR, Weight);
 
 		// SV.stream().forEach(i -> computeRcvrClkDrift(i, ionoCorrECEF));
-		computeRcvrClkDriftStatic(SV, userECEF, Weight);
-		return new ArrayList<Object>(Arrays.asList(approxWLS_ECEF, ionoCorrECEF));
+		double rcvrClkDrift = computeRcvrClkDriftStatic(SV, userECEF, Weight);
+		return new ArrayList<Object>(Arrays.asList(approxWLS_ECEF, ionoCorrECEF, rcvrClkDrift));
 
 	}
 

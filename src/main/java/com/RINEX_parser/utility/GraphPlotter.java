@@ -65,14 +65,14 @@ public class GraphPlotter extends ApplicationFrame {
 	}
 
 	private TimePeriodValuesCollection createDatasetError(ArrayList<Calendar> timeList,
-			HashMap<String, ArrayList<Double>> ErrMap) {
+			HashMap<String, ArrayList<Double>> _map) {
 		TimePeriodValuesCollection coll = new TimePeriodValuesCollection();
-		for (String ErrType : ErrMap.keySet()) {
-			TimePeriodValues series = new TimePeriodValues(ErrType);
-			ArrayList<Double> ErrList = ErrMap.get(ErrType);
-			for (int i = 0; i < ErrList.size(); i++) {
+		for (String _type : _map.keySet()) {
+			TimePeriodValues series = new TimePeriodValues(_type);
+			ArrayList<Double> _list = _map.get(_type);
+			for (int i = 0; i < _list.size(); i++) {
 
-				series.add(new Second(timeList.get(i).getTime()), ErrList.get(i));
+				series.add(new Second(timeList.get(i).getTime()), _list.get(i));
 			}
 
 			coll.addSeries(series);
