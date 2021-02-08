@@ -15,6 +15,7 @@ import java.util.stream.IntStream;
 
 import org.jfree.ui.RefineryUtilities;
 
+import com.RINEX_parser.ComputeUserPos.EKF;
 import com.RINEX_parser.ComputeUserPos.LeastSquare;
 import com.RINEX_parser.ComputeUserPos.WLS;
 import com.RINEX_parser.fileParser.NavigationRNX;
@@ -39,7 +40,7 @@ public class MainApp {
 
 	public static void main(String[] args) {
 
-		posEstimate(false, false, 2);
+		posEstimate(false, false, 4);
 	}
 
 	public static void posEstimate(boolean doIonoPlot, boolean doPosErrPlot, int estimatorType) {
@@ -52,7 +53,7 @@ public class MainApp {
 		String obs_path = "C:\\Users\\Naman\\Downloads\\NYA100NOR_S_20201000000_01D_30S_MO.rnx\\NYA100NOR_S_20201000000_01D_30S_MO.rnx";
 
 		Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path);
-		File output = new File("C:\\Users\\Naman\\Desktop\\rinex_parse_files\\output_iono_WLS_test.txt");
+		File output = new File("C:\\Users\\Naman\\Desktop\\rinex_parse_files\\output_EKF.txt");
 		PrintStream stream;
 
 		try {
@@ -73,12 +74,13 @@ public class MainApp {
 		HashMap<String, ArrayList<double[]>> ErrMap = new HashMap<String, ArrayList<double[]>>();
 		HashMap<String, ArrayList<Double>> RcvrClkMap = new HashMap<String, ArrayList<Double>>();
 		ArrayList<Calendar> timeList = new ArrayList<Calendar>();
-
+		ArrayList<ArrayList<Satellite>> SVlist = new ArrayList<ArrayList<Satellite>>();
+		double[] userECEF = null;
 		for (ObservationMsg obsvMsg : ObsvMsgs) {
 
 			long tRX = obsvMsg.getTRX();
 			long weekNo = obsvMsg.getWeekNo();
-			double[] userECEF = obsvMsg.getECEF();
+			userECEF = obsvMsg.getECEF();
 			double[] userLatLon = ECEFtoLatLon.ecef2lla(userECEF);
 			Calendar time = Time.getDate(tRX, weekNo, userLatLon[1]);
 			// find out index of nav-msg inside the nav-msg list which is most suitable for
@@ -89,7 +91,7 @@ public class MainApp {
 
 			ArrayList<Satellite> SV = new ArrayList<Satellite>();
 
-			System.out.print("\n");
+			// System.out.print("\n");
 
 			for (int i = 0; i < order.length; i++) {
 
@@ -141,10 +143,19 @@ public class MainApp {
 				ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
 						.add(estimateError(computedECEF, userECEF, time));
 				break;
+			case 4:
+				SVlist.add(SV);
 			}
 			timeList.add(time);
 
 		}
+
+		if (estimatorType == 4) {
+
+			EKF.compute(SVlist, timeList, userECEF);
+
+		}
+
 		int totalObsCount = ObsvMsgs.size();
 		HashMap<String, ArrayList<Double>> GraphErrMap = new HashMap<String, ArrayList<Double>>();
 		for (String key : ErrMap.keySet()) {

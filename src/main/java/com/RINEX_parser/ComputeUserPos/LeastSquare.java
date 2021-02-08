@@ -88,7 +88,7 @@ public class LeastSquare {
 				System.out.println("GDOP - " + GDOP);
 			}
 
-			return approxECEF;
+			return new double[] { approxECEF[0], approxECEF[1], approxECEF[2], approxUserClkOff };
 
 		}
 		System.out.println("Satellite count is less than 4, can't compute user position");
