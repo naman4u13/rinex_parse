@@ -1,10 +1,12 @@
 package com.RINEX_parser.ComputeUserPos;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.stream.IntStream;
 
+import org.ejml.dense.row.MatrixFeatures_DDRM;
 import org.ejml.simple.SimpleMatrix;
 import org.jfree.ui.RefineryUtilities;
 
@@ -19,23 +21,31 @@ public class EKF {
 	static double SpeedofLight = 299792458;
 
 	public static void compute(ArrayList<ArrayList<Satellite>> SVlist, ArrayList<Calendar> timeList,
-			double[] trueUserECEF) {
+			double[] trueUserECEF, String path) {
 
 		SatUtil satUtil = new SatUtil(SVlist.get(0));
 		double[] approxECEF = satUtil.getUserECEF();
-		System.out.println(trueUserECEF);
+		System.out.println("True User ECEF - "
+				+ Arrays.stream(trueUserECEF).mapToObj(i -> String.valueOf(i)).reduce("", (i, j) -> i + " " + j));
+		System.out.println("Reference User Position to calculate Z_hat - "
+				+ Arrays.stream(approxECEF).mapToObj(i -> String.valueOf(i)).reduce("", (i, j) -> i + " " + j));
 		ArrayList<Double> errList = new ArrayList<Double>();
-		// Intial State Vector = [ECEF_X, ECEF_Y, ECEF_Z, Rcvr Clk Offset, Rcvr Clk
-		// Drift ]
+		ArrayList<Double> errCovList = new ArrayList<Double>();
 //		SimpleMatrix postStateEst = new SimpleMatrix(
 //				new double[][] { { 1000 }, { 1000 }, { 1000 }, { 0.1 }, { 0.001 } });
-//		
+
 		SimpleMatrix postStateEst = new SimpleMatrix(new double[][] { { approxECEF[0] }, { approxECEF[1] },
 				{ approxECEF[2] }, { approxECEF[3] }, { 0.001 } });
+		System.out.println("Intial State Estimate - " + postStateEst.toString());
 
 		double[][] _postEstErr = new double[5][5];
-		IntStream.range(0, 5).forEach(i -> _postEstErr[i][i] = 100);
+		IntStream.range(0, 5).forEach(i -> _postEstErr[i][i] = 25);
 		SimpleMatrix postEstErr = new SimpleMatrix(_postEstErr);
+
+		System.out.println("Intial Estimate Error Covariance - " + postEstErr.toString());
+
+		int ObsNoiseVar = 25;
+		System.out.println("ObsNoiseVar(R) - " + ObsNoiseVar);
 
 		// Typical Allan Variance Coefficients for TCXO (low quality)
 		double h0 = 2E-19;
@@ -48,6 +58,7 @@ public class EKF {
 
 		for (int i = 0; i < SVlist.size(); i++) {
 
+			System.out.println(i);
 			ArrayList<Satellite> SV = SVlist.get(i);
 			int SVcount = SV.size();
 			double currentTime = timeList.get(i).getTimeInMillis() / 1E3;
@@ -75,7 +86,7 @@ public class EKF {
 			// ref
 			// -(https://gnss-compare.readthedocs.io/en/latest/user_manual/implemented_algorithms.html)
 			double[][] cov_dp = new double[SVcount][SVcount];
-			IntStream.range(0, SVcount).forEach(x -> cov_dp[x][x] = 25);
+			IntStream.range(0, SVcount).forEach(x -> cov_dp[x][x] = ObsNoiseVar);
 			SimpleMatrix measurementNoise = new SimpleMatrix(cov_dp);
 
 			double[][] unitLOS = satUtil.getUnitLOS(SV);
@@ -107,9 +118,10 @@ public class EKF {
 			SimpleMatrix measurementEst = new SimpleMatrix(_measurementEst);
 
 			// update step
-//			SimpleMatrix[] updatedVals = update(priorEstErr, H, measurementNoise, priorStateEst, measurement,
-//					measurementEst);
-			SimpleMatrix[] updatedVals = update2(priorEstErr, _H, cov_dp, priorStateEst, _measurement, SV);
+			SimpleMatrix[] updatedVals = update(priorEstErr, H, measurementNoise, priorStateEst, measurement,
+					measurementEst);
+			// SimpleMatrix[] updatedVals = update2(priorEstErr, _H, cov_dp, priorStateEst,
+			// _measurement, SV);
 			postStateEst = updatedVals[0];
 			postEstErr = updatedVals[1];
 
@@ -118,21 +130,23 @@ public class EKF {
 			double err = Math.sqrt(IntStream.range(0, 3).mapToDouble(x -> estECEF[x] - trueUserECEF[x]).map(x -> x * x)
 					.reduce(0, (x, y) -> x + y));
 
-			System.out.println(i);
-
 			// System.out.println("postStateEst -" + postStateEst.toString());
 			// System.out.println("priorEstErr -" + priorEstErr.toString());
-			// System.out.println("postEstErr -" + postEstErr.toString());
-			System.out.println(err);
-			errList.add(err);
-		}
-		HashMap<String, ArrayList<Double>> errMap = new HashMap<String, ArrayList<Double>>();
-		errMap.put("EKF error", errList);
-		GraphPlotter chart = new GraphPlotter("EKF - ", "EKF", timeList, errMap);
+			System.out.println("postEstErr -" + postEstErr.toString());
+			if (!MatrixFeatures_DDRM.isPositiveDefinite(postEstErr.getMatrix())) {
+				System.out.println("PositiveDefinite test Failed");
+			}
+			System.out.println("Pos Error - " + err);
 
-		chart.pack();
-		RefineryUtilities.positionFrameRandomly(chart);
-		chart.setVisible(true);
+			double postEstErrTrace = postEstErr.trace();
+			System.out.println(" Trace of ErrEstCov - " + postEstErrTrace);
+			errList.add(err);
+			errCovList.add(postEstErrTrace);
+		}
+
+		chartPack("Position Error", path + "_err.PNG", errList, timeList, 100);
+		chartPack("Error Covariance", path + "_cov.PNG", errCovList, timeList, 10);
+
 		System.out.println(postStateEst.toString());
 	}
 
@@ -154,8 +168,7 @@ public class EKF {
 		SimpleMatrix Pplus = (I.minus(KH)).mult(Pminus);
 		SimpleMatrix Pplus2 = ((I.minus(KH)).mult(Pminus).mult((I.minus(KH)).transpose()))
 				.plus(K.mult(R).mult(K.transpose()));
-		System.out.println("PostEstErr -" + Pplus.toString());
-		System.out.println("PostEstErr2 -" + Pplus2.toString());
+
 		return new SimpleMatrix[] { Xplus, Pplus2 };
 
 	}
@@ -173,8 +186,9 @@ public class EKF {
 			SimpleMatrix K = P.mult(H.transpose()).scale(1 / denom.get(0));
 			SimpleMatrix KH = K.mult(H);
 			SimpleMatrix I = SimpleMatrix.identity(KH.numRows());
-			// P = P.minus(K.mult(H).mult(P));
-			P = ((I.minus(KH)).mult(P).mult((I.minus(KH)).transpose())).plus(K.mult(R).mult(K.transpose()));
+			P = P.minus(K.mult(H).mult(P));
+			// P = ((I.minus(KH)).mult(P).mult((I.minus(KH)).transpose()))
+			// .plus(K.mult(R).mult(K.transpose()));
 
 			SimpleMatrix Z = new SimpleMatrix(new double[][] { _Z[i] });
 
@@ -187,74 +201,18 @@ public class EKF {
 
 			X = X.plus((K.mult(Z.minus(Zest))));
 		}
+
 		return new SimpleMatrix[] { X, P };
 
 	}
 
-	public static void compute2(ArrayList<ArrayList<Satellite>> SVlist, ArrayList<Calendar> timeList) {
-
-		// Intial State Vector = [ECEF_X, ECEF_Y, ECEF_Z, Rcvr Clk Offset, Rcvr Clk
-		// Drift ]
-		SimpleMatrix postStateEst = new SimpleMatrix(new double[][] { { 1000, 1000, 1000, 0.1, 0.001 } });
-
-		double[][] _postEstErr = new double[5][5];
-		IntStream.range(0, 5).forEach(i -> _postEstErr[i][i] = 10);
-		SimpleMatrix postEstErr = new SimpleMatrix(_postEstErr);
-
-		// Typical Allan Variance Coefficients for TCXO (low quality)
-		double h0 = 2E-19;
-		double h_2 = 2E-20;
-		double sf = h0 / 2;
-		double sg = 2 * Math.PI * Math.PI * h_2;
-
-		// In Seconds
-		double time = timeList.get(0).getTimeInMillis() / 1E3;
-
-		SatUtil satUtil = new SatUtil(SVlist.get(0));
-
-		for (int i = 0; i < SVlist.size(); i++) {
-
-			ArrayList<Satellite> SV = SVlist.get(i);
-			int SVcount = SV.size();
-			double currentTime = timeList.get(i).getTimeInMillis() / 1E3;
-			double deltaT = currentTime - time;
-			double[][] _stateTrans = new double[5][5];
-			IntStream.range(0, 5).forEach(x -> _stateTrans[x][x] = 1);
-			_stateTrans[3][4] = deltaT;
-			SimpleMatrix stateTrans = new SimpleMatrix(_stateTrans);
-			double[][] _processNoise = new double[5][5];
-			_processNoise[3][3] = (sf * deltaT) + ((sg * Math.pow(deltaT, 3)) / 3);
-			_processNoise[3][4] = (sg * Math.pow(deltaT, 2)) / 2;
-			_processNoise[4][3] = (sg * Math.pow(deltaT, 2)) / 2;
-			_processNoise[4][4] = sg * deltaT;
-			SimpleMatrix processNoise = new SimpleMatrix(_processNoise);
-
-			// Prediction Step / Time Update
-
-			// calculating K-th priosStateEst using (K-1)-th postStateEst
-			SimpleMatrix priorStateEst = stateTrans.mult(postStateEst);
-			SimpleMatrix priorEstErr = (stateTrans.mult(postEstErr).mult((stateTrans.transpose()))).plus(processNoise);
-
-			double[][] weightMat = satUtil.getWeightMat(SV);
-			SimpleMatrix cov_dp = new SimpleMatrix(weightMat);
-			double[][] unitLOS = satUtil.getUnitLOS(SV);
-			SimpleMatrix H = new SimpleMatrix(unitLOS);
-			SimpleMatrix K = (((H.transpose()).mult(H)).invert()).mult(H.transpose());
-			// Understanding GPS Principles and Applications Second Edition Elliott D.
-			// Kaplan Christopher J. Hegarty
-			// page - 326
-			// ECEF pos and rcvr clock offset error or covariance matrix - [dx,dy,dz,c*dt_u]
-			SimpleMatrix cov_dx = K.mult(cov_dp).mult((K.transpose()));
-			// connection matrix for pseudorange rate for static case
-			double[][] _H = new double[SVcount][1];
-			IntStream.range(0, SVcount).forEach(x -> _H[x][0] = 1);
-			H = new SimpleMatrix(_H);
-			K = (((H.transpose()).mult(H)).invert()).mult(H.transpose());
-			// SimpleMatrix cov_dp_dot =
-			double[][] _meaurementNoise = new double[1][1];
-
-			time = currentTime;
-		}
+	public static void chartPack(String title, String path, ArrayList<Double> dataList, ArrayList<Calendar> timeList,
+			long max) {
+		HashMap<String, ArrayList<Double>> errMap = new HashMap<String, ArrayList<Double>>();
+		errMap.put(title, dataList);
+		GraphPlotter chart = new GraphPlotter(title, title, timeList, errMap, max, path);
+		chart.pack();
+		RefineryUtilities.positionFrameRandomly(chart);
+		chart.setVisible(true);
 	}
-
 }

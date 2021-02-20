@@ -20,6 +20,10 @@ public class SatUtil {
 		approxECEF = LeastSquare.trilateration(SV, PR);
 	}
 
+	public SatUtil(double[] trueECEF) {
+		approxECEF = trueECEF;
+	}
+
 	public double[][] getWeightMat(ArrayList<Satellite> SV) {
 		int SVcount = SV.size();
 		ArrayList<double[]> AzmEle = (ArrayList<double[]>) SV.stream()
