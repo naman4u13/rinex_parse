@@ -7,6 +7,8 @@ import java.util.stream.IntStream;
 
 import com.RINEX_parser.ComputeUserPos.LeastSquare;
 import com.RINEX_parser.helper.ComputeAzmEle;
+import com.RINEX_parser.helper.ComputeIonoCorr;
+import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.Satellite;
 
 public class SatUtil {
@@ -18,6 +20,7 @@ public class SatUtil {
 		// Removed satellite clock offset error from pseudorange
 		double[] PR = SV.stream().mapToDouble(x -> x.getPseudorange() + (SpeedofLight * x.getSatClkOff())).toArray();
 		approxECEF = LeastSquare.trilateration(SV, PR);
+
 	}
 
 	public SatUtil(double[] trueECEF) {
@@ -58,6 +61,18 @@ public class SatUtil {
 		}
 		return unitLOS;
 
+	}
+
+	public double[] getIonoCorr(ArrayList<Satellite> SV, IonoCoeff ionoCoeff) {
+		ArrayList<double[]> AzmEle = (ArrayList<double[]>) SV.stream()
+				.map(i -> ComputeAzmEle.computeAzmEle(Arrays.copyOfRange(approxECEF, 0, 3), i.getECEF()))
+				.collect(Collectors.toList());
+		double[] approxLatLon = ECEFtoLatLon.ecef2lla(approxECEF);
+		double[] ionoCorr = IntStream
+				.range(0, SV.size()).mapToDouble(x -> ComputeIonoCorr.computeIonoCorr(AzmEle.get(x)[0],
+						AzmEle.get(x)[1], approxLatLon[0], approxLatLon[1], (long) SV.get(x).gettSV(), ionoCoeff))
+				.toArray();
+		return ionoCorr;
 	}
 
 	public double[] getUserECEF() {

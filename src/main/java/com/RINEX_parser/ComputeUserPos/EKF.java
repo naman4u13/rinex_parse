@@ -10,6 +10,7 @@ import org.ejml.dense.row.MatrixFeatures_DDRM;
 import org.ejml.simple.SimpleMatrix;
 import org.jfree.ui.RefineryUtilities;
 
+import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.Satellite;
 import com.RINEX_parser.utility.GraphPlotter;
 import com.RINEX_parser.utility.SatUtil;
@@ -21,7 +22,7 @@ public class EKF {
 	static double SpeedofLight = 299792458;
 
 	public static void compute(ArrayList<ArrayList<Satellite>> SVlist, ArrayList<Calendar> timeList,
-			double[] trueUserECEF, String path) {
+			double[] trueUserECEF, String path, IonoCoeff ionoCoeff) {
 
 		SatUtil satUtil = new SatUtil(SVlist.get(0));
 		double[] approxECEF = satUtil.getUserECEF();
@@ -31,20 +32,20 @@ public class EKF {
 				+ Arrays.stream(approxECEF).mapToObj(i -> String.valueOf(i)).reduce("", (i, j) -> i + " " + j));
 		ArrayList<Double> errList = new ArrayList<Double>();
 		ArrayList<Double> errCovList = new ArrayList<Double>();
-//		SimpleMatrix postStateEst = new SimpleMatrix(
-//				new double[][] { { 1000 }, { 1000 }, { 1000 }, { 0.1 }, { 0.001 } });
+		SimpleMatrix postStateEst = new SimpleMatrix(
+				new double[][] { { 1000 }, { 1000 }, { 1000 }, { 0.1 }, { 0.001 } });
 
-		SimpleMatrix postStateEst = new SimpleMatrix(new double[][] { { approxECEF[0] }, { approxECEF[1] },
-				{ approxECEF[2] }, { approxECEF[3] }, { 0.001 } });
+//		SimpleMatrix postStateEst = new SimpleMatrix(new double[][] { { approxECEF[0] }, { approxECEF[1] },
+//				{ approxECEF[2] }, { approxECEF[3] }, { 0.001 } });
 		System.out.println("Intial State Estimate - " + postStateEst.toString());
 
 		double[][] _postEstErr = new double[5][5];
-		IntStream.range(0, 5).forEach(i -> _postEstErr[i][i] = 25);
+		IntStream.range(0, 5).forEach(i -> _postEstErr[i][i] = 1e13);
 		SimpleMatrix postEstErr = new SimpleMatrix(_postEstErr);
 
 		System.out.println("Intial Estimate Error Covariance - " + postEstErr.toString());
 
-		int ObsNoiseVar = 25;
+		int ObsNoiseVar = 10;
 		System.out.println("ObsNoiseVar(R) - " + ObsNoiseVar);
 
 		// Typical Allan Variance Coefficients for TCXO (low quality)
@@ -101,9 +102,11 @@ public class EKF {
 			SimpleMatrix H = new SimpleMatrix(_H);
 
 			double[][] _measurement = new double[SVcount][1];
-			// Removed satellite clock offset error from pseudorange
-			IntStream.range(0, SVcount).forEach(
-					x -> _measurement[x][0] = SV.get(x).getPseudorange() + (SpeedofLight * SV.get(x).getSatClkOff()));
+			// Compute Iono corrections
+			double[] ionoCorr = satUtil.getIonoCorr(SV, ionoCoeff);
+			// Removed satellite clock offset error and Iono errors from pseudorange
+			IntStream.range(0, SVcount).forEach(x -> _measurement[x][0] = SV.get(x).getPseudorange()
+					+ (SpeedofLight * SV.get(x).getSatClkOff()) - ionoCorr[x]);
 
 			SimpleMatrix measurement = new SimpleMatrix(_measurement);
 

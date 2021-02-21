@@ -53,7 +53,7 @@ public class MainApp {
 		String obs_path = "C:\\Users\\Naman\\Downloads\\NYA100NOR_S_20201000000_01D_30S_MO.rnx\\NYA100NOR_S_20201000000_01D_30S_MO.rnx";
 
 		Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path);
-		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\EKF\\NYA_joseph5";
+		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\EKF\\NYA_joseph_iono3";
 		File output = new File(path + ".txt");
 		PrintStream stream;
 
@@ -153,7 +153,7 @@ public class MainApp {
 
 		if (estimatorType == 4) {
 
-			EKF.compute(SVlist, timeList, userECEF, path);
+			EKF.compute(SVlist, timeList, userECEF, path, ionoCoeff);
 
 		}
 
