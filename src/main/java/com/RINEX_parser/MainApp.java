@@ -15,9 +15,10 @@ import java.util.stream.IntStream;
 
 import org.jfree.ui.RefineryUtilities;
 
-import com.RINEX_parser.ComputeUserPos.EKF;
 import com.RINEX_parser.ComputeUserPos.LeastSquare;
 import com.RINEX_parser.ComputeUserPos.WLS;
+import com.RINEX_parser.ComputeUserPos.KalmanFilter.StaticEKF;
+import com.RINEX_parser.ComputeUserPos.KalmanFilter.StaticEKF1;
 import com.RINEX_parser.fileParser.NavigationRNX;
 import com.RINEX_parser.fileParser.ObservationRNX;
 import com.RINEX_parser.helper.ComputeAzmEle;
@@ -53,7 +54,7 @@ public class MainApp {
 		String obs_path = "C:\\Users\\Naman\\Downloads\\NYA100NOR_S_20201000000_01D_30S_MO.rnx\\NYA100NOR_S_20201000000_01D_30S_MO.rnx";
 
 		Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path);
-		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\EKF\\NYA_joseph_iono3";
+		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\EKF\\NYA_test2";
 		File output = new File(path + ".txt");
 		PrintStream stream;
 
@@ -153,7 +154,8 @@ public class MainApp {
 
 		if (estimatorType == 4) {
 
-			EKF.compute(SVlist, timeList, userECEF, path, ionoCoeff);
+			new StaticEKF(SVlist, userECEF, ionoCoeff).compute(timeList, path);
+			new StaticEKF1().compute(SVlist, timeList, userECEF, path, ionoCoeff);
 
 		}
 

@@ -1,4 +1,4 @@
-package com.RINEX_parser.ComputeUserPos;
+package com.RINEX_parser.ComputeUserPos.KalmanFilter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -18,7 +18,7 @@ import com.RINEX_parser.utility.SatUtil;
 //ref - https://link.springer.com/article/10.1007/s10291-015-0480-2
 // ref - https://ieeexplore.ieee.org/document/6702097
 // ref - Introduction to Random Signals and Applied Kalman Filtering
-public class EKF {
+public class StaticEKF1 {
 	static double SpeedofLight = 299792458;
 
 	public static void compute(ArrayList<ArrayList<Satellite>> SVlist, ArrayList<Calendar> timeList,
