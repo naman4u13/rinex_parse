@@ -13,14 +13,14 @@ import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.Satellite;
 import com.RINEX_parser.utility.ECEFtoLatLon;
 
-public class WLS {
+public class WLS1 {
 	static final double SpeedofLight = 299792458;
 
 	public static ArrayList<Object> compute(ArrayList<Satellite> SV, IonoCoeff ionoCoeff, double[] userECEF) {
 
 		// Removed satellite clock offset error from pseudorange
 		double[] PR = SV.stream().mapToDouble(x -> x.getPseudorange() + (SpeedofLight * x.getSatClkOff())).toArray();
-		double[] approxECEF = LeastSquare.trilateration(SV, PR);
+		double[] approxECEF = LS1.trilateration(SV, PR);
 		double[] approxLatLon = ECEFtoLatLon.ecef2lla(approxECEF);
 		double[] userLatLon = ECEFtoLatLon.ecef2lla(userECEF);
 		int SVcount = SV.size();
@@ -53,8 +53,8 @@ public class WLS {
 		double[] approxWLS_ECEF = trilateration(SV, PR, Weight);
 
 		// SV.stream().forEach(i -> computeRcvrClkDrift(i, ionoCorrECEF));
-		double rcvrClkDrift = computeRcvrClkDriftStatic(SV, userECEF, Weight);
-		return new ArrayList<Object>(Arrays.asList(approxWLS_ECEF, ionoCorrECEF, rcvrClkDrift));
+		// double rcvrClkDrift = computeRcvrClkDriftStatic(SV, userECEF, Weight);
+		return new ArrayList<Object>(Arrays.asList(approxWLS_ECEF, ionoCorrECEF));// , rcvrClkDrift));
 
 	}
 
@@ -63,7 +63,7 @@ public class WLS {
 		if (SVcount >= 4) {
 			double[] approxECEF = new double[] { 0, 0, 0 };
 			double approxUserClkOff = 0;
-			SimpleMatrix HtHinv = null;
+			SimpleMatrix HtWHinv = null;
 			for (int i = 0; i < 100; i++) {
 				double[][] deltaPR = new double[SVcount][1];
 				// approx Geometric range or true range
@@ -86,21 +86,22 @@ public class WLS {
 				SimpleMatrix H = new SimpleMatrix(coeffA);
 				SimpleMatrix Ht = H.transpose();
 				SimpleMatrix W = new SimpleMatrix(Weight);
-				HtHinv = (Ht.mult(W).mult(H)).invert();
+				HtWHinv = (Ht.mult(W).mult(H)).invert();
 				SimpleMatrix DeltaPR = new SimpleMatrix(deltaPR);
-				SimpleMatrix DeltaX = HtHinv.mult(Ht).mult(W).mult(DeltaPR);
+				SimpleMatrix DeltaX = HtWHinv.mult(Ht).mult(W).mult(DeltaPR);
 				IntStream.range(0, 3).forEach(x -> approxECEF[x] = approxECEF[x] + DeltaX.get(x, 0));
 				approxUserClkOff += (-DeltaX.get(3, 0)) / SpeedofLight;
 
 			}
-			if (HtHinv != null) {
-				SimpleMatrix _HtHinv = HtHinv;
+
+			if (HtWHinv != null) {
+				SimpleMatrix _HtWHinv = HtWHinv;
 				double GDOP = Math
-						.sqrt(IntStream.range(0, 3).mapToDouble(x -> _HtHinv.get(x, x)).reduce(0, (a, b) -> a + b));
+						.sqrt(IntStream.range(0, 3).mapToDouble(x -> _HtWHinv.get(x, x)).reduce(0, (a, b) -> a + b));
 				System.out.println("GDOP - " + GDOP);
 			}
 
-			return new double[] { approxECEF[0], approxECEF[1], approxECEF[2], approxUserClkOff };
+			return new double[] { approxECEF[0], approxECEF[1], approxECEF[2], approxUserClkOff};
 
 		}
 		System.out.println("Satellite count is less than 4, can't compute user position");

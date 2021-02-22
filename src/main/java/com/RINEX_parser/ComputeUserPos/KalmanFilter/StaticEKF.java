@@ -98,10 +98,9 @@ public class StaticEKF {
 
 		double[][] z = new double[SVcount][1];
 		// Compute Iono corrections
-		double[] ionoCorr = satUtil.getIonoCorr(SV, ionoCoeff);
+		double[] ionoCorrPR = satUtil.getIonoCorrPR(SV, ionoCoeff);
 		// Removed satellite clock offset error and Iono errors from pseudorange
-		IntStream.range(0, SVcount).forEach(
-				i -> z[i][0] = SV.get(i).getPseudorange() + (SpeedofLight * SV.get(i).getSatClkOff()) - ionoCorr[i]);
+		IntStream.range(0, SVcount).forEach(i -> z[i][0] = ionoCorrPR[i]);
 		double[][] ze = new double[SVcount][1];
 		SimpleMatrix x = kfObj.getState();
 		double[] estUserECEF = new double[] { x.get(0), x.get(1), x.get(2), x.get(3) };
@@ -113,6 +112,12 @@ public class StaticEKF {
 		double[][] R = new double[SVcount][SVcount];
 		IntStream.range(0, SVcount).forEach(i -> R[i][i] = ObsNoiseVar);
 		kfObj.update(z, R, ze);
+
+	}
+
+	public void runFilter2(double deltaT, ArrayList<Satellite> SV) {
+		int SVcount = SV.size();
+		kfObj.predict(deltaT);
 
 	}
 

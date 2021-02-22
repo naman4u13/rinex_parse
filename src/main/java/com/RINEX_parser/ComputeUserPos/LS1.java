@@ -13,7 +13,7 @@ import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.Satellite;
 import com.RINEX_parser.utility.ECEFtoLatLon;
 
-public class LeastSquare {
+public class LS1 {
 	static double SpeedofLight = 299792458;
 
 	public static ArrayList<Object> compute(ArrayList<Satellite> SV, IonoCoeff ionoCoeff, double[] userECEF) {

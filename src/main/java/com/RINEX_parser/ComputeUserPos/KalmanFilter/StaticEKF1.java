@@ -103,10 +103,9 @@ public class StaticEKF1 {
 
 			double[][] _measurement = new double[SVcount][1];
 			// Compute Iono corrections
-			double[] ionoCorr = satUtil.getIonoCorr(SV, ionoCoeff);
+			double[] ionoCorrPR = satUtil.getIonoCorrPR(SV, ionoCoeff);
 			// Removed satellite clock offset error and Iono errors from pseudorange
-			IntStream.range(0, SVcount).forEach(x -> _measurement[x][0] = SV.get(x).getPseudorange()
-					+ (SpeedofLight * SV.get(x).getSatClkOff()) - ionoCorr[x]);
+			IntStream.range(0, SVcount).forEach(x -> _measurement[x][0] = ionoCorrPR[x]);
 
 			SimpleMatrix measurement = new SimpleMatrix(_measurement);
 

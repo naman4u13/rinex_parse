@@ -15,10 +15,10 @@ import java.util.stream.IntStream;
 
 import org.jfree.ui.RefineryUtilities;
 
-import com.RINEX_parser.ComputeUserPos.LeastSquare;
-import com.RINEX_parser.ComputeUserPos.WLS;
 import com.RINEX_parser.ComputeUserPos.KalmanFilter.StaticEKF;
 import com.RINEX_parser.ComputeUserPos.KalmanFilter.StaticEKF1;
+import com.RINEX_parser.ComputeUserPos.Regression.LS;
+import com.RINEX_parser.ComputeUserPos.Regression.WLS;
 import com.RINEX_parser.fileParser.NavigationRNX;
 import com.RINEX_parser.fileParser.ObservationRNX;
 import com.RINEX_parser.helper.ComputeAzmEle;
@@ -41,7 +41,7 @@ public class MainApp {
 
 	public static void main(String[] args) {
 
-		posEstimate(false, false, 4);
+		posEstimate(false, true, 4);
 	}
 
 	public static void posEstimate(boolean doIonoPlot, boolean doPosErrPlot, int estimatorType) {
@@ -54,7 +54,7 @@ public class MainApp {
 		String obs_path = "C:\\Users\\Naman\\Downloads\\NYA100NOR_S_20201000000_01D_30S_MO.rnx\\NYA100NOR_S_20201000000_01D_30S_MO.rnx";
 
 		Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path);
-		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\EKF\\NYA_test2";
+		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\EKF\\NYA_test";
 		File output = new File(path + ".txt");
 		PrintStream stream;
 
@@ -124,26 +124,28 @@ public class MainApp {
 
 			switch (estimatorType) {
 			case 1:
-				ArrayList<Object> computedECEF = LeastSquare.compute(SV, ionoCoeff, userECEF);
+				LS ls = new LS(SV, ionoCoeff);
 				ErrMap.computeIfAbsent("LS", k -> new ArrayList<double[]>())
-						.add(estimateError(computedECEF, userECEF, time));
+						.add(estimateError(ls.getEstECEF(), ls.getIonoCorrECEF(), userECEF, time));
 				break;
 			case 2:
-				computedECEF = WLS.compute(SV, ionoCoeff, userECEF);
+				WLS wls = new WLS(SV, ionoCoeff);
 				ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
-						.add(estimateError(computedECEF, userECEF, time));
-				double rcvrClkOff = ((double[]) computedECEF.get(1))[3];
-				double rcvrClkDrift = (double) computedECEF.get(2);
-				RcvrClkMap.computeIfAbsent("Receiver Clock Offset", k -> new ArrayList<Double>()).add(rcvrClkOff);
-				RcvrClkMap.computeIfAbsent("Receiver Clock Drift", k -> new ArrayList<Double>()).add(rcvrClkDrift);
+						.add(estimateError(wls.getEstECEF(), wls.getIonoCorrECEF(), userECEF, time));
+				double rcvrClkOff = wls.getRcvrClkOff();
+				// double rcvrClkDrift = (double) computedECEF.get(2);
+				// RcvrClkMap.computeIfAbsent("Receiver Clock Offset", k -> new
+				// ArrayList<Double>()).add(rcvrClkOff);
+				// RcvrClkMap.computeIfAbsent("Receiver Clock Drift", k -> new
+				// ArrayList<Double>()).add(rcvrClkDrift);
 				break;
 			case 3:
-				computedECEF = LeastSquare.compute(SV, ionoCoeff, userECEF);
+				ls = new LS(SV, ionoCoeff);
 				ErrMap.computeIfAbsent("LS", k -> new ArrayList<double[]>())
-						.add(estimateError(computedECEF, userECEF, time));
-				computedECEF = WLS.compute(SV, ionoCoeff, userECEF);
+						.add(estimateError(ls.getEstECEF(), ls.getIonoCorrECEF(), userECEF, time));
+				wls = new WLS(SV, ionoCoeff);
 				ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
-						.add(estimateError(computedECEF, userECEF, time));
+						.add(estimateError(wls.getEstECEF(), wls.getIonoCorrECEF(), userECEF, time));
 				break;
 			case 4:
 				SVlist.add(SV);
@@ -207,19 +209,18 @@ public class MainApp {
 			chart.setVisible(true);
 
 		}
-		if (estimatorType == 2) {
-			GraphPlotter chart = new GraphPlotter("GPS Receiver Clock - ", "GPS Receiver Clock", timeList, RcvrClkMap);
-
-			chart.pack();
-			RefineryUtilities.positionFrameRandomly(chart);
-			chart.setVisible(true);
-		}
+//		if (estimatorType == 2) {
+//			GraphPlotter chart = new GraphPlotter("GPS Receiver Clock - ", "GPS Receiver Clock", timeList, RcvrClkMap);
+//
+//			chart.pack();
+//			RefineryUtilities.positionFrameRandomly(chart);
+//			chart.setVisible(true);
+//		}
 
 	}
 
-	public static double[] estimateError(ArrayList<Object> computedECEF, double[] userECEF, Calendar time) {
-		double[] nonIonoECEF = (double[]) computedECEF.get(0);
-		double[] IonoECEF = (double[]) computedECEF.get(1);
+	public static double[] estimateError(double[] nonIonoECEF, double[] IonoECEF, double[] userECEF, Calendar time) {
+
 		double[] userLatLon = ECEFtoLatLon.ecef2lla(userECEF);
 
 		double nonIonoError = Math.sqrt(IntStream.range(0, 3).mapToDouble(x -> userECEF[x] - nonIonoECEF[x])

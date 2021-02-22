@@ -2,12 +2,10 @@ package com.RINEX_parser.utility;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import com.RINEX_parser.ComputeUserPos.LeastSquare;
-import com.RINEX_parser.helper.ComputeAzmEle;
-import com.RINEX_parser.helper.ComputeIonoCorr;
+import com.RINEX_parser.ComputeUserPos.Regression.LS;
+import com.RINEX_parser.ComputeUserPos.Regression.WLS;
 import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.Satellite;
 
@@ -17,9 +15,10 @@ public class SatUtil {
 	private double[] approxECEF;
 
 	public SatUtil(ArrayList<Satellite> SV) {
-		// Removed satellite clock offset error from pseudorange
-		double[] PR = SV.stream().mapToDouble(x -> x.getPseudorange() + (SpeedofLight * x.getSatClkOff())).toArray();
-		approxECEF = LeastSquare.trilateration(SV, PR);
+
+		LS ls = new LS(SV);
+		ls.estimate(ls.getPR());
+		approxECEF = ls.getEstECEF();
 
 	}
 
@@ -28,24 +27,8 @@ public class SatUtil {
 	}
 
 	public double[][] getWeightMat(ArrayList<Satellite> SV) {
-		int SVcount = SV.size();
-		ArrayList<double[]> AzmEle = (ArrayList<double[]>) SV.stream()
-				.map(i -> ComputeAzmEle.computeAzmEle(approxECEF, i.getECEF())).collect(Collectors.toList());
-		// Computing weight matrix
-		double[][] Weight = new double[SVcount][SVcount];
-		IntStream.range(0, SVcount)
-				.forEach(i -> Weight[i][i] = 1 / computeCoVariance(SV.get(i).getCNo(), AzmEle.get(i)[0]));
-		return Weight;
-	}
-
-	// Sarab Tay and Juliette Marais -
-	// https://www.researchgate.net/publication/260200581_Weighting_models_for_GPS_Pseudorange_observations_for_land_transportation_in_urban_canyons
-	// Hybrid WLS estimator combines both Carrier to Noise ratio and Elevation angle
-	// info to compute weighing matrix, Intial results show its the superior
-	// estimator in comparison to standalone estimator based on CNo or Elev angle.
-	public double computeCoVariance(double CNo, double ElevAng) {
-		double var = Math.pow(10, -(CNo / 10)) / Math.pow(Math.sin(ElevAng), 2);
-		return var;
+		WLS wls = new WLS(SV);
+		return wls.getWeight();
 	}
 
 	public double[][] getUnitLOS(ArrayList<Satellite> SV) {
@@ -63,16 +46,9 @@ public class SatUtil {
 
 	}
 
-	public double[] getIonoCorr(ArrayList<Satellite> SV, IonoCoeff ionoCoeff) {
-		ArrayList<double[]> AzmEle = (ArrayList<double[]>) SV.stream()
-				.map(i -> ComputeAzmEle.computeAzmEle(Arrays.copyOfRange(approxECEF, 0, 3), i.getECEF()))
-				.collect(Collectors.toList());
-		double[] approxLatLon = ECEFtoLatLon.ecef2lla(approxECEF);
-		double[] ionoCorr = IntStream
-				.range(0, SV.size()).mapToDouble(x -> ComputeIonoCorr.computeIonoCorr(AzmEle.get(x)[0],
-						AzmEle.get(x)[1], approxLatLon[0], approxLatLon[1], (long) SV.get(x).gettSV(), ionoCoeff))
-				.toArray();
-		return ionoCorr;
+	public double[] getIonoCorrPR(ArrayList<Satellite> SV, IonoCoeff ionoCoeff) {
+		LS ls = new LS(SV, ionoCoeff);
+		return ls.getIonoCorrPR();
 	}
 
 	public double[] getUserECEF() {

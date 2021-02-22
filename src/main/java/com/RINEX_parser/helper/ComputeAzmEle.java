@@ -3,6 +3,8 @@ package com.RINEX_parser.helper;
 import static java.lang.Math.cos;
 import static java.lang.Math.sin;
 
+import java.util.Arrays;
+
 import org.ejml.simple.SimpleMatrix;
 
 import com.RINEX_parser.utility.ECEFtoLatLon;
@@ -10,7 +12,7 @@ import com.RINEX_parser.utility.ECEFtoLatLon;
 public class ComputeAzmEle {
 	public static double[] computeAzmEle(double[] _userECEF, double[] _satECEF) {
 
-		SimpleMatrix userECEF = new SimpleMatrix(new double[][] { _userECEF }).transpose();
+		SimpleMatrix userECEF = new SimpleMatrix(new double[][] { Arrays.copyOfRange(_userECEF, 0, 3) }).transpose();
 		SimpleMatrix satECEF = new SimpleMatrix(new double[][] { _satECEF }).transpose();
 		SimpleMatrix range = satECEF.minus(userECEF);
 		double[] userLLA = ECEFtoLatLon.ecef2lla(_userECEF);

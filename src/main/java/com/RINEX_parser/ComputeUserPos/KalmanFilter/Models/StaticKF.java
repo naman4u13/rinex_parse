@@ -11,19 +11,12 @@ public class StaticKF extends KF {
 	private final double h_2 = 2E-20;
 	private final double sf = h0 / 2;
 	private final double sg = 2 * Math.PI * Math.PI * h_2;
+	private double[][] Q;
+	private double[][] F;
 
 	public void predict(double deltaT, double[][] unitLOS) {
-		double[][] Q = new double[5][5];
 
-		Q[3][3] = (sf * deltaT) + ((sg * Math.pow(deltaT, 3)) / 3);
-		Q[3][4] = (sg * Math.pow(deltaT, 2)) / 2;
-		Q[4][3] = (sg * Math.pow(deltaT, 2)) / 2;
-		Q[4][4] = sg * deltaT;
-
-		double[][] F = new double[5][5];
-		IntStream.range(0, 5).forEach(x -> F[x][x] = 1);
-		F[3][4] = deltaT;
-
+		assign(deltaT);
 		int SVcount = unitLOS.length;
 
 		// H is the Jacobian matrix of partial derivatives Observation Model(h) of with
@@ -36,5 +29,29 @@ public class StaticKF extends KF {
 
 		configure(F, Q, H);
 		predict();
+	}
+
+	public void predict(double deltaT) {
+
+		assign(deltaT);
+
+		double[][] H = new double[4][5];
+		IntStream.range(0, 4).forEach(i -> H[i][i] = 1);
+		H[3][4] = deltaT;
+		configure(F, Q, H);
+		predict();
+	}
+
+	public void assign(double deltaT) {
+
+		F = new double[5][5];
+		Q = new double[5][5];
+		Q[3][3] = (sf * deltaT) + ((sg * Math.pow(deltaT, 3)) / 3);
+		Q[3][4] = (sg * Math.pow(deltaT, 2)) / 2;
+		Q[4][3] = (sg * Math.pow(deltaT, 2)) / 2;
+		Q[4][4] = sg * deltaT;
+
+		IntStream.range(0, 5).forEach(x -> F[x][x] = 1);
+		F[3][4] = deltaT;
 	}
 }
