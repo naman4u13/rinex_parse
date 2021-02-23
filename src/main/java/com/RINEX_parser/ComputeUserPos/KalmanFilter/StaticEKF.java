@@ -11,6 +11,7 @@ import org.ejml.simple.SimpleMatrix;
 import org.jfree.ui.RefineryUtilities;
 
 import com.RINEX_parser.ComputeUserPos.KalmanFilter.Models.StaticKF;
+import com.RINEX_parser.ComputeUserPos.Regression.WLS;
 import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.Satellite;
 import com.RINEX_parser.utility.GraphPlotter;
@@ -35,24 +36,26 @@ public class StaticEKF {
 		double[] approxECEF = satUtil.getUserECEF();
 		System.out.println("True User ECEF - "
 				+ Arrays.stream(trueUserECEF).mapToObj(i -> String.valueOf(i)).reduce("", (i, j) -> i + " " + j));
-		System.out.println("Reference User Position to calculate Z_hat - "
+		System.out.println("Reference User Position to calculate H jacobian - "
 				+ Arrays.stream(approxECEF).mapToObj(i -> String.valueOf(i)).reduce("", (i, j) -> i + " " + j));
 
 		double[][] x = new double[][] { { 1000 }, { 1000 }, { 1000 }, { 0.1 }, { 0.001 } };
+//		double[][] x = new double[][] { { approxECEF[0] }, { approxECEF[1] }, { approxECEF[2] }, { approxECEF[3] },
+//				{ 0.001 } };
 		System.out.println("Intial State Estimate - " + IntStream.range(0, x.length)
 				.mapToObj(i -> String.valueOf(x[i][0])).reduce("", (i, j) -> i + " " + j));
 
 		double[][] P = new double[5][5];
-		IntStream.range(0, 5).forEach(i -> P[i][i] = 1e13);
+		IntStream.range(0, 5).forEach(i -> P[i][i] = 1E13);
 		System.out.println("Intial Estimate Error Covariance - " + IntStream.range(0, P.length)
 				.mapToObj(i -> String.valueOf(P[i][i])).reduce("", (i, j) -> i + " " + j));
 
-		ObsNoiseVar = 10;
+		ObsNoiseVar = 100;
 		System.out.println("ObsNoiseVar(R) - " + ObsNoiseVar);
 		kfObj.setState(x, P);
 	}
 
-	public void compute(ArrayList<Calendar> timeList, String path) {
+	public ArrayList<Double> compute(ArrayList<Calendar> timeList, String path) {
 
 		ArrayList<Double> errList = new ArrayList<Double>();
 		ArrayList<Double> errCovList = new ArrayList<Double>();
@@ -84,18 +87,25 @@ public class StaticEKF {
 
 		}
 		chartPack("Position Error", path + "_err.PNG", errList, timeList, 100);
-		chartPack("Error Covariance", path + "_cov.PNG", errCovList, timeList, 10);
+		chartPack("Error Covariance", path + "_cov.PNG", errCovList, timeList, 100);
 
 		System.out.println(kfObj.getState().toString());
-
+		return errList;
 	}
 
 	public void runFilter1(double deltaT, ArrayList<Satellite> SV) {
 
 		int SVcount = SV.size();
 		double[][] unitLOS = satUtil.getUnitLOS(SV);
-		kfObj.predict(deltaT, unitLOS);
-
+		// H is the Jacobian matrix of partial derivatives Observation Model(h) of with
+		// respect to x
+		double[][] H = new double[SVcount][5];
+		IntStream.range(0, SVcount).forEach(x -> {
+			IntStream.range(0, 3).forEach(y -> H[x][y] = -unitLOS[x][y]);
+			H[x][3] = 1;
+		});
+		kfObj.configure(deltaT, H);
+		kfObj.predict();
 		double[][] z = new double[SVcount][1];
 		// Compute Iono corrections
 		double[] ionoCorrPR = satUtil.getIonoCorrPR(SV, ionoCoeff);
@@ -116,8 +126,34 @@ public class StaticEKF {
 	}
 
 	public void runFilter2(double deltaT, ArrayList<Satellite> SV) {
-		int SVcount = SV.size();
-		kfObj.predict(deltaT);
+		double[][] H = new double[4][5];
+		IntStream.range(0, 4).forEach(i -> H[i][i] = 1);
+		H[3][4] = deltaT;
+		kfObj.configure(deltaT, H);
+		kfObj.predict();
+
+		WLS wls = new WLS(SV, ionoCoeff);
+
+		double[] mECEF = wls.getIonoCorrECEF();
+		double[][] z = new double[][] { { mECEF[0] }, { mECEF[1] }, { mECEF[2] }, { wls.getRcvrClkOff() } };
+		double[][] ze = new double[4][1];
+		SimpleMatrix x = kfObj.getState();
+		IntStream.range(0, 3).forEach(i -> ze[i][0] = x.get(i));
+		ze[3][0] = x.get(3) + (x.get(4) * deltaT);
+		SimpleMatrix covdX = wls.getCovdX();
+		double[][] R = new double[4][4];
+		double trace = covdX.trace();
+		IntStream.range(0, 4).forEach(i -> R[i][i] = covdX.get(i, i) * ObsNoiseVar / trace);
+//		double sum = covdX.elementSum();
+//		IntStream.range(0, 4)
+//				.forEach(i -> IntStream.range(0, 4).forEach(j -> R[i][j] = covdX.get(i, j) * ObsNoiseVar / sum));
+		SimpleMatrix _R = new SimpleMatrix(R);
+		System.out.println("Measurement Noise  " + _R.toString());
+		if (!MatrixFeatures_DDRM.isPositiveDefinite(_R.getMatrix())) {
+			System.out.println("PositiveDefinite test Failed for R");
+		}
+
+		kfObj.update(z, R, ze);
 
 	}
 

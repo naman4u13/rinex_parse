@@ -116,11 +116,11 @@ public class LinearLeastSquare {
 						refLatLon[1], (long) SV.get(x).gettSV(), ionoCoeff))
 				.toArray();
 
-		System.out.println("IONO corrections");
-		IntStream.range(0, ionoCorr.length)
-				.forEach(i -> System.out.print("GPS" + SV.get(i).getSVID() + " - " + ionoCorr[i] + " "));
-
-		System.out.println("");
+//		System.out.println("IONO corrections");
+//		IntStream.range(0, ionoCorr.length)
+//				.forEach(i -> System.out.print("GPS" + SV.get(i).getSVID() + " - " + ionoCorr[i] + " "));
+//
+//		System.out.println("");
 
 		return IntStream.range(0, PR.length).mapToDouble(x -> PR[x] - ionoCorr[x]).toArray();
 	}

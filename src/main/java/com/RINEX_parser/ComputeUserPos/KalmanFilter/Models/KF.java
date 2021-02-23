@@ -34,6 +34,7 @@ public class KF {
 
 		// P = F P F' + Q
 		P = F.mult(P).mult(F.transpose()).plus(Q);
+		System.out.println();
 	}
 
 	public void update(double[][] _z, double[][] _R, double[][] _ze) {
@@ -53,7 +54,7 @@ public class KF {
 		// Joseph Form to ensure Positive Definiteness
 		// P = (I-KH)P(I-KH)' + KRK'
 		P = ((I.minus(KH)).mult(P).mult((I.minus(KH)).transpose())).plus(K.mult(R).mult(K.transpose()));
-
+		System.out.println();
 	}
 
 	public SimpleMatrix getState() {

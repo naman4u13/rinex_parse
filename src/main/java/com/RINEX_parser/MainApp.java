@@ -16,7 +16,6 @@ import java.util.stream.IntStream;
 import org.jfree.ui.RefineryUtilities;
 
 import com.RINEX_parser.ComputeUserPos.KalmanFilter.StaticEKF;
-import com.RINEX_parser.ComputeUserPos.KalmanFilter.StaticEKF1;
 import com.RINEX_parser.ComputeUserPos.Regression.LS;
 import com.RINEX_parser.ComputeUserPos.Regression.WLS;
 import com.RINEX_parser.fileParser.NavigationRNX;
@@ -41,7 +40,7 @@ public class MainApp {
 
 	public static void main(String[] args) {
 
-		posEstimate(false, true, 4);
+		posEstimate(false, false, 4);
 	}
 
 	public static void posEstimate(boolean doIonoPlot, boolean doPosErrPlot, int estimatorType) {
@@ -54,7 +53,7 @@ public class MainApp {
 		String obs_path = "C:\\Users\\Naman\\Downloads\\NYA100NOR_S_20201000000_01D_30S_MO.rnx\\NYA100NOR_S_20201000000_01D_30S_MO.rnx";
 
 		Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path);
-		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\EKF\\NYA_test";
+		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\simpleKF\\NYA_test";
 		File output = new File(path + ".txt");
 		PrintStream stream;
 
@@ -146,6 +145,7 @@ public class MainApp {
 				wls = new WLS(SV, ionoCoeff);
 				ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
 						.add(estimateError(wls.getEstECEF(), wls.getIonoCorrECEF(), userECEF, time));
+				SVlist.add(SV);
 				break;
 			case 4:
 				SVlist.add(SV);
@@ -154,15 +154,9 @@ public class MainApp {
 
 		}
 
-		if (estimatorType == 4) {
-
-			new StaticEKF(SVlist, userECEF, ionoCoeff).compute(timeList, path);
-			new StaticEKF1().compute(SVlist, timeList, userECEF, path, ionoCoeff);
-
-		}
-
 		int totalObsCount = ObsvMsgs.size();
 		HashMap<String, ArrayList<Double>> GraphErrMap = new HashMap<String, ArrayList<Double>>();
+
 		for (String key : ErrMap.keySet()) {
 			ArrayList<Double> ErrList = (ArrayList<Double>) ErrMap.get(key).stream().map(i -> i[0])
 					.collect(Collectors.toList());
@@ -188,6 +182,11 @@ public class MainApp {
 			GraphErrMap.put(key + " Iono corrected ECEF Offset", IonErrList);
 			GraphErrMap.put(key + " LL Offset", LLdiffList);
 			GraphErrMap.put(key + " Iono corrected LL Offset", IonLLdiffList);
+
+		}
+		if (estimatorType == 4 || estimatorType == 3) {
+			ArrayList<Double> KalmanErr = new StaticEKF(SVlist, userECEF, ionoCoeff).compute(timeList, path);
+			GraphErrMap.put("KALMAN ECEF", KalmanErr);
 
 		}
 

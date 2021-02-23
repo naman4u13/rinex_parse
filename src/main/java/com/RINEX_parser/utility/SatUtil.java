@@ -13,12 +13,14 @@ public class SatUtil {
 
 	static final double SpeedofLight = 299792458;
 	private double[] approxECEF;
+	private double rcvrClkOff;
 
 	public SatUtil(ArrayList<Satellite> SV) {
 
 		LS ls = new LS(SV);
 		ls.estimate(ls.getPR());
 		approxECEF = ls.getEstECEF();
+		rcvrClkOff = ls.getRcvrClkOff();
 
 	}
 
@@ -52,6 +54,6 @@ public class SatUtil {
 	}
 
 	public double[] getUserECEF() {
-		return approxECEF;
+		return new double[] { approxECEF[0], approxECEF[1], approxECEF[2], rcvrClkOff };
 	}
 }
