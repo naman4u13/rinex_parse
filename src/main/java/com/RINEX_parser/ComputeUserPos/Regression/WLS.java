@@ -34,6 +34,8 @@ public class WLS extends LinearLeastSquare {
 
 		estimate(getIonoCorrPR());
 		System.out.println("Iono WGDOP - " + Math.sqrt(getCovdX().extractMatrix(0, 3, 0, 3).trace()));
+		computeRcvrInfo(true);
+		System.out.println("Rcvr Velocity - " + getEstVel() + "  Rcvr Clk Drift - " + getRcvrClkDrift());
 		return super.getEstECEF();
 	}
 

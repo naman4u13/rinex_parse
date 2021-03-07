@@ -18,12 +18,14 @@ public class LinearLeastSquare {
 	private final static double SpeedofLight = 299792458;
 	private double[] estECEF = new double[] { 0, 0, 0 };
 	private SimpleMatrix HtWHinv = null;
-	private double approxUserClkOff = 0;
+	private double approxRcvrClkOff = 0;
 	private IonoCoeff ionoCoeff;
 	private ArrayList<Satellite> SV;
 	private double[][] Weight;
 	private double[] refLatLon;
 	private ArrayList<double[]> AzmEle;
+	private double estVel = 0;
+	private double approxRcvrClkDrift = 0;
 
 	public LinearLeastSquare(ArrayList<Satellite> SV, IonoCoeff ionoCoeff) {
 		this.SV = SV;
@@ -41,7 +43,7 @@ public class LinearLeastSquare {
 
 	public void intialize() {
 		estECEF = new double[] { 0, 0, 0 };
-		approxUserClkOff = 0;
+		approxRcvrClkOff = 0;
 		HtWHinv = null;
 	}
 
@@ -63,7 +65,7 @@ public class LinearLeastSquare {
 							.map(x -> Math.pow(x, 2)).reduce((x, y) -> x + y).getAsDouble());
 					approxGR[j] = ApproxGR;
 
-					double approxPR = approxGR[j] + (SpeedofLight * approxUserClkOff);
+					double approxPR = approxGR[j] + (SpeedofLight * approxRcvrClkOff);
 					deltaPR[j][0] = approxPR - PR[j];
 					int index = j;
 					IntStream.range(0, 3).forEach(x -> coeffA[index][x] = (satECEF[x] - estECEF[x]) / ApproxGR);
@@ -76,7 +78,7 @@ public class LinearLeastSquare {
 				SimpleMatrix DeltaPR = new SimpleMatrix(deltaPR);
 				SimpleMatrix DeltaX = HtWHinv.mult(Ht).mult(W).mult(DeltaPR);
 				IntStream.range(0, 3).forEach(x -> estECEF[x] = estECEF[x] + DeltaX.get(x, 0));
-				approxUserClkOff += (-DeltaX.get(3, 0)) / SpeedofLight;
+				approxRcvrClkOff += (-DeltaX.get(3, 0)) / SpeedofLight;
 
 			}
 
@@ -91,7 +93,7 @@ public class LinearLeastSquare {
 	}
 
 	public double getRcvrClkOff() {
-		return approxUserClkOff;
+		return approxRcvrClkOff;
 	}
 
 	public SimpleMatrix getCovdX() {
@@ -150,5 +152,62 @@ public class LinearLeastSquare {
 
 	public void setWeight(double[][] Weight) {
 		this.Weight = Weight;
+	}
+
+	public void computeRcvrInfo(boolean isStatic) {
+		computeRcvrInfo(estECEF, isStatic);
+
+	}
+
+	public void computeRcvrInfo(double[] userECEF, boolean isStatic) {
+		estVel = 0;
+		approxRcvrClkDrift = 0;
+		int SVcount = SV.size();
+
+		SimpleMatrix d = new SimpleMatrix(SVcount, 1);
+		SimpleMatrix unitLOS = new SimpleMatrix(SVcount, 3);
+		for (int i = 0; i < SVcount; i++) {
+			Satellite sat = SV.get(i);
+			double[] satECEF = sat.getECEF();
+			double ApproxGR = Math.sqrt(IntStream.range(0, 3).mapToDouble(x -> satECEF[x] - userECEF[x])
+					.map(x -> Math.pow(x, 2)).reduce((x, y) -> x + y).getAsDouble());
+			int rowNum = i;
+			IntStream.range(0, 3).forEach(j -> unitLOS.set(rowNum, j, (satECEF[j] - userECEF[j]) / ApproxGR));
+			double PRrate = sat.getPseudoRangeRate();
+			double SatClkDrift = SpeedofLight * sat.getSatClkDrift();
+			double[] SatVel = sat.getSatVel();
+			double SatVelLOS = IntStream.range(0, 3).mapToDouble(j -> SatVel[j] * unitLOS.get(rowNum, j)).reduce(0,
+					(j, k) -> j + k);
+			d.set(rowNum, 0, -(PRrate + SatClkDrift - SatVelLOS));
+
+		}
+		SimpleMatrix H;
+		SimpleMatrix unitVector = new SimpleMatrix(SVcount, 1);
+		unitVector.fill(1);
+		if (isStatic) {
+			H = unitVector;
+		} else {
+			H = unitLOS.concatColumns(unitVector);
+		}
+		SimpleMatrix Ht = H.transpose();
+		SimpleMatrix W = new SimpleMatrix(Weight);
+		SimpleMatrix HtWHinv = (Ht.mult(W).mult(H)).invert();
+		SimpleMatrix g = HtWHinv.mult(Ht).mult(W).mult(d);
+		if (isStatic) {
+			approxRcvrClkDrift = -g.get(0) / SpeedofLight;
+		} else {
+			estVel = Math
+					.sqrt(IntStream.range(0, 3).mapToDouble(i -> Math.pow(g.get(i), 2)).reduce(0, (x, y) -> x + y));
+			approxRcvrClkDrift = -g.get(3) / SpeedofLight;
+		}
+
+	}
+
+	public double getRcvrClkDrift() {
+		return approxRcvrClkDrift;
+	}
+
+	public double getEstVel() {
+		return estVel;
 	}
 }

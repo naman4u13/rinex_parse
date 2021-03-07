@@ -40,7 +40,13 @@ public class MainApp {
 
 	public static void main(String[] args) {
 
-		posEstimate(false, false, 4);
+//		double[][] A = new double[][] { { 1, 2, 3 }, { 4, 5, 6 }, { 7, 8, 9 } };
+//		double[][] B = new double[][] { { 11, 12, 13 }, { 14, 15, 16 }, { 17, 18, 19 } };
+//		SimpleMatrix a = new SimpleMatrix(A);
+//		SimpleMatrix b = new SimpleMatrix(B);
+//		SimpleMatrix c = a.elementMult(b);
+//		System.out.println(c.toString());
+		posEstimate(false, true, 2);
 	}
 
 	public static void posEstimate(boolean doIonoPlot, boolean doPosErrPlot, int estimatorType) {
@@ -53,7 +59,7 @@ public class MainApp {
 		String obs_path = "C:\\Users\\Naman\\Downloads\\NYA100NOR_S_20201000000_01D_30S_MO.rnx\\NYA100NOR_S_20201000000_01D_30S_MO.rnx";
 
 		Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path);
-		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\simpleKF\\NYA_test";
+		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\NYA_test2";
 		File output = new File(path + ".txt");
 		PrintStream stream;
 
@@ -131,7 +137,7 @@ public class MainApp {
 				WLS wls = new WLS(SV, ionoCoeff);
 				ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
 						.add(estimateError(wls.getEstECEF(), wls.getIonoCorrECEF(), userECEF, time));
-				double rcvrClkOff = wls.getRcvrClkOff();
+				// double rcvrClkOff = wls.getRcvrClkOff();
 				// double rcvrClkDrift = (double) computedECEF.get(2);
 				// RcvrClkMap.computeIfAbsent("Receiver Clock Offset", k -> new
 				// ArrayList<Double>()).add(rcvrClkOff);

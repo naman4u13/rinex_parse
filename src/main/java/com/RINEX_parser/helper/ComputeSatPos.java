@@ -160,29 +160,29 @@ public class ComputeSatPos {
 		modVel = Math.sqrt(modVel);
 		double[] ECEF_SatClkOff = new double[] { xk_ECEF, yk_ECEF, zk_ECEF, SatClockOffset };
 
-		double Vk_dot2 = (Ek_dot * Math.sqrt(1 - (Sat.getE() * Sat.getE()))) / (1 - (Sat.getE() * Math.cos(Ek)));
-		double Vk_dot3 = Math.sin(Ek) * Ek_dot * (1.0 + (Sat.getE() * Math.cos(Vk)))
-				/ (Math.sin(Vk) * (1.0 - (Sat.getE() * Math.cos(Ek))));
-		double ik_dot2 = Sat.getIDOT() + (2 * Vk_dot2 * ((Sat.getCis() * Math.cos(2 * argument_of_latitude))
-				- (Sat.getCic() * Math.sin(2 * argument_of_latitude))));
-		double uk_dot2 = Vk_dot2 - (2 * ((Sat.getCuc() * Math.sin(2 * argument_of_latitude))
-				- (Sat.getCus() * Math.cos(2 * argument_of_latitude))) * Vk_dot2);
-		double rk_dot2 = (A * Sat.getE() * Math.sin(Ek) * Ek_dot)
-				+ (-2 * ((Sat.getCrc() * Math.sin(2 * argument_of_latitude))
-						- (Sat.getCrs() * Math.cos(2 * argument_of_latitude))) * Vk_dot2);
-		double ascNode_dot2 = Sat.getOMEGA_DOT() - OMEGA_E_DOT;
-		double vxplane = (rk_dot2 * Math.cos(uk)) - (rk * Math.sin(uk) * uk_dot2);
-		double vyplane = (rk_dot2 * Math.sin(uk)) + (rk * Math.cos(uk) * uk_dot2);
-		double vx2 = (-xk_orbital * ascNode_dot2 * Math.sin(ascNode)) + (vxplane * Math.cos(ascNode))
-				- (vyplane * Math.sin(ascNode) * Math.cos(ik))
-				- (yk_orbital * ((ascNode_dot2 * Math.cos(ascNode) * Math.cos(ik))
-						- (ik_dot2 * Math.sin(ascNode) * Math.sin(ik))));
-		double vy2 = (xk_orbital * ascNode_dot2 * Math.cos(ascNode)) + (vxplane * Math.sin(ascNode))
-				+ (vyplane * Math.cos(ascNode) * Math.cos(ik))
-				- (yk_orbital * ((ascNode_dot2 * Math.sin(ascNode) * Math.cos(ik))
-						+ (ik_dot2 * Math.cos(ascNode) * Math.sin(ik))));
-		double vz2 = (yk_orbital * ik_dot2 * Math.cos(ik)) + (vyplane * Math.sin(ik));
-		double[] SV_velocity2 = { vx2, vy2, vz2 };
+//		double Vk_dot2 = (Ek_dot * Math.sqrt(1 - (Sat.getE() * Sat.getE()))) / (1 - (Sat.getE() * Math.cos(Ek)));
+//		double Vk_dot3 = Math.sin(Ek) * Ek_dot * (1.0 + (Sat.getE() * Math.cos(Vk)))
+//				/ (Math.sin(Vk) * (1.0 - (Sat.getE() * Math.cos(Ek))));
+//		double ik_dot2 = Sat.getIDOT() + (2 * Vk_dot2 * ((Sat.getCis() * Math.cos(2 * argument_of_latitude))
+//				- (Sat.getCic() * Math.sin(2 * argument_of_latitude))));
+//		double uk_dot2 = Vk_dot2 - (2 * ((Sat.getCuc() * Math.sin(2 * argument_of_latitude))
+//				- (Sat.getCus() * Math.cos(2 * argument_of_latitude))) * Vk_dot2);
+//		double rk_dot2 = (A * Sat.getE() * Math.sin(Ek) * Ek_dot)
+//				+ (-2 * ((Sat.getCrc() * Math.sin(2 * argument_of_latitude))
+//						- (Sat.getCrs() * Math.cos(2 * argument_of_latitude))) * Vk_dot2);
+//		double ascNode_dot2 = Sat.getOMEGA_DOT() - OMEGA_E_DOT;
+//		double vxplane = (rk_dot2 * Math.cos(uk)) - (rk * Math.sin(uk) * uk_dot2);
+//		double vyplane = (rk_dot2 * Math.sin(uk)) + (rk * Math.cos(uk) * uk_dot2);
+//		double vx2 = (-xk_orbital * ascNode_dot2 * Math.sin(ascNode)) + (vxplane * Math.cos(ascNode))
+//				- (vyplane * Math.sin(ascNode) * Math.cos(ik))
+//				- (yk_orbital * ((ascNode_dot2 * Math.cos(ascNode) * Math.cos(ik))
+//						- (ik_dot2 * Math.sin(ascNode) * Math.sin(ik))));
+//		double vy2 = (xk_orbital * ascNode_dot2 * Math.cos(ascNode)) + (vxplane * Math.sin(ascNode))
+//				+ (vyplane * Math.cos(ascNode) * Math.cos(ik))
+//				- (yk_orbital * ((ascNode_dot2 * Math.sin(ascNode) * Math.cos(ik))
+//						+ (ik_dot2 * Math.cos(ascNode) * Math.sin(ik))));
+//		double vz2 = (yk_orbital * ik_dot2 * Math.cos(ik)) + (vyplane * Math.sin(ik));
+//		double[] SV_velocity2 = { vx2, vy2, vz2 };
 		return new Object[] { ECEF_SatClkOff, SV_velocity, SV_clock_drift_derived };
 
 	}
