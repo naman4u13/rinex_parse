@@ -50,9 +50,13 @@ public class LinearLeastSquare {
 	public void estimate(double[] PR, double[][] Weight) {
 		intialize();
 		int SVcount = SV.size();
+		double error = Double.MAX_VALUE;
+		// Get Millimeter Accuracy, actually it takes atleast 5 iterations to converge
+		// to the result which is accurate more than micrometer scale
+		double threshold = 1e-3;
 		if (SVcount >= 4) {
 
-			for (int i = 0; i < 100; i++) {
+			while (error >= threshold) {
 				double[][] deltaPR = new double[SVcount][1];
 				// approx Geometric range or true range
 				double[] approxGR = new double[SVcount];
@@ -79,6 +83,8 @@ public class LinearLeastSquare {
 				SimpleMatrix DeltaX = HtWHinv.mult(Ht).mult(W).mult(DeltaPR);
 				IntStream.range(0, 3).forEach(x -> estECEF[x] = estECEF[x] + DeltaX.get(x, 0));
 				approxRcvrClkOff += (-DeltaX.get(3, 0)) / SpeedofLight;
+				error = Math.sqrt(IntStream.range(0, 3).mapToDouble(i -> Math.pow(DeltaX.get(i, 0), 2)).reduce(0,
+						(i, j) -> i + j));
 
 			}
 
@@ -98,6 +104,10 @@ public class LinearLeastSquare {
 
 	public SimpleMatrix getCovdX() {
 		return HtWHinv;
+	}
+
+	public void setCovdX(SimpleMatrix HtWHinv) {
+		this.HtWHinv = HtWHinv;
 	}
 
 	public double[] getPR() {
@@ -134,7 +144,9 @@ public class LinearLeastSquare {
 		int SVcount = SV.size();
 		double[][] Weight = new double[SVcount][SVcount];
 		IntStream.range(0, SVcount).forEach(i -> Weight[i][i] = 1);
-		estimate(getPR(), Weight);
+		LinearLeastSquare lls = new LinearLeastSquare(SV);
+		lls.estimate(getPR(), Weight);
+		setEstECEF(lls.getEstECEF());
 		double[] refECEF = estECEF;
 		refLatLon = ECEFtoLatLon.ecef2lla(refECEF);
 
@@ -209,5 +221,29 @@ public class LinearLeastSquare {
 
 	public double getEstVel() {
 		return estVel;
+	}
+
+	public void setEstECEF(double[] estECEF) {
+		this.estECEF = estECEF;
+	}
+
+	public void setEstVel(double estVel) {
+		this.estVel = estVel;
+	}
+
+	public void setApproxRcvrClkOff(double approxRcvrClkOff) {
+		this.approxRcvrClkOff = approxRcvrClkOff;
+	}
+
+	public void setApproxRcvrClkDrift(double approxRcvrClkDrift) {
+		this.approxRcvrClkDrift = approxRcvrClkDrift;
+	}
+
+	public ArrayList<Satellite> getSV() {
+		return SV;
+	}
+
+	public void setSV(ArrayList<Satellite> SV) {
+		this.SV = SV;
 	}
 }

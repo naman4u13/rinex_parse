@@ -3,23 +3,16 @@ package com.RINEX_parser.ComputeUserPos.Regression;
 import java.util.ArrayList;
 import java.util.stream.IntStream;
 
-import com.RINEX_parser.ComputeUserPos.Regression.Models.LinearLeastSquare;
+import com.RINEX_parser.ComputeUserPos.Regression.Models.DopplerLLS;
 import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.Satellite;
 
-public class WLS extends LinearLeastSquare {
-
-	public WLS(ArrayList<Satellite> SV, IonoCoeff ionoCoeff) {
+public class Doppler extends DopplerLLS {
+	public Doppler(ArrayList<Satellite> SV, IonoCoeff ionoCoeff) {
 		super(SV, ionoCoeff);
 
 		setWeight(SV);
 
-	}
-
-	public WLS(ArrayList<Satellite> SV) {
-		super(SV);
-
-		setWeight(SV);
 	}
 
 	@Override
@@ -31,11 +24,8 @@ public class WLS extends LinearLeastSquare {
 	}
 
 	public double[] getIonoCorrECEF() {
-
 		estimate(getIonoCorrPR());
 		System.out.println("Iono WGDOP - " + Math.sqrt(getCovdX().extractMatrix(0, 3, 0, 3).trace()));
-//		computeRcvrInfo(true);
-//		System.out.println("Rcvr Velocity - " + getEstVel() + "  Rcvr Clk Drift - " + getRcvrClkDrift());
 		return super.getEstECEF();
 	}
 
@@ -63,10 +53,18 @@ public class WLS extends LinearLeastSquare {
 	public void setWeight(ArrayList<Satellite> SV) {
 		int SVcount = SV.size();
 		ArrayList<double[]> AzmEle = getAzmEle();
-		double[][] Weight = new double[SVcount][SVcount];
-		IntStream.range(0, SVcount)
-				.forEach(i -> Weight[i][i] = 1 / computeCoVariance(SV.get(i).getCNo(), AzmEle.get(i)[0]));
-		super.setWeight(Weight);
+		double[][] Weight = new double[2 * SVcount][2 * SVcount];
+		IntStream.range(0, SVcount).forEach(i -> {
+			Weight[i][i] = 1 / computeCoVariance(SV.get(i).getCNo(), AzmEle.get(i)[0]);
+			Weight[SVcount + i][SVcount + i] = Weight[i][i];
+		});
+		double[][] normWeight = normalize(Weight);
+		// for Pseudorange measurement error is 10 meter and for Doppler it is 0.1 meter
+		IntStream.range(0, SVcount).forEach(i -> {
+			normWeight[i][i] = normWeight[i][i] / 100;
+			Weight[SVcount + i][SVcount + i] = Weight[SVcount + i][SVcount + i] / 0.01;
+		});
+		super.setWeight(normWeight);
 	}
 
 }

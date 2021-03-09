@@ -16,6 +16,7 @@ import java.util.stream.IntStream;
 import org.jfree.ui.RefineryUtilities;
 
 import com.RINEX_parser.ComputeUserPos.KalmanFilter.StaticEKF;
+import com.RINEX_parser.ComputeUserPos.Regression.Doppler;
 import com.RINEX_parser.ComputeUserPos.Regression.LS;
 import com.RINEX_parser.ComputeUserPos.Regression.WLS;
 import com.RINEX_parser.fileParser.NavigationRNX;
@@ -59,7 +60,7 @@ public class MainApp {
 		String obs_path = "C:\\Users\\Naman\\Downloads\\NYA100NOR_S_20201000000_01D_30S_MO.rnx\\NYA100NOR_S_20201000000_01D_30S_MO.rnx";
 
 		Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path);
-		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\NYA_test2";
+		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\NYA_dopplerWLStest";
 		File output = new File(path + ".txt");
 		PrintStream stream;
 
@@ -137,24 +138,43 @@ public class MainApp {
 				WLS wls = new WLS(SV, ionoCoeff);
 				ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
 						.add(estimateError(wls.getEstECEF(), wls.getIonoCorrECEF(), userECEF, time));
-				// double rcvrClkOff = wls.getRcvrClkOff();
-				// double rcvrClkDrift = (double) computedECEF.get(2);
-				// RcvrClkMap.computeIfAbsent("Receiver Clock Offset", k -> new
-				// ArrayList<Double>()).add(rcvrClkOff);
-				// RcvrClkMap.computeIfAbsent("Receiver Clock Drift", k -> new
-				// ArrayList<Double>()).add(rcvrClkDrift);
+
+//				RcvrClkMap.computeIfAbsent("Receiver Clock Offset", k -> new ArrayList<Double>())
+//						.add(wls.getRcvrClkOff());
+//				RcvrClkMap.computeIfAbsent("Receiver Clock Drift", k -> new ArrayList<Double>())
+//						.add(SpeedofLight * wls.getRcvrClkDrift());
 				break;
 			case 3:
+				Doppler doppler = new Doppler(SV, ionoCoeff);
+				ErrMap.computeIfAbsent("DopplerWLS", k -> new ArrayList<double[]>())
+						.add(estimateError(doppler.getEstECEF(), doppler.getIonoCorrECEF(), userECEF, time));
+				System.out.println("Rcvr Vel = " + doppler.getEstVel() + "  Rcvr Clk Off = " + doppler.getRcvrClkOff()
+						+ "  Rcvr Clk Drift = " + doppler.getRcvrClkDrift());
+				break;
+			case 4:
+				SVlist.add(SV);
+				break;
+			case 5:
 				ls = new LS(SV, ionoCoeff);
 				ErrMap.computeIfAbsent("LS", k -> new ArrayList<double[]>())
 						.add(estimateError(ls.getEstECEF(), ls.getIonoCorrECEF(), userECEF, time));
 				wls = new WLS(SV, ionoCoeff);
 				ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
 						.add(estimateError(wls.getEstECEF(), wls.getIonoCorrECEF(), userECEF, time));
+				doppler = new Doppler(SV, ionoCoeff);
+				ErrMap.computeIfAbsent("DopplerWLS", k -> new ArrayList<double[]>())
+						.add(estimateError(doppler.getEstECEF(), doppler.getIonoCorrECEF(), userECEF, time));
+
 				SVlist.add(SV);
 				break;
-			case 4:
-				SVlist.add(SV);
+			case 6:
+				wls = new WLS(SV, ionoCoeff);
+				ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
+						.add(estimateError(wls.getEstECEF(), wls.getIonoCorrECEF(), userECEF, time));
+				doppler = new Doppler(SV, ionoCoeff);
+				ErrMap.computeIfAbsent("DopplerWLS", k -> new ArrayList<double[]>())
+						.add(estimateError(doppler.getEstECEF(), doppler.getIonoCorrECEF(), userECEF, time));
+
 			}
 			timeList.add(time);
 
@@ -190,7 +210,7 @@ public class MainApp {
 			GraphErrMap.put(key + " Iono corrected LL Offset", IonLLdiffList);
 
 		}
-		if (estimatorType == 4 || estimatorType == 3) {
+		if (estimatorType == 4 || estimatorType == 5) {
 			ArrayList<Double> KalmanErr = new StaticEKF(SVlist, userECEF, ionoCoeff).compute(timeList, path);
 			GraphErrMap.put("KALMAN ECEF", KalmanErr);
 
