@@ -15,16 +15,15 @@ public class Doppler extends DopplerLLS {
 
 	}
 
-	@Override
-	public double[] getEstECEF() {
-		estimate(getPR());
+	public double[] getEstECEF(boolean isStatic) {
+		estimate(getPR(), isStatic);
 		System.out.println("\nWGDOP - " + Math.sqrt(getCovdX().extractMatrix(0, 3, 0, 3).trace()));
 		return super.getEstECEF();
 
 	}
 
-	public double[] getIonoCorrECEF() {
-		estimate(getIonoCorrPR());
+	public double[] getIonoCorrECEF(boolean isStatic) {
+		estimate(getIonoCorrPR(), isStatic);
 		System.out.println("Iono WGDOP - " + Math.sqrt(getCovdX().extractMatrix(0, 3, 0, 3).trace()));
 		return super.getEstECEF();
 	}

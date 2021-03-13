@@ -25,8 +25,10 @@ public class ObservationRNX {
 			double[] ECEF_XYZ = new double[3];
 			ArrayList<String> obs_types = new ArrayList<String>();
 			while (header.hasNextLine()) {
+
 				// Remove leading and trailing whitespace, as split method adds them
 				String line = header.nextLine().trim();
+
 				if (line.contains("APPROX POSITION XYZ")) {
 					ECEF_XYZ = Arrays.stream(line.split("\\s+")).limit(3).mapToDouble(x -> Double.parseDouble(x))
 							.toArray();
@@ -71,9 +73,15 @@ public class ObservationRNX {
 							}
 
 						}
+						try {
+							SV.add(new SatelliteModel(SVID, satInfo.get(type_index.get("C1C")),
+									satInfo.get(type_index.get("S1C")), satInfo.get(type_index.get("D1C"))));
+						} catch (Exception e) {
+							// TODO: handle exception
+							System.out.println("MAIN ERROR - " + msgLine);
 
-						SV.add(new SatelliteModel(SVID, satInfo.get(type_index.get("C1C")),
-								satInfo.get(type_index.get("S1C")), satInfo.get(type_index.get("D1C"))));
+						}
+
 					}
 				}
 

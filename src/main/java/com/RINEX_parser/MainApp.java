@@ -16,6 +16,7 @@ import java.util.stream.IntStream;
 import org.jfree.ui.RefineryUtilities;
 
 import com.RINEX_parser.ComputeUserPos.KalmanFilter.StaticEKF;
+import com.RINEX_parser.ComputeUserPos.Regression.DeltaRange;
 import com.RINEX_parser.ComputeUserPos.Regression.Doppler;
 import com.RINEX_parser.ComputeUserPos.Regression.LS;
 import com.RINEX_parser.ComputeUserPos.Regression.WLS;
@@ -57,10 +58,10 @@ public class MainApp {
 
 		String nav_path = "C:\\Users\\Naman\\Downloads\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
-		String obs_path = "C:\\Users\\Naman\\Downloads\\NYA100NOR_S_20201000000_01D_30S_MO.rnx\\NYA100NOR_S_20201000000_01D_30S_MO.rnx";
+		String obs_path = "C:\\Users\\Naman\\Downloads\\AGGO00ARG_S_20201001045_15M_01S_MO.crx\\AGGO00ARG_S_20201001045_15M_01S_MO.rnx";
 
 		Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path);
-		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\NYA_dopplerWLStest";
+		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\AGG_DR_test";
 		File output = new File(path + ".txt");
 		PrintStream stream;
 
@@ -127,7 +128,7 @@ public class MainApp {
 				}
 
 			}
-
+			SVlist.add(SV);
 			switch (estimatorType) {
 			case 1:
 				LS ls = new LS(SV, ionoCoeff);
@@ -147,40 +148,33 @@ public class MainApp {
 			case 3:
 				Doppler doppler = new Doppler(SV, ionoCoeff);
 				ErrMap.computeIfAbsent("DopplerWLS", k -> new ArrayList<double[]>())
-						.add(estimateError(doppler.getEstECEF(), doppler.getIonoCorrECEF(), userECEF, time));
+						.add(estimateError(doppler.getEstECEF(true), doppler.getIonoCorrECEF(true), userECEF, time));
 				System.out.println("Rcvr Vel = " + doppler.getEstVel() + "  Rcvr Clk Off = " + doppler.getRcvrClkOff()
 						+ "  Rcvr Clk Drift = " + doppler.getRcvrClkDrift());
 				break;
 			case 4:
-				SVlist.add(SV);
-				break;
-			case 5:
 				ls = new LS(SV, ionoCoeff);
 				ErrMap.computeIfAbsent("LS", k -> new ArrayList<double[]>())
 						.add(estimateError(ls.getEstECEF(), ls.getIonoCorrECEF(), userECEF, time));
 				wls = new WLS(SV, ionoCoeff);
 				ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
 						.add(estimateError(wls.getEstECEF(), wls.getIonoCorrECEF(), userECEF, time));
-				doppler = new Doppler(SV, ionoCoeff);
-				ErrMap.computeIfAbsent("DopplerWLS", k -> new ArrayList<double[]>())
-						.add(estimateError(doppler.getEstECEF(), doppler.getIonoCorrECEF(), userECEF, time));
-
-				SVlist.add(SV);
+//				doppler = new Doppler(SV, ionoCoeff);
+//				ErrMap.computeIfAbsent("DopplerWLS", k -> new ArrayList<double[]>())
+//						.add(estimateError(doppler.getEstECEF(true), doppler.getIonoCorrECEF(true), userECEF, time));
 				break;
-			case 6:
-				wls = new WLS(SV, ionoCoeff);
-				ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
-						.add(estimateError(wls.getEstECEF(), wls.getIonoCorrECEF(), userECEF, time));
-				doppler = new Doppler(SV, ionoCoeff);
-				ErrMap.computeIfAbsent("DopplerWLS", k -> new ArrayList<double[]>())
-						.add(estimateError(doppler.getEstECEF(), doppler.getIonoCorrECEF(), userECEF, time));
-
 			}
 			timeList.add(time);
 
 		}
 
-		int totalObsCount = ObsvMsgs.size();
+		if (estimatorType == 6 || estimatorType == 2) {
+			for (int i = 1; i < SVlist.size(); i++) {
+				DeltaRange dr = new DeltaRange(SVlist.get(i), SVlist.get(i - 1));
+				ErrMap.computeIfAbsent("DR", k -> new ArrayList<double[]>())
+						.add(estimateError(dr.getEstECEF(), dr.getEstECEF(), userECEF, timeList.get(i)));
+			}
+		}
 		HashMap<String, ArrayList<Double>> GraphErrMap = new HashMap<String, ArrayList<Double>>();
 
 		for (String key : ErrMap.keySet()) {
@@ -210,7 +204,7 @@ public class MainApp {
 			GraphErrMap.put(key + " Iono corrected LL Offset", IonLLdiffList);
 
 		}
-		if (estimatorType == 4 || estimatorType == 5) {
+		if (estimatorType == 5) {
 			ArrayList<Double> KalmanErr = new StaticEKF(SVlist, userECEF, ionoCoeff).compute(timeList, path);
 			GraphErrMap.put("KALMAN ECEF", KalmanErr);
 

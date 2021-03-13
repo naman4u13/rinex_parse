@@ -18,9 +18,8 @@ public class DopplerLLS extends LinearLeastSquare {
 		// TODO Auto-generated constructor stub
 	}
 
-	@Override
-	public void estimate(double[] PR) {
-		estimate(PR, getWeight());
+	public void estimate(double[] PR, boolean isStatic) {
+		estimate(PR, getWeight(), isStatic);
 	}
 
 	// reference - DopplerLLS-Aided GNSS Position Estimation With Weighted Least
@@ -28,8 +27,8 @@ public class DopplerLLS extends LinearLeastSquare {
 	// https://ieeexplore.ieee.org/document/5976479/
 	// reference - A-GPS: Assisted GPS, GNSS, and SBAS: Frank van Diggelen, chapter
 	// 8
-	@Override
-	public void estimate(double[] PR, double[][] Weight) {
+
+	public void estimate(double[] PR, double[][] Weight, boolean isStatic) {
 		double[] estECEF = new double[] { 0, 0, 0 };
 		SimpleMatrix HtWHinv = null;
 		double approxRcvrClkOff = 0;
@@ -85,18 +84,28 @@ public class DopplerLLS extends LinearLeastSquare {
 					Hfp[j][4] = 1;
 
 				}
-				// H = [{Hpp,0},{Hfp,Hfv}]
-				SimpleMatrix H = (new SimpleMatrix(Hpp))
-						.concatRows((new SimpleMatrix(Hfp)).concatColumns(new SimpleMatrix(Hfv)));
+				SimpleMatrix H;
+				if (isStatic) {
+					// H = [{Hpp,0},{Hfp}]
+					H = (new SimpleMatrix(Hpp)).concatRows((new SimpleMatrix(Hfp)));
+				} else {
+					// H = [{Hpp,0},{Hfp,Hfv}]
+					H = (new SimpleMatrix(Hpp))
+							.concatRows((new SimpleMatrix(Hfp)).concatColumns(new SimpleMatrix(Hfv)));
+				}
 				SimpleMatrix Ht = H.transpose();
 				SimpleMatrix W = new SimpleMatrix(Weight);
 				HtWHinv = (Ht.mult(W).mult(H)).invert();
 				SimpleMatrix DeltaY = new SimpleMatrix(deltaPR).concatRows(new SimpleMatrix(deltaPRrate));
 				SimpleMatrix DeltaX = HtWHinv.mult(Ht).mult(W).mult(DeltaY);
 				IntStream.range(0, 3).forEach(x -> estECEF[x] = estECEF[x] + DeltaX.get(x, 0));
-				IntStream.range(5, 8).forEach(x -> estVel[x - 5] = estVel[x - 5] + DeltaX.get(x, 0));
 				approxRcvrClkOff += DeltaX.get(3, 0) / SpeedofLight;
 				approxRcvrClkDrift += DeltaX.get(4, 0) / SpeedofLight;
+				// For Dynamic rcvr update the estVel
+				if (!isStatic) {
+					IntStream.range(5, 8).forEach(x -> estVel[x - 5] = estVel[x - 5] + DeltaX.get(x, 0));
+
+				}
 				error = Math.sqrt(IntStream.range(0, 3).mapToDouble(i -> Math.pow(DeltaX.get(i, 0), 2)).reduce(0,
 						(i, j) -> i + j));
 

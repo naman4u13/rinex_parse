@@ -111,12 +111,20 @@ public class LinearLeastSquare {
 	}
 
 	public double[] getPR() {
+		return getPR(this.SV);
+	}
+
+	public double[] getPR(ArrayList<Satellite> SV) {
 		// Removed satellite clock offset error from pseudorange
 		double[] PR = SV.stream().mapToDouble(x -> x.getPseudorange() + (SpeedofLight * x.getSatClkOff())).toArray();
 		return PR;
 	}
 
 	public double[] getIonoCorrPR() {
+		return getIonoCorrPR(this.SV);
+	}
+
+	public double[] getIonoCorrPR(ArrayList<Satellite> SV) {
 		if (Optional.ofNullable(ionoCoeff).isEmpty()) {
 			System.out.println("You have not provided IonoCoeff");
 			return null;
@@ -138,6 +146,11 @@ public class LinearLeastSquare {
 	}
 
 	public ArrayList<double[]> getAzmEle() {
+
+		return getAzmEle(this.SV);
+	}
+
+	public ArrayList<double[]> getAzmEle(ArrayList<Satellite> SV) {
 		if (Optional.ofNullable(AzmEle).isPresent()) {
 			return AzmEle;
 		}
