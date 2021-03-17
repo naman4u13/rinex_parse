@@ -67,7 +67,7 @@ public class StaticEKF {
 			ArrayList<Satellite> SV = SVlist.get(i);
 			double currentTime = timeList.get(i).getTimeInMillis() / 1E3;
 			double deltaT = (int) (currentTime - time);
-			runFilter1(deltaT, SV);
+			runFilter2(deltaT, SV);
 			SimpleMatrix x = kfObj.getState();
 			SimpleMatrix P = kfObj.getCovariance();
 			double[] estECEF = new double[] { x.get(0), x.get(1), x.get(2) };
@@ -142,8 +142,8 @@ public class StaticEKF {
 		ze[3][0] = x.get(3) + (x.get(4) * deltaT);
 		SimpleMatrix covdX = wls.getCovdX();
 		double[][] R = new double[4][4];
-		double trace = covdX.trace();
-		IntStream.range(0, 4).forEach(i -> R[i][i] = covdX.get(i, i) * ObsNoiseVar / trace);
+
+		IntStream.range(0, 4).forEach(i -> R[i][i] = covdX.get(i, i) * ObsNoiseVar);
 //		double sum = covdX.elementSum();
 //		IntStream.range(0, 4)
 //				.forEach(i -> IntStream.range(0, 4).forEach(j -> R[i][j] = covdX.get(i, j) * ObsNoiseVar / sum));

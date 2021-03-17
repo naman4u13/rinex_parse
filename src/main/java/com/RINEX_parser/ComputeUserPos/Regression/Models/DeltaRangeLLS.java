@@ -1,8 +1,6 @@
 package com.RINEX_parser.ComputeUserPos.Regression.Models;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.stream.IntStream;
 
 import org.ejml.simple.SimpleMatrix;
@@ -14,14 +12,17 @@ public class DeltaRangeLLS extends LinearLeastSquare {
 	private ArrayList<Satellite> SV_t;
 	private ArrayList<Satellite> SV_tmin1;
 
-	public DeltaRangeLLS(ArrayList<Satellite> SV_t, ArrayList<Satellite> SV_tmin1) {
+	public DeltaRangeLLS(ArrayList<Satellite> SV_t) {
+
 		super(SV_t);
-		this.SV_t = SV_t;
-		this.SV_tmin1 = SV_tmin1;
-		checkCompatibleSV();
-		setSV(SV_t);
 
 		// TODO Auto-generated constructor stub
+	}
+
+	public void setSVs(ArrayList<Satellite> SV_t, ArrayList<Satellite> SV_tmin1) {
+		this.SV_t = SV_t;
+		this.SV_tmin1 = SV_tmin1;
+		setSV(SV_t);
 	}
 
 	public void estimate() {
@@ -32,7 +33,7 @@ public class DeltaRangeLLS extends LinearLeastSquare {
 	public void estimate(double[][] Weight) {
 		double[] estECEF = new double[] { 0, 0, 0 };
 		SimpleMatrix HtWHinv = null;
-
+		double approxRcvrClkDrift = 0;
 		int SVcount = SV_t.size();
 
 		double error = Double.MAX_VALUE;
@@ -51,6 +52,7 @@ public class DeltaRangeLLS extends LinearLeastSquare {
 
 					Satellite sat_t = SV_t.get(i);
 					Satellite sat_tmin1 = SV_tmin1.get(i);
+
 					double[] satECEF_t = sat_t.getECEF();
 					double[] satECEF_tmin1 = sat_tmin1.getECEF();
 
@@ -75,13 +77,18 @@ public class DeltaRangeLLS extends LinearLeastSquare {
 				}
 				SimpleMatrix H;
 				H = new SimpleMatrix(H_t).minus(new SimpleMatrix(H_tmin1));
+				SimpleMatrix unitVector = new SimpleMatrix(SVcount, 1);
+				unitVector.fill(1.0);
+				H = H.concatColumns(unitVector);
 				SimpleMatrix Ht = H.transpose();
 				SimpleMatrix W = new SimpleMatrix(Weight);
+
 				HtWHinv = (Ht.mult(W).mult(H)).invert();
+
 				SimpleMatrix DeltaY = new SimpleMatrix(delta_DeltaRange);
 				SimpleMatrix DeltaX = HtWHinv.mult(Ht).mult(W).mult(DeltaY);
 				IntStream.range(0, 3).forEach(x -> estECEF[x] = estECEF[x] + DeltaX.get(x, 0));
-
+				approxRcvrClkDrift = DeltaX.get(3);
 				error = Math.sqrt(IntStream.range(0, 3).mapToDouble(i -> Math.pow(DeltaX.get(i, 0), 2)).reduce(0,
 						(i, j) -> i + j));
 				System.out.print("");
@@ -89,34 +96,11 @@ public class DeltaRangeLLS extends LinearLeastSquare {
 			}
 			setEstECEF(estECEF);
 			setCovdX(HtWHinv);
+			setApproxRcvrClkDrift(approxRcvrClkDrift / SpeedofLight);
 
 			return;
 		}
 		System.out.println("Satellite count is less than 4, can't compute user position");
-
-	}
-
-	// find out common satellite present on both epochs - t and t-1, and arrange
-	// them in same order
-	public void checkCompatibleSV() {
-		ArrayList<Satellite> new_SV_t = new ArrayList<Satellite>();
-		ArrayList<Satellite> new_SV_tmin1 = new ArrayList<Satellite>();
-		HashMap<Integer, Satellite> map = new HashMap<Integer, Satellite>();
-		HashSet<Integer> set = new HashSet<Integer>();
-		SV_t.stream().forEach(i -> {
-			map.put(i.getSVID(), i);
-			set.add(i.getSVID());
-		});
-
-		for (Satellite sat : SV_tmin1) {
-			int svid = sat.getSVID();
-			if (set.contains(svid)) {
-				new_SV_t.add(map.get(svid));
-				new_SV_tmin1.add(sat);
-			}
-		}
-		SV_t = new_SV_t;
-		SV_tmin1 = new_SV_tmin1;
 
 	}
 

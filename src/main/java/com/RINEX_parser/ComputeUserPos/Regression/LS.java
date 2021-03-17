@@ -25,7 +25,7 @@ public class LS extends LinearLeastSquare {
 	@Override
 	public double[] getEstECEF() {
 		estimate(getPR());
-		System.out.println("\nGDOP - " + Math.sqrt(getCovdX().extractMatrix(0, 3, 0, 3).trace()));
+		System.out.println("\nPDOP - " + Math.sqrt(getCovdX().extractMatrix(0, 3, 0, 3).trace()));
 		return super.getEstECEF();
 
 	}
@@ -33,7 +33,7 @@ public class LS extends LinearLeastSquare {
 	public double[] getIonoCorrECEF() {
 
 		estimate(getIonoCorrPR());
-		System.out.println("Iono GDOP - " + Math.sqrt(getCovdX().extractMatrix(0, 3, 0, 3).trace()));
+		System.out.println("Iono PDOP - " + Math.sqrt(getCovdX().extractMatrix(0, 3, 0, 3).trace()));
 		return super.getEstECEF();
 	}
 

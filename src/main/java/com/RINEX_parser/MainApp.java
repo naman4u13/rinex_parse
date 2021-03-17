@@ -42,26 +42,20 @@ public class MainApp {
 
 	public static void main(String[] args) {
 
-//		double[][] A = new double[][] { { 1, 2, 3 }, { 4, 5, 6 }, { 7, 8, 9 } };
-//		double[][] B = new double[][] { { 11, 12, 13 }, { 14, 15, 16 }, { 17, 18, 19 } };
-//		SimpleMatrix a = new SimpleMatrix(A);
-//		SimpleMatrix b = new SimpleMatrix(B);
-//		SimpleMatrix c = a.elementMult(b);
-//		System.out.println(c.toString());
-		posEstimate(false, true, 2);
+		posEstimate(false, false, true, 6);
 	}
 
-	public static void posEstimate(boolean doIonoPlot, boolean doPosErrPlot, int estimatorType) {
+	public static void posEstimate(boolean doWeightPlot, boolean doIonoPlot, boolean doPosErrPlot, int estimatorType) {
 
 		HashMap<Integer, ArrayList<IonoValue>> ionoValueMap = new HashMap<Integer, ArrayList<IonoValue>>();
 		double SpeedofLight = 299792458;
 
-		String nav_path = "C:\\Users\\Naman\\Downloads\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
+		String nav_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
-		String obs_path = "C:\\Users\\Naman\\Downloads\\AGGO00ARG_S_20201001045_15M_01S_MO.crx\\AGGO00ARG_S_20201001045_15M_01S_MO.rnx";
+		String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRUX00BEL_S_20201000300_15M_01S_MO.crx\\BRUX00BEL_S_20201000300_15M_01S_MO.rnx";
 
 		Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path);
-		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\AGG_DR_test";
+		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\testBRU.txt";
 		File output = new File(path + ".txt");
 		PrintStream stream;
 
@@ -82,6 +76,7 @@ public class MainApp {
 
 		HashMap<String, ArrayList<double[]>> ErrMap = new HashMap<String, ArrayList<double[]>>();
 		HashMap<String, ArrayList<Double>> RcvrClkMap = new HashMap<String, ArrayList<Double>>();
+		HashMap<String, ArrayList<Double>> WeightMap = new HashMap<String, ArrayList<Double>>();
 		ArrayList<Calendar> timeList = new ArrayList<Calendar>();
 		ArrayList<ArrayList<Satellite>> SVlist = new ArrayList<ArrayList<Satellite>>();
 		double[] userECEF = null;
@@ -168,11 +163,21 @@ public class MainApp {
 
 		}
 
-		if (estimatorType == 6 || estimatorType == 2) {
+		if (estimatorType == 6) {
 			for (int i = 1; i < SVlist.size(); i++) {
 				DeltaRange dr = new DeltaRange(SVlist.get(i), SVlist.get(i - 1));
 				ErrMap.computeIfAbsent("DR", k -> new ArrayList<double[]>())
 						.add(estimateError(dr.getEstECEF(), dr.getEstECEF(), userECEF, timeList.get(i)));
+				System.out.println("  Rcvr Clk Drift 1 = " + 1000 * SpeedofLight * dr.getRcvrClkDrift());
+				dr.computeRcvrInfo(userECEF, true);
+				System.out.println("  Rcvr Clk Drift 2 = " + 1000 * SpeedofLight * dr.getRcvrClkDrift());
+				double[][] weight = dr.getWeight();
+				ArrayList<Satellite> sats = dr.getSV();
+				for (int j = 0; j < sats.size(); j++) {
+					WeightMap.computeIfAbsent("" + sats.get(j).getSVID(), k -> new ArrayList<Double>())
+							.add(weight[j][j]);
+				}
+
 			}
 		}
 		HashMap<String, ArrayList<Double>> GraphErrMap = new HashMap<String, ArrayList<Double>>();
@@ -204,7 +209,7 @@ public class MainApp {
 			GraphErrMap.put(key + " Iono corrected LL Offset", IonLLdiffList);
 
 		}
-		if (estimatorType == 5) {
+		if (estimatorType == 5 || estimatorType == 4) {
 			ArrayList<Double> KalmanErr = new StaticEKF(SVlist, userECEF, ionoCoeff).compute(timeList, path);
 			GraphErrMap.put("KALMAN ECEF", KalmanErr);
 
@@ -235,6 +240,13 @@ public class MainApp {
 //			RefineryUtilities.positionFrameRandomly(chart);
 //			chart.setVisible(true);
 //		}
+		if (doWeightPlot) {
+			GraphPlotter chart = new GraphPlotter("Weight Matrix - ", "Weights", timeList, WeightMap);
+
+			chart.pack();
+			RefineryUtilities.positionFrameRandomly(chart);
+			chart.setVisible(true);
+		}
 
 	}
 
@@ -261,4 +273,5 @@ public class MainApp {
 
 		return new double[] { nonIonoError, ionoError, nonIonoDiff, ionoDiff };
 	}
+
 }
