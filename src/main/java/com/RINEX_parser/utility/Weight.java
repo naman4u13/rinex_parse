@@ -38,4 +38,10 @@ public class Weight {
 		return normWeight;
 	}
 
+	public static double[][] computeIdentityMat(int SVcount) {
+		double[][] Weight = new double[SVcount][SVcount];
+		IntStream.range(0, SVcount).forEach(i -> Weight[i][i] = 1);
+		return Weight;
+	}
+
 }

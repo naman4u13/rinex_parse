@@ -167,7 +167,7 @@ public class MainApp {
 			for (int i = 1; i < SVlist.size(); i++) {
 				DeltaRange dr = new DeltaRange(SVlist.get(i), SVlist.get(i - 1));
 				ErrMap.computeIfAbsent("DR", k -> new ArrayList<double[]>())
-						.add(estimateError(dr.getEstECEF(), dr.getEstECEF(), userECEF, timeList.get(i)));
+						.add(estimateError(dr.getEstECEF(), dr.getEstECEF(ionoCoeff), userECEF, timeList.get(i)));
 				System.out.println("  Rcvr Clk Drift 1 = " + 1000 * SpeedofLight * dr.getRcvrClkDrift());
 				dr.computeRcvrInfo(userECEF, true);
 				System.out.println("  Rcvr Clk Drift 2 = " + 1000 * SpeedofLight * dr.getRcvrClkDrift());

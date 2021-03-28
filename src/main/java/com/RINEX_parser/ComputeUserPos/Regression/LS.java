@@ -1,25 +1,25 @@
 package com.RINEX_parser.ComputeUserPos.Regression;
 
 import java.util.ArrayList;
-import java.util.stream.IntStream;
 
 import com.RINEX_parser.ComputeUserPos.Regression.Models.LinearLeastSquare;
 import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.Satellite;
+import com.RINEX_parser.utility.Weight;
 
 public class LS extends LinearLeastSquare {
 
 	public LS(ArrayList<Satellite> SV, IonoCoeff ionoCoeff) {
 		super(SV, ionoCoeff);
 		int SVcount = SV.size();
-		setWeight(SVcount);
+		setWeight(Weight.computeIdentityMat(SVcount));
 
 	}
 
 	public LS(ArrayList<Satellite> SV) {
 		super(SV);
 		int SVcount = SV.size();
-		setWeight(SVcount);
+		setWeight(Weight.computeIdentityMat(SVcount));
 	}
 
 	@Override
@@ -37,9 +37,4 @@ public class LS extends LinearLeastSquare {
 		return super.getEstECEF();
 	}
 
-	public void setWeight(int SVcount) {
-		double[][] Weight = new double[SVcount][SVcount];
-		IntStream.range(0, SVcount).forEach(i -> Weight[i][i] = 1);
-		super.setWeight(Weight);
-	}
 }
