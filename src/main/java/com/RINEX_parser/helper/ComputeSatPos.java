@@ -9,7 +9,7 @@ import org.ejml.simple.SimpleMatrix;
 import com.RINEX_parser.models.NavigationMsg;
 
 public class ComputeSatPos {
-	public static Object[] computeSatPos(NavigationMsg Sat, double tSV) {
+	public static Object[] computeSatPos(NavigationMsg Sat, double tSV, double tRX) {
 		TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
 		double Mu = 3.986005E14; // WGS-84 value of the Earth's universal gravitational parameter
 		long NumberSecondsWeek = 604800;
@@ -49,12 +49,13 @@ public class ComputeSatPos {
 		double assumed_Ek = 0;
 		double f_Ek = Sat.getM0() + (n * (tSV - Sat.getTOE() - coeff1));
 		double assumed_f_Ek = assumed_Ek + (Sat.getE() * Math.sin(assumed_Ek) * coeff2);
+
 		int count = 0;
-		while (count < 1000)// && delta_Ek != 0)
-		{
+		while (count < 10) {
 			delta_Ek = (f_Ek - assumed_f_Ek) / (1 + (Sat.getE() * Math.cos(assumed_Ek)) * coeff2);
 			assumed_Ek = assumed_Ek + delta_Ek;
 			assumed_f_Ek = assumed_Ek + (Sat.getE() * Math.sin(assumed_Ek) * coeff2);
+
 			count++;
 		}
 		double Ek = assumed_Ek;
@@ -102,14 +103,16 @@ public class ComputeSatPos {
 		double yk_orbital = rk * Math.sin(uk);
 
 		double ascNode = Sat.getOMEGA0() + ((Sat.getOMEGA_DOT() - OMEGA_E_DOT) * tk) - (OMEGA_E_DOT * Sat.getTOE());// Corrected
-																													// longitude
-																													// of
-																													// ascending
-																													// node
 
 		double xk_ECEF = (xk_orbital * Math.cos(ascNode)) - (yk_orbital * Math.cos(ik) * Math.sin(ascNode));
 		double yk_ECEF = (xk_orbital * Math.sin(ascNode)) + (yk_orbital * Math.cos(ik) * Math.cos(ascNode));
 		double zk_ECEF = yk_orbital * Math.sin(ik);
+
+		// eciArg = Earth_Rotation_Rate *(Propgation_Time)
+		double eciArg = OMEGA_E_DOT * (tRX - t);
+		double x_ECI = (xk_ECEF * Math.cos(eciArg)) + (yk_ECEF * Math.sin(eciArg));
+		double y_ECI = -(xk_ECEF * Math.sin(eciArg)) + (yk_ECEF * Math.cos(eciArg));
+		double z_ECI = zk_ECEF;
 
 		// Deriving SV_clock_drift
 		// Source - The study of GPS Time Transfer based on extended Kalman filter -
@@ -159,7 +162,7 @@ public class ComputeSatPos {
 		double modVel = Arrays.stream(SV_velocity).map(i -> i * i).reduce(0.0, (i, j) -> i + j);
 		modVel = Math.sqrt(modVel);
 		double[] ECEF_SatClkOff = new double[] { xk_ECEF, yk_ECEF, zk_ECEF, SatClockOffset };
-
+		double[] ECI = new double[] { x_ECI, y_ECI, z_ECI };
 //		double Vk_dot2 = (Ek_dot * Math.sqrt(1 - (Sat.getE() * Sat.getE()))) / (1 - (Sat.getE() * Math.cos(Ek)));
 //		double Vk_dot3 = Math.sin(Ek) * Ek_dot * (1.0 + (Sat.getE() * Math.cos(Vk)))
 //				/ (Math.sin(Vk) * (1.0 - (Sat.getE() * Math.cos(Ek))));
@@ -183,7 +186,7 @@ public class ComputeSatPos {
 //						+ (ik_dot2 * Math.cos(ascNode) * Math.sin(ik))));
 //		double vz2 = (yk_orbital * ik_dot2 * Math.cos(ik)) + (vyplane * Math.sin(ik));
 //		double[] SV_velocity2 = { vx2, vy2, vz2 };
-		return new Object[] { ECEF_SatClkOff, SV_velocity, SV_clock_drift_derived };
+		return new Object[] { ECEF_SatClkOff, SV_velocity, SV_clock_drift_derived, t, ECI };
 
 	}
 

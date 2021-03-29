@@ -42,7 +42,7 @@ public class MainApp {
 
 	public static void main(String[] args) {
 
-		posEstimate(false, false, true, 6);
+		posEstimate(false, false, true, 2);
 	}
 
 	public static void posEstimate(boolean doWeightPlot, boolean doIonoPlot, boolean doPosErrPlot, int estimatorType) {
@@ -55,7 +55,7 @@ public class MainApp {
 		String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRUX00BEL_S_20201000300_15M_01S_MO.crx\\BRUX00BEL_S_20201000300_15M_01S_MO.rnx";
 
 		Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path);
-		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\testBRU.txt";
+		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\testBRU15";
 		File output = new File(path + ".txt");
 		PrintStream stream;
 
@@ -103,19 +103,23 @@ public class MainApp {
 				int SVID = sat.getSVID();
 				double tSV = tRX - (sat.getPseudorange() / SpeedofLight);
 
-				Object[] SatParams = ComputeSatPos.computeSatPos(NavMsgs.get(SVID).get(order[i]), tSV);
+				Object[] SatParams = ComputeSatPos.computeSatPos(NavMsgs.get(SVID).get(order[i]), tSV, tRX);
 				double[] ECEF_SatClkOff = (double[]) SatParams[0];
 				double[] SatVel = (double[]) SatParams[1];
 				// Note this Clock Drift is derived, it not what we get from Ephemeris
 				double SatClkDrift = (double) SatParams[2];
-				SV.add(new Satellite(sat, Arrays.copyOfRange(ECEF_SatClkOff, 0, 3), ECEF_SatClkOff[3], tSV, SatVel,
-						SatClkDrift));
+				// GPS System time at time of transmission time
+				double t = (double) SatParams[3];
+				// ECI coordinates
+				double[] ECI = (double[]) SatParams[4];
+				SV.add(new Satellite(sat, Arrays.copyOfRange(ECEF_SatClkOff, 0, 3), ECEF_SatClkOff[3], t, tRX, SatVel,
+						SatClkDrift, ECI));
 				if (doIonoPlot) {
 
 					double[] AzmEle = ComputeAzmEle.computeAzmEle(userECEF, Arrays.copyOfRange(ECEF_SatClkOff, 0, 3));
 
 					double ionoCorr = ComputeIonoCorr.computeIonoCorr(AzmEle[0], AzmEle[1], userLatLon[0],
-							userLatLon[1], (long) tSV, ionoCoeff);
+							userLatLon[1], tRX, ionoCoeff);
 
 					ionoValueMap.computeIfAbsent(SVID, k -> new ArrayList<IonoValue>())
 							.add(new IonoValue(time.getTime(), ionoCorr, SVID));

@@ -63,16 +63,16 @@ public class LinearLeastSquare {
 				double[][] coeffA = new double[SVcount][4];
 				for (int j = 0; j < SVcount; j++) {
 
-					double[] satECEF = SV.get(j).getECEF();
+					double[] satECI = SV.get(j).getECI();
 
-					double ApproxGR = Math.sqrt(IntStream.range(0, 3).mapToDouble(x -> satECEF[x] - estECEF[x])
+					double ApproxGR = Math.sqrt(IntStream.range(0, 3).mapToDouble(x -> satECI[x] - estECEF[x])
 							.map(x -> Math.pow(x, 2)).reduce((x, y) -> x + y).getAsDouble());
 					approxGR[j] = ApproxGR;
 
 					double approxPR = approxGR[j] + (SpeedofLight * approxRcvrClkOff);
 					deltaPR[j][0] = approxPR - PR[j];
 					int index = j;
-					IntStream.range(0, 3).forEach(x -> coeffA[index][x] = (satECEF[x] - estECEF[x]) / ApproxGR);
+					IntStream.range(0, 3).forEach(x -> coeffA[index][x] = (satECI[x] - estECEF[x]) / ApproxGR);
 					coeffA[j][3] = 1;
 				}
 				SimpleMatrix H = new SimpleMatrix(coeffA);
@@ -133,7 +133,7 @@ public class LinearLeastSquare {
 		double[] PR = getPR();
 		double[] ionoCorr = IntStream.range(0, SV.size())
 				.mapToDouble(x -> ComputeIonoCorr.computeIonoCorr(AzmEle.get(x)[0], AzmEle.get(x)[1], refLatLon[0],
-						refLatLon[1], (long) SV.get(x).gettSV(), ionoCoeff))
+						refLatLon[1], (long) SV.get(x).gettRX(), ionoCoeff))
 				.toArray();
 
 //		System.out.println("IONO corrections");

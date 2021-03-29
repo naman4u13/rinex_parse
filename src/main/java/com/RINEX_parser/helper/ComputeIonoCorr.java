@@ -8,12 +8,12 @@ public class ComputeIonoCorr {
 	final static double SpeedofLight = 299792458;
 
 	public static double computeIonoCorr(double ElevAng_rad, double AzmAng_rad, double userLat_deg, double userLong_deg,
-			long tSV, IonoCoeff ionoCoeff) {
+			long tRX, IonoCoeff ionoCoeff) {
 
 		/*
 		 * double Central_Angle = (0.0137/(ElevAng+0.11))-0.022; double IPP_Lat =
 		 */
-		tSV = tSV % 86400;
+		tRX = tRX % 86400;
 		// double ElevAng_rad = Math.toRadians(ElevAng_deg);
 		// double AzmAng_rad = Math.toRadians(AzmAng_deg);
 		double userLat_rad = Math.toRadians(userLat_deg);
@@ -39,13 +39,13 @@ public class ComputeIonoCorr {
 		double geomagnetic_lat = (IPP_lat / Math.PI) + (0.064 * Math.cos(((IPP_long / Math.PI) - 1.617) * Math.PI));
 		double temp_geomagnetic_lat = temp_IPP_lat + (0.064 * Math.cos((temp_IPP_long - 1.617) * Math.PI));
 
-		double local_time = 4.32 * (1E4) * (IPP_long / Math.PI) + tSV;
+		double local_time = 4.32 * (1E4) * (IPP_long / Math.PI) + tRX;
 		if (local_time >= 86400) {
 			local_time = local_time - 86400;
 		} else if (local_time < 0) {
 			local_time = local_time + 86400;
 		}
-		double temp_local_time = 4.32 * (1E4) * (temp_IPP_long) + tSV;
+		double temp_local_time = 4.32 * (1E4) * (temp_IPP_long) + tRX;
 		if (temp_local_time >= 86400) {
 			temp_local_time = temp_local_time - 86400;
 		} else if (local_time < 0) {
@@ -90,7 +90,7 @@ public class ComputeIonoCorr {
 			iono_time = obliquity_factor * 5E-9;
 		}
 		double iono_corr = iono_time * SpeedofLight;
-		double timediff = local_time - tSV;
+		double timediff = local_time - tRX;
 		double temp_iono_time;
 		if (Math.abs(temp_phase) < 1.57) {
 			temp_iono_time = obliquity_factor
@@ -120,20 +120,6 @@ public class ComputeIonoCorr {
 		 * System.out.println("  local_time  " + local_time); System.out.println(1E4);
 		 */
 //6.691617002417778
-	}
-
-	public static double computeIonoCorr2(double ElevAng_rad, double AzmAng_rad, double userLat_deg,
-			double userLong_deg, long tSV, IonoCoeff ionoCoeff) {
-
-		// Computing each angle in semi-circles
-		double userLat = userLat_deg / 180;
-		double userLong = userLong_deg / 180;
-		double ElevAng = ElevAng_rad / Math.PI;
-		double AzmAng = AzmAng_rad / Math.PI;
-
-		double earth_central_angle = (0.0137 / (ElevAng + 0.11)) - 0.022;
-
-		return 0.0;
 	}
 
 }

@@ -34,7 +34,7 @@ public class WLS1 {
 				.map(x -> new double[] { Math.toDegrees(x[0]), Math.toDegrees(x[1]) }).collect(Collectors.toList());
 		double[] ionoCorr = IntStream
 				.range(0, SV.size()).mapToDouble(x -> ComputeIonoCorr.computeIonoCorr(AzmEle.get(x)[0],
-						AzmEle.get(x)[1], approxLatLon[0], approxLatLon[1], (long) SV.get(x).gettSV(), ionoCoeff))
+						AzmEle.get(x)[1], approxLatLon[0], approxLatLon[1], (long) SV.get(x).gettRX(), ionoCoeff))
 				.toArray();
 		System.out.println("IONO corrections");
 		IntStream.range(0, ionoCorr.length)
@@ -101,7 +101,7 @@ public class WLS1 {
 				System.out.println("GDOP - " + GDOP);
 			}
 
-			return new double[] { approxECEF[0], approxECEF[1], approxECEF[2], approxUserClkOff};
+			return new double[] { approxECEF[0], approxECEF[1], approxECEF[2], approxUserClkOff };
 
 		}
 		System.out.println("Satellite count is less than 4, can't compute user position");
