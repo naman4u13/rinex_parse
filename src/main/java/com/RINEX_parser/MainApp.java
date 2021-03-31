@@ -42,10 +42,11 @@ public class MainApp {
 
 	public static void main(String[] args) {
 
-		posEstimate(false, false, true, 2);
+		posEstimate(false, false, true, true, 2);
 	}
 
-	public static void posEstimate(boolean doWeightPlot, boolean doIonoPlot, boolean doPosErrPlot, int estimatorType) {
+	public static void posEstimate(boolean doWeightPlot, boolean doIonoPlot, boolean doPosErrPlot, boolean useSNX,
+			int estimatorType) {
 
 		HashMap<Integer, ArrayList<IonoValue>> ionoValueMap = new HashMap<Integer, ArrayList<IonoValue>>();
 		double SpeedofLight = 299792458;
@@ -72,7 +73,7 @@ public class MainApp {
 		IonoCoeff ionoCoeff = (IonoCoeff) NavMsgComp.get("ionoCoeff");
 		TimeCorrection timeCorr = (TimeCorrection) NavMsgComp.get("timeCorr");
 
-		ArrayList<ObservationMsg> ObsvMsgs = ObservationRNX.rinex_obsv_process(obs_path);
+		ArrayList<ObservationMsg> ObsvMsgs = ObservationRNX.rinex_obsv_process(obs_path, useSNX);
 
 		HashMap<String, ArrayList<double[]>> ErrMap = new HashMap<String, ArrayList<double[]>>();
 		HashMap<String, ArrayList<Double>> RcvrClkMap = new HashMap<String, ArrayList<Double>>();

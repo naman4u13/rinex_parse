@@ -12,7 +12,7 @@ import com.RINEX_parser.models.SatelliteModel;
 
 public class ObservationRNX {
 
-	public static ArrayList<ObservationMsg> rinex_obsv_process(String path) {
+	public static ArrayList<ObservationMsg> rinex_obsv_process(String path, boolean useSNX) {
 		File file = new File(path);
 		ArrayList<ObservationMsg> ObsvMsgs = new ArrayList<ObservationMsg>();
 		try {
@@ -23,19 +23,26 @@ public class ObservationRNX {
 			Scanner header = new Scanner(input.next());
 
 			double[] ECEF_XYZ = new double[3];
+			String siteCode = null;
 			ArrayList<String> obs_types = new ArrayList<String>();
 			while (header.hasNextLine()) {
 
 				// Remove leading and trailing whitespace, as split method adds them
 				String line = header.nextLine().trim();
+				if (line.contains("MARKER NAME")) {
+					siteCode = line.split("\\s+")[0].trim().substring(0, 4);
 
-				if (line.contains("APPROX POSITION XYZ")) {
+				} else if (line.contains("APPROX POSITION XYZ")) {
 					ECEF_XYZ = Arrays.stream(line.split("\\s+")).limit(3).mapToDouble(x -> Double.parseDouble(x))
 							.toArray();
 
 				} else if (line.contains("SYS / # / OBS TYPES")) {
 					obs_types.addAll(Arrays.asList(line.replaceAll("SYS / # / OBS TYPES", "").split("\\s+")));
 				}
+			}
+			if (useSNX) {
+				String snxPath = "C:\\Users\\Naman\\Downloads\\igs20P21004.ssc\\igs20P21004.ssc";
+				ECEF_XYZ = SINEX.sinex_process(snxPath, siteCode);
 			}
 			HashMap<String, Integer> type_index = new HashMap<String, Integer>();
 			int GPSindex = obs_types.indexOf("G");
@@ -86,11 +93,13 @@ public class ObservationRNX {
 				}
 
 				Msg.set_ECEF_XYZ(ECEF_XYZ);
+
 				Msg.set_RxTime(msgLines[0].trim().split("\\s+"));
 				Msg.setObsvSat(SV);
 				ObsvMsgs.add(Msg);
 
 			}
+			input.close();
 
 		} catch (
 

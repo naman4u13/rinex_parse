@@ -81,6 +81,7 @@ public class NavigationRNX {
 				}
 			}
 			SV.forEach((k, v) -> v.sort((x, y) -> Math.toIntExact(x.getTOC() - y.getTOC())));
+			input.close();
 
 		} catch (
 
