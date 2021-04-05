@@ -1,6 +1,7 @@
 package com.RINEX_parser.ComputeUserPos.Regression.Models;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -9,6 +10,7 @@ import org.ejml.simple.SimpleMatrix;
 
 import com.RINEX_parser.helper.ComputeAzmEle;
 import com.RINEX_parser.helper.ComputeIonoCorr;
+import com.RINEX_parser.helper.ComputeTropoCorr;
 import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.Satellite;
 import com.RINEX_parser.utility.ECEFtoLatLon;
@@ -49,6 +51,16 @@ public class LinearLeastSquare {
 
 	public void estimate(double[] PR, double[][] Weight) {
 		intialize();
+		process(PR, Weight);
+		// Below lines are commented out because they are computationally expensive
+		// It corrects SV ECEF to ECI transformation by removing rcvr clock bias
+//		SV.stream().forEach(i -> i.updateECI(approxRcvrClkOff));
+//		HtWHinv = null;
+//		process(PR, Weight);
+
+	}
+
+	public void process(double[] PR, double[][] Weight) {
 		int SVcount = SV.size();
 		double error = Double.MAX_VALUE;
 		// Get Millimeter Accuracy, actually it takes atleast 5 iterations to converge
@@ -91,7 +103,6 @@ public class LinearLeastSquare {
 			return;
 		}
 		System.out.println("Satellite count is less than 4, can't compute user position");
-
 	}
 
 	public double[] getEstECEF() {
@@ -135,14 +146,20 @@ public class LinearLeastSquare {
 				.mapToDouble(x -> ComputeIonoCorr.computeIonoCorr(AzmEle.get(x)[0], AzmEle.get(x)[1], refLatLon[0],
 						refLatLon[1], (long) SV.get(x).gettRX(), ionoCoeff))
 				.toArray();
+		Calendar calendar = Calendar.getInstance();
+		int DoY = SV.get(0).getTime().get(Calendar.DAY_OF_YEAR);
+		double[] tropoCorr = IntStream.range(0, SV.size())
 
-//		System.out.println("IONO corrections");
-//		IntStream.range(0, ionoCorr.length)
-//				.forEach(i -> System.out.print("GPS" + SV.get(i).getSVID() + " - " + ionoCorr[i] + " "));
-//
-//		System.out.println("");
+				.mapToDouble(x -> ComputeTropoCorr.computeTropoCorr(refLatLon[0], DoY, refLatLon[2], AzmEle.get(x)[0]))
+				.toArray();
 
-		return IntStream.range(0, PR.length).mapToDouble(x -> PR[x] - ionoCorr[x]).toArray();
+		System.out.println("TROPO corrections");
+		IntStream.range(0, tropoCorr.length)
+				.forEach(i -> System.out.print("GPS" + SV.get(i).getSVID() + " - " + tropoCorr[i] + " "));
+
+		System.out.println("");
+
+		return IntStream.range(0, PR.length).mapToDouble(x -> PR[x] - ionoCorr[x] - tropoCorr[x]).toArray();
 	}
 
 	public ArrayList<double[]> getAzmEle() {
@@ -193,11 +210,11 @@ public class LinearLeastSquare {
 		SimpleMatrix unitLOS = new SimpleMatrix(SVcount, 3);
 		for (int i = 0; i < SVcount; i++) {
 			Satellite sat = SV.get(i);
-			double[] satECEF = sat.getECEF();
-			double ApproxGR = Math.sqrt(IntStream.range(0, 3).mapToDouble(x -> satECEF[x] - userECEF[x])
+			double[] satECI = sat.getECI();
+			double ApproxGR = Math.sqrt(IntStream.range(0, 3).mapToDouble(x -> satECI[x] - userECEF[x])
 					.map(x -> Math.pow(x, 2)).reduce((x, y) -> x + y).getAsDouble());
 			int rowNum = i;
-			IntStream.range(0, 3).forEach(j -> unitLOS.set(rowNum, j, (satECEF[j] - userECEF[j]) / ApproxGR));
+			IntStream.range(0, 3).forEach(j -> unitLOS.set(rowNum, j, (satECI[j] - userECEF[j]) / ApproxGR));
 			double PRrate = sat.getPseudoRangeRate();
 			double SatClkDrift = SpeedofLight * sat.getSatClkDrift();
 			double[] SatVel = sat.getSatVel();

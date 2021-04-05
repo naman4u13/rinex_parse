@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintStream;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -42,7 +44,11 @@ public class MainApp {
 
 	public static void main(String[] args) {
 
+		Instant start = Instant.now();
 		posEstimate(false, false, true, true, 2);
+		Instant end = Instant.now();
+		System.out.println("EXECUTION TIME -  " + Duration.between(start, end));
+
 	}
 
 	public static void posEstimate(boolean doWeightPlot, boolean doIonoPlot, boolean doPosErrPlot, boolean useSNX,
@@ -53,10 +59,10 @@ public class MainApp {
 
 		String nav_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
-		String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRUX00BEL_S_20201000300_15M_01S_MO.crx\\BRUX00BEL_S_20201000300_15M_01S_MO.rnx";
+		String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\NYA100NOR_S_20201000000_01D_30S_MO.rnx\\NYA100NOR_S_20201000000_01D_30S_MO.rnx";
 
 		Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path);
-		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\testBRU15";
+		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\test";
 		File output = new File(path + ".txt");
 		PrintStream stream;
 
@@ -114,7 +120,7 @@ public class MainApp {
 				// ECI coordinates
 				double[] ECI = (double[]) SatParams[4];
 				SV.add(new Satellite(sat, Arrays.copyOfRange(ECEF_SatClkOff, 0, 3), ECEF_SatClkOff[3], t, tRX, SatVel,
-						SatClkDrift, ECI));
+						SatClkDrift, ECI, time));
 				if (doIonoPlot) {
 
 					double[] AzmEle = ComputeAzmEle.computeAzmEle(userECEF, Arrays.copyOfRange(ECEF_SatClkOff, 0, 3));
@@ -139,7 +145,7 @@ public class MainApp {
 				WLS wls = new WLS(SV, ionoCoeff);
 				ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
 						.add(estimateError(wls.getEstECEF(), wls.getIonoCorrECEF(), userECEF, time));
-
+//				wls.computeRcvrInfo(true);
 //				RcvrClkMap.computeIfAbsent("Receiver Clock Offset", k -> new ArrayList<Double>())
 //						.add(wls.getRcvrClkOff());
 //				RcvrClkMap.computeIfAbsent("Receiver Clock Drift", k -> new ArrayList<Double>())
@@ -173,15 +179,15 @@ public class MainApp {
 				DeltaRange dr = new DeltaRange(SVlist.get(i), SVlist.get(i - 1));
 				ErrMap.computeIfAbsent("DR", k -> new ArrayList<double[]>())
 						.add(estimateError(dr.getEstECEF(), dr.getEstECEF(ionoCoeff), userECEF, timeList.get(i)));
-				System.out.println("  Rcvr Clk Drift 1 = " + 1000 * SpeedofLight * dr.getRcvrClkDrift());
-				dr.computeRcvrInfo(userECEF, true);
-				System.out.println("  Rcvr Clk Drift 2 = " + 1000 * SpeedofLight * dr.getRcvrClkDrift());
-				double[][] weight = dr.getWeight();
-				ArrayList<Satellite> sats = dr.getSV();
-				for (int j = 0; j < sats.size(); j++) {
-					WeightMap.computeIfAbsent("" + sats.get(j).getSVID(), k -> new ArrayList<Double>())
-							.add(weight[j][j]);
-				}
+//				System.out.println("  Rcvr Clk Drift 1 = " + 1000 * SpeedofLight * dr.getRcvrClkDrift());
+//				dr.computeRcvrInfo(userECEF, true);
+//				System.out.println("  Rcvr Clk Drift 2 = " + 1000 * SpeedofLight * dr.getRcvrClkDrift());
+//				double[][] weight = dr.getWeight();
+//				ArrayList<Satellite> sats = dr.getSV();
+//				for (int j = 0; j < sats.size(); j++) {
+//					WeightMap.computeIfAbsent("" + sats.get(j).getSVID(), k -> new ArrayList<Double>())
+//							.add(weight[j][j]);
+//				}
 
 			}
 		}

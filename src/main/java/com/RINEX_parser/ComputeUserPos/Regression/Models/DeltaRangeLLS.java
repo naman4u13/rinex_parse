@@ -53,13 +53,13 @@ public class DeltaRangeLLS extends LinearLeastSquare {
 					Satellite sat_t = SV_t.get(i);
 					Satellite sat_tmin1 = SV_tmin1.get(i);
 
-					double[] satECEF_t = sat_t.getECEF();
-					double[] satECEF_tmin1 = sat_tmin1.getECEF();
+					double[] satECI_t = sat_t.getECI();
+					double[] satECI_tmin1 = sat_tmin1.getECI();
 
-					double approxGR_t = Math.sqrt(IntStream.range(0, 3).mapToDouble(x -> satECEF_t[x] - estECEF[x])
+					double approxGR_t = Math.sqrt(IntStream.range(0, 3).mapToDouble(x -> satECI_t[x] - estECEF[x])
 							.map(x -> Math.pow(x, 2)).reduce((x, y) -> x + y).getAsDouble());
 					double approxGR_tmin1 = Math
-							.sqrt(IntStream.range(0, 3).mapToDouble(x -> satECEF_tmin1[x] - estECEF[x])
+							.sqrt(IntStream.range(0, 3).mapToDouble(x -> satECI_tmin1[x] - estECEF[x])
 									.map(x -> Math.pow(x, 2)).reduce((x, y) -> x + y).getAsDouble());
 
 					double PRrate_t = sat_t.getPseudoRangeRate() + (SpeedofLight * sat_t.getSatClkDrift());
@@ -69,10 +69,9 @@ public class DeltaRangeLLS extends LinearLeastSquare {
 							- (sat_tmin1.getPseudorange() + (SpeedofLight * sat_tmin1.getSatClkOff()));
 					delta_DeltaRange[i][0] = deltaRange - (approxGR_t - approxGR_tmin1);
 
-					H_t[i] = IntStream.range(0, 3).mapToDouble(j -> -(satECEF_t[j] - estECEF[j]) / approxGR_t)
-							.toArray();
+					H_t[i] = IntStream.range(0, 3).mapToDouble(j -> -(satECI_t[j] - estECEF[j]) / approxGR_t).toArray();
 					H_tmin1[i] = IntStream.range(0, 3)
-							.mapToDouble(j -> -(satECEF_tmin1[j] - estECEF[j]) / approxGR_tmin1).toArray();
+							.mapToDouble(j -> -(satECI_tmin1[j] - estECEF[j]) / approxGR_tmin1).toArray();
 
 				}
 				SimpleMatrix H;
@@ -125,12 +124,12 @@ public class DeltaRangeLLS extends LinearLeastSquare {
 				Satellite sat_t = SV_t.get(i);
 				Satellite sat_tmin1 = SV_tmin1.get(i);
 
-				double[] satECEF_t = sat_t.getECEF();
-				double[] satECEF_tmin1 = sat_tmin1.getECEF();
+				double[] satECI_t = sat_t.getECI();
+				double[] satECI_tmin1 = sat_tmin1.getECI();
 
-				double approxGR_t = Math.sqrt(IntStream.range(0, 3).mapToDouble(j -> satECEF_t[j] - userECEF[j])
+				double approxGR_t = Math.sqrt(IntStream.range(0, 3).mapToDouble(j -> satECI_t[j] - userECEF[j])
 						.map(j -> Math.pow(j, 2)).reduce((j, k) -> j + k).getAsDouble());
-				double approxGR_tmin1 = Math.sqrt(IntStream.range(0, 3).mapToDouble(j -> satECEF_tmin1[j] - userECEF[j])
+				double approxGR_tmin1 = Math.sqrt(IntStream.range(0, 3).mapToDouble(j -> satECI_tmin1[j] - userECEF[j])
 						.map(j -> Math.pow(j, 2)).reduce((j, k) -> j + k).getAsDouble());
 
 				double PRrate_t = sat_t.getPseudoRangeRate() + (SpeedofLight * sat_t.getSatClkDrift());
@@ -138,12 +137,12 @@ public class DeltaRangeLLS extends LinearLeastSquare {
 				double deltaRange = 0.5 * 1 * (PRrate_t + PRrate_tmin1);
 				double diffRange = (sat_t.getPseudorange() + (SpeedofLight * sat_t.getSatClkOff()))
 						- (sat_tmin1.getPseudorange() + (SpeedofLight * sat_tmin1.getSatClkOff()));
-				H_t[i] = IntStream.range(0, 3).mapToDouble(j -> (satECEF_t[j] - userECEF[j]) / approxGR_t).toArray();
-				H_tmin1[i] = IntStream.range(0, 3).mapToDouble(j -> (satECEF_tmin1[j] - userECEF[j]) / approxGR_tmin1)
+				H_t[i] = IntStream.range(0, 3).mapToDouble(j -> (satECI_t[j] - userECEF[j]) / approxGR_t).toArray();
+				H_tmin1[i] = IntStream.range(0, 3).mapToDouble(j -> (satECI_tmin1[j] - userECEF[j]) / approxGR_tmin1)
 						.toArray();
 				int rowNum = i;
 				double temp = IntStream.range(0, 3)
-						.mapToDouble(j -> (H_t[rowNum][j] * satECEF_t[j]) - (H_tmin1[rowNum][j] * satECEF_tmin1[j]))
+						.mapToDouble(j -> (H_t[rowNum][j] * satECI_t[j]) - (H_tmin1[rowNum][j] * satECI_tmin1[j]))
 						.reduce(0, (j, k) -> j + k);
 				y[i][0] = deltaRange - temp;
 

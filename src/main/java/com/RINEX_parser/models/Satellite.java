@@ -1,6 +1,7 @@
 package com.RINEX_parser.models;
 
 import java.util.Arrays;
+import java.util.Calendar;
 
 public class Satellite extends SatelliteModel {
 
@@ -14,6 +15,8 @@ public class Satellite extends SatelliteModel {
 	private double[] ECI;
 	// Note this is GPS System time at time of Reception + Receiver clock offset
 	private double tRX;
+	// time
+	private Calendar time;
 
 	public double[] getECEF() {
 		return ECEF;
@@ -44,7 +47,7 @@ public class Satellite extends SatelliteModel {
 	}
 
 	public Satellite(int SVID, double pseudorange, double CNo, double doppler, double[] eCEF, double satClkOff,
-			double t, double tRX, double[] satVel, double satClkDrift, double[] ECI) {
+			double t, double tRX, double[] satVel, double satClkDrift, double[] ECI, Calendar time) {
 		super(SVID, pseudorange, CNo, doppler);
 		ECEF = eCEF;
 		SatClkOff = satClkOff;
@@ -53,10 +56,11 @@ public class Satellite extends SatelliteModel {
 		SatVel = satVel;
 		SatClkDrift = satClkDrift;
 		this.ECI = ECI;
+		this.time = time;
 	}
 
 	public Satellite(SatelliteModel satModel, double[] eCEF, double satClkOff, double t, double tRX, double[] satVel,
-			double satClkDrift, double[] ECI) {
+			double satClkDrift, double[] ECI, Calendar time) {
 		super(satModel);
 		ECEF = eCEF;
 		SatClkOff = satClkOff;
@@ -65,6 +69,7 @@ public class Satellite extends SatelliteModel {
 		SatVel = satVel;
 		SatClkDrift = satClkDrift;
 		this.ECI = ECI;
+		this.time = time;
 	}
 
 	public double getSatClkOff() {
@@ -112,6 +117,14 @@ public class Satellite extends SatelliteModel {
 
 	public void settRX(double tRX) {
 		this.tRX = tRX;
+	}
+
+	public Calendar getTime() {
+		return time;
+	}
+
+	public void setTime(Calendar time) {
+		this.time = time;
 	}
 
 }
