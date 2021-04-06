@@ -1,6 +1,7 @@
 package com.RINEX_parser.ComputeUserPos.Regression;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.stream.IntStream;
 
 import com.RINEX_parser.ComputeUserPos.Regression.Models.DopplerLLS;
@@ -9,8 +10,8 @@ import com.RINEX_parser.models.Satellite;
 import com.RINEX_parser.utility.Weight;
 
 public class Doppler extends DopplerLLS {
-	public Doppler(ArrayList<Satellite> SV, IonoCoeff ionoCoeff) {
-		super(SV, ionoCoeff);
+	public Doppler(ArrayList<Satellite> SV, IonoCoeff ionoCoeff, Calendar time) {
+		super(SV, ionoCoeff, time);
 
 		setWeight(SV);
 
@@ -50,14 +51,14 @@ public class Doppler extends DopplerLLS {
 	@Override
 	public void computeRcvrInfo(boolean isStatic) {
 		// TODO Auto-generated method stub
-		super.setWeight(Weight.computeWeight(getSV()));
+		super.setWeight(Weight.computeWeight(getSV(), getTime()));
 		super.computeRcvrInfo(isStatic);
 	}
 
 	@Override
 	public void computeRcvrInfo(double[] userECEF, boolean isStatic) {
 		// TODO Auto-generated method stub
-		super.setWeight(Weight.computeWeight(getSV()));
+		super.setWeight(Weight.computeWeight(getSV(), getTime()));
 		super.computeRcvrInfo(userECEF, isStatic);
 	}
 

@@ -1,6 +1,17 @@
 package com.RINEX_parser.helper;
 
+import java.util.Calendar;
 import java.util.stream.IntStream;
+
+import org.orekit.forces.gravity.potential.GravityFieldFactory;
+import org.orekit.forces.gravity.potential.NormalizedSphericalHarmonicsProvider;
+import org.orekit.frames.Frame;
+import org.orekit.frames.FramesFactory;
+import org.orekit.models.earth.Geoid;
+import org.orekit.models.earth.ReferenceEllipsoid;
+import org.orekit.time.AbsoluteDate;
+import org.orekit.time.TimeScalesFactory;
+import org.orekit.utils.IERSConventions;
 
 public class ComputeTropoCorr {
 
@@ -32,8 +43,17 @@ public class ComputeTropoCorr {
 	private double[] y;
 	private double[] coeffDry;
 	private double[] coeffWet;
+	// Semi-major axis or Equatorial radius
+	private final double ae = 6378137;
+	// flattening
+	private final double f = 1 / 298.257223563;
 
-	public ComputeTropoCorr(double lat, int D, double H) {
+	// Earth's rotation rate
+	private final double spin = 7.2921151467E-5;
+	// Earth's universal gravitational parameter
+	private final double GM = 3.986004418E14;
+
+	public ComputeTropoCorr(double[] llh, Calendar time) {
 		// TODO Auto-generated constructor stub
 		Y0 = new double[][] { { 1013.25, 299.65, 75.0, 6.30e-3, 2.77 }, { 1017.25, 294.15, 80.0, 6.05e-3, 3.15 },
 				{ 1015.75, 283.15, 76.0, 5.58e-3, 2.57 }, { 1011.75, 272.15, 77.5, 5.39e-3, 1.81 },
@@ -56,12 +76,22 @@ public class ComputeTropoCorr {
 				{ 5.8118019 * 1e-4, 1.4572752 * 1e-3, 4.3908931 * 1e-2 },
 				{ 5.9727542 * 1e-4, 1.5007428 * 1e-3, 4.4626982 * 1e-2 },
 				{ 6.1641693 * 1e-4, 1.7599082 * 1e-3, 5.4736038 * 1e-2 } };
-		this.lat = lat;
-		this.D = D;
-		this.H = H;
+		this.lat = llh[0];
+		this.D = time.get(Calendar.DAY_OF_YEAR);
+		NormalizedSphericalHarmonicsProvider nhsp = GravityFieldFactory.getNormalizedProvider(50, 50);
+		Frame frame = FramesFactory.getITRFEquinox(IERSConventions.IERS_2010, true);
 
-		// Geoid geoid = new Geoid(NormalizedSphericalHarmonicsProvider.O,
-		// referenceEllipsoid)
+		ReferenceEllipsoid refElp = new ReferenceEllipsoid(ae, f, frame, GM, spin);
+		Geoid geoid = new Geoid(nhsp, refElp);
+
+		AbsoluteDate date = new AbsoluteDate(time.getTime(), TimeScalesFactory.getGPS());
+		double lon = llh[1];
+		// Geoid Height
+		double geoidH = geoid.getUndulation(lat, lon, date);
+		// Ellipsoid Height
+		double ellipH = llh[2];
+		// Orthometric Height or MSL
+		H = ellipH - geoidH;
 		y = new double[5];
 		coeffDry = new double[3];
 		coeffWet = new double[3];

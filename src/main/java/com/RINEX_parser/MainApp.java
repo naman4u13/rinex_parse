@@ -16,6 +16,8 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.jfree.ui.RefineryUtilities;
+import org.orekit.data.DataProvidersManager;
+import org.orekit.data.DirectoryCrawler;
 
 import com.RINEX_parser.ComputeUserPos.KalmanFilter.StaticEKF;
 import com.RINEX_parser.ComputeUserPos.Regression.DeltaRange;
@@ -53,7 +55,7 @@ public class MainApp {
 
 	public static void posEstimate(boolean doWeightPlot, boolean doIonoPlot, boolean doPosErrPlot, boolean useSNX,
 			int estimatorType) {
-
+		buildGeoid();
 		HashMap<Integer, ArrayList<IonoValue>> ionoValueMap = new HashMap<Integer, ArrayList<IonoValue>>();
 		double SpeedofLight = 299792458;
 
@@ -62,7 +64,7 @@ public class MainApp {
 		String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\NYA100NOR_S_20201000000_01D_30S_MO.rnx\\NYA100NOR_S_20201000000_01D_30S_MO.rnx";
 
 		Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path);
-		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\Tropo_NYA2";
+		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\Tropo_NYAtest";
 		File output = new File(path + ".txt");
 		PrintStream stream;
 
@@ -137,12 +139,12 @@ public class MainApp {
 			SVlist.add(SV);
 			switch (estimatorType) {
 			case 1:
-				LS ls = new LS(SV, ionoCoeff);
+				LS ls = new LS(SV, ionoCoeff, time);
 				ErrMap.computeIfAbsent("LS", k -> new ArrayList<double[]>())
 						.add(estimateError(ls.getEstECEF(), ls.getIonoCorrECEF(), userECEF, time));
 				break;
 			case 2:
-				WLS wls = new WLS(SV, ionoCoeff);
+				WLS wls = new WLS(SV, ionoCoeff, time);
 				ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
 						.add(estimateError(wls.getEstECEF(), wls.getIonoCorrECEF(), userECEF, time));
 //				wls.computeRcvrInfo(true);
@@ -152,17 +154,17 @@ public class MainApp {
 //						.add(SpeedofLight * wls.getRcvrClkDrift());
 				break;
 			case 3:
-				Doppler doppler = new Doppler(SV, ionoCoeff);
+				Doppler doppler = new Doppler(SV, ionoCoeff, time);
 				ErrMap.computeIfAbsent("DopplerWLS", k -> new ArrayList<double[]>())
 						.add(estimateError(doppler.getEstECEF(true), doppler.getIonoCorrECEF(true), userECEF, time));
 				System.out.println("Rcvr Vel = " + doppler.getEstVel() + "  Rcvr Clk Off = " + doppler.getRcvrClkOff()
 						+ "  Rcvr Clk Drift = " + doppler.getRcvrClkDrift());
 				break;
 			case 4:
-				ls = new LS(SV, ionoCoeff);
+				ls = new LS(SV, ionoCoeff, time);
 				ErrMap.computeIfAbsent("LS", k -> new ArrayList<double[]>())
 						.add(estimateError(ls.getEstECEF(), ls.getIonoCorrECEF(), userECEF, time));
-				wls = new WLS(SV, ionoCoeff);
+				wls = new WLS(SV, ionoCoeff, time);
 				ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
 						.add(estimateError(wls.getEstECEF(), wls.getIonoCorrECEF(), userECEF, time));
 //				doppler = new Doppler(SV, ionoCoeff);
@@ -176,7 +178,7 @@ public class MainApp {
 
 		if (estimatorType == 6) {
 			for (int i = 1; i < SVlist.size(); i++) {
-				DeltaRange dr = new DeltaRange(SVlist.get(i), SVlist.get(i - 1));
+				DeltaRange dr = new DeltaRange(SVlist.get(i), SVlist.get(i - 1), timeList.get(i));
 				ErrMap.computeIfAbsent("DR", k -> new ArrayList<double[]>())
 						.add(estimateError(dr.getEstECEF(), dr.getEstECEF(ionoCoeff), userECEF, timeList.get(i)));
 //				System.out.println("  Rcvr Clk Drift 1 = " + 1000 * SpeedofLight * dr.getRcvrClkDrift());
@@ -221,7 +223,7 @@ public class MainApp {
 
 		}
 		if (estimatorType == 5 || estimatorType == 4) {
-			ArrayList<Double> KalmanErr = new StaticEKF(SVlist, userECEF, ionoCoeff).compute(timeList, path);
+			ArrayList<Double> KalmanErr = new StaticEKF(SVlist, userECEF, ionoCoeff, timeList).compute(path);
 			GraphErrMap.put("KALMAN ECEF", KalmanErr);
 
 		}
@@ -271,7 +273,7 @@ public class MainApp {
 				.map(x -> Math.pow(x, 2)).reduce(0, (a, b) -> a + b));
 		double[] nonIonoLatLon = ECEFtoLatLon.ecef2lla(nonIonoECEF);
 		double[] ionoLatLon = ECEFtoLatLon.ecef2lla(IonoECEF);
-
+		System.out.println("HEIGHT - " + ionoLatLon[0] + "  " + ionoLatLon[1] + "  " + ionoLatLon[2]);
 		double nonIonoDiff = LatLonDiff.getHaversineDistance(nonIonoLatLon, userLatLon);
 		double ionoDiff = LatLonDiff.getHaversineDistance(ionoLatLon, userLatLon);
 		// double nonIonoDiff = LatLonDiff.getVincentyDistance(nonIonoLatLon,
@@ -283,6 +285,14 @@ public class MainApp {
 				+ ionoError + " non Iono LL Diff - " + nonIonoDiff + " Iono LL Diff - " + ionoDiff);
 
 		return new double[] { nonIonoError, ionoError, nonIonoDiff, ionoDiff };
+	}
+
+	public static void buildGeoid() {
+
+		File orekitData = new File("C:\\Users\\Naman\\Downloads\\orekit-data-master\\orekit-data-master");
+		DataProvidersManager manager = DataProvidersManager.getInstance();
+		manager.addProvider(new DirectoryCrawler(orekitData));
+
 	}
 
 }

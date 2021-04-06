@@ -2,6 +2,7 @@ package com.RINEX_parser.utility;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.stream.IntStream;
 
 import com.RINEX_parser.ComputeUserPos.Regression.LS;
@@ -15,9 +16,9 @@ public class SatUtil {
 	private double[] approxECEF;
 	private double rcvrClkOff;
 
-	public SatUtil(ArrayList<Satellite> SV) {
+	public SatUtil(ArrayList<Satellite> SV, Calendar time) {
 
-		LS ls = new LS(SV);
+		LS ls = new LS(SV, time);
 		ls.estimate(ls.getPR());
 		approxECEF = ls.getEstECEF();
 		rcvrClkOff = ls.getRcvrClkOff();
@@ -28,8 +29,8 @@ public class SatUtil {
 		approxECEF = trueECEF;
 	}
 
-	public double[][] getWeightMat(ArrayList<Satellite> SV) {
-		WLS wls = new WLS(SV);
+	public double[][] getWeightMat(ArrayList<Satellite> SV, Calendar time) {
+		WLS wls = new WLS(SV, time);
 		return wls.getWeight();
 	}
 
@@ -48,8 +49,8 @@ public class SatUtil {
 
 	}
 
-	public double[] getIonoCorrPR(ArrayList<Satellite> SV, IonoCoeff ionoCoeff) {
-		LS ls = new LS(SV, ionoCoeff);
+	public double[] getIonoCorrPR(ArrayList<Satellite> SV, IonoCoeff ionoCoeff, Calendar time) {
+		LS ls = new LS(SV, ionoCoeff, time);
 		return ls.getIonoCorrPR();
 	}
 

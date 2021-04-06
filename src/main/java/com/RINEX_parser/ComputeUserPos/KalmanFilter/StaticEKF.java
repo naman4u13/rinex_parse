@@ -27,12 +27,15 @@ public class StaticEKF {
 	private IonoCoeff ionoCoeff;
 	private static final double SpeedofLight = 299792458;
 	private int ObsNoiseVar;
+	private ArrayList<Calendar> timeList;
 
-	public StaticEKF(ArrayList<ArrayList<Satellite>> SVlist, double[] trueUserECEF, IonoCoeff ionoCoeff) {
+	public StaticEKF(ArrayList<ArrayList<Satellite>> SVlist, double[] trueUserECEF, IonoCoeff ionoCoeff,
+			ArrayList<Calendar> timeList) {
 		this.SVlist = SVlist;
 		this.trueUserECEF = trueUserECEF;
 		this.ionoCoeff = ionoCoeff;
-		satUtil = new SatUtil(SVlist.get(0));
+		this.timeList = timeList;
+		satUtil = new SatUtil(SVlist.get(0), timeList.get(0));
 		double[] approxECEF = satUtil.getUserECEF();
 		System.out.println("True User ECEF - "
 				+ Arrays.stream(trueUserECEF).mapToObj(i -> String.valueOf(i)).reduce("", (i, j) -> i + " " + j));
@@ -55,7 +58,7 @@ public class StaticEKF {
 		kfObj.setState(x, P);
 	}
 
-	public ArrayList<Double> compute(ArrayList<Calendar> timeList, String path) {
+	public ArrayList<Double> compute(String path) {
 
 		ArrayList<Double> errList = new ArrayList<Double>();
 		ArrayList<Double> errCovList = new ArrayList<Double>();
@@ -67,7 +70,7 @@ public class StaticEKF {
 			ArrayList<Satellite> SV = SVlist.get(i);
 			double currentTime = timeList.get(i).getTimeInMillis() / 1E3;
 			double deltaT = (int) (currentTime - time);
-			runFilter2(deltaT, SV);
+			runFilter2(deltaT, SV, timeList.get(i));
 			SimpleMatrix x = kfObj.getState();
 			SimpleMatrix P = kfObj.getCovariance();
 			double[] estECEF = new double[] { x.get(0), x.get(1), x.get(2) };
@@ -93,7 +96,7 @@ public class StaticEKF {
 		return errList;
 	}
 
-	public void runFilter1(double deltaT, ArrayList<Satellite> SV) {
+	public void runFilter1(double deltaT, ArrayList<Satellite> SV, Calendar time) {
 
 		int SVcount = SV.size();
 		double[][] unitLOS = satUtil.getUnitLOS(SV);
@@ -108,7 +111,7 @@ public class StaticEKF {
 		kfObj.predict();
 		double[][] z = new double[SVcount][1];
 		// Compute Iono corrections
-		double[] ionoCorrPR = satUtil.getIonoCorrPR(SV, ionoCoeff);
+		double[] ionoCorrPR = satUtil.getIonoCorrPR(SV, ionoCoeff, time);
 		// Removed satellite clock offset error and Iono errors from pseudorange
 		IntStream.range(0, SVcount).forEach(i -> z[i][0] = ionoCorrPR[i]);
 		double[][] ze = new double[SVcount][1];
@@ -125,14 +128,14 @@ public class StaticEKF {
 
 	}
 
-	public void runFilter2(double deltaT, ArrayList<Satellite> SV) {
+	public void runFilter2(double deltaT, ArrayList<Satellite> SV, Calendar time) {
 		double[][] H = new double[4][5];
 		IntStream.range(0, 4).forEach(i -> H[i][i] = 1);
 		H[3][4] = deltaT;
 		kfObj.configure(deltaT, H);
 		kfObj.predict();
 
-		WLS wls = new WLS(SV, ionoCoeff);
+		WLS wls = new WLS(SV, ionoCoeff, time);
 
 		double[] mECEF = wls.getIonoCorrECEF();
 		double[][] z = new double[][] { { mECEF[0] }, { mECEF[1] }, { mECEF[2] }, { wls.getRcvrClkOff() } };

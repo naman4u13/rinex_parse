@@ -1,6 +1,7 @@
 package com.RINEX_parser.ComputeUserPos.Regression.Models;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.stream.IntStream;
 
 import org.ejml.simple.SimpleMatrix;
@@ -12,9 +13,9 @@ public class DeltaRangeLLS extends LinearLeastSquare {
 	private ArrayList<Satellite> SV_t;
 	private ArrayList<Satellite> SV_tmin1;
 
-	public DeltaRangeLLS(ArrayList<Satellite> SV_t) {
+	public DeltaRangeLLS(ArrayList<Satellite> SV_t, Calendar time) {
 
-		super(SV_t);
+		super(SV_t, time);
 
 		// TODO Auto-generated constructor stub
 	}

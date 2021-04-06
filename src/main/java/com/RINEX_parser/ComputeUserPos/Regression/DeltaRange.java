@@ -1,6 +1,7 @@
 package com.RINEX_parser.ComputeUserPos.Regression;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.HashSet;
 
@@ -11,9 +12,9 @@ import com.RINEX_parser.utility.Weight;
 
 public class DeltaRange extends DeltaRangeLLS {
 
-	public DeltaRange(ArrayList<Satellite> SV_t, ArrayList<Satellite> SV_tmin1) {
+	public DeltaRange(ArrayList<Satellite> SV_t, ArrayList<Satellite> SV_tmin1, Calendar time) {
 		// Reduntant as correct SV will be set below
-		super(SV_t);
+		super(SV_t, time);
 		// Correct SV will now be set
 		checkCompatibleSV(SV_t, SV_tmin1);
 
@@ -28,7 +29,7 @@ public class DeltaRange extends DeltaRangeLLS {
 	}
 
 	public double[] getEstECEF(IonoCoeff ionoCoeff) {
-		WLS wls = new WLS(getSV(), ionoCoeff);
+		WLS wls = new WLS(getSV(), ionoCoeff, getTime());
 		double[] userECEF = wls.getIonoCorrECEF();
 		estimate(userECEF);
 		System.out.println("\nPDOP - " + Math.sqrt(getCovdX().extractMatrix(0, 3, 0, 3).trace()));

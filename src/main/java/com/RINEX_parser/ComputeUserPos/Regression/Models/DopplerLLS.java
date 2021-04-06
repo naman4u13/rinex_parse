@@ -2,6 +2,7 @@ package com.RINEX_parser.ComputeUserPos.Regression.Models;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.stream.IntStream;
 
 import org.ejml.simple.SimpleMatrix;
@@ -13,8 +14,8 @@ public class DopplerLLS extends LinearLeastSquare {
 
 	private final static double SpeedofLight = 299792458;
 
-	public DopplerLLS(ArrayList<Satellite> SV, IonoCoeff ionoCoeff) {
-		super(SV, ionoCoeff);
+	public DopplerLLS(ArrayList<Satellite> SV, IonoCoeff ionoCoeff, Calendar time) {
+		super(SV, ionoCoeff, time);
 		// TODO Auto-generated constructor stub
 	}
 

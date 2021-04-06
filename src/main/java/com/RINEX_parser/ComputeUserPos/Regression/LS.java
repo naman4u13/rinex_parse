@@ -1,6 +1,7 @@
 package com.RINEX_parser.ComputeUserPos.Regression;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 
 import com.RINEX_parser.ComputeUserPos.Regression.Models.LinearLeastSquare;
 import com.RINEX_parser.models.IonoCoeff;
@@ -9,15 +10,15 @@ import com.RINEX_parser.utility.Weight;
 
 public class LS extends LinearLeastSquare {
 
-	public LS(ArrayList<Satellite> SV, IonoCoeff ionoCoeff) {
-		super(SV, ionoCoeff);
+	public LS(ArrayList<Satellite> SV, IonoCoeff ionoCoeff, Calendar time) {
+		super(SV, ionoCoeff, time);
 		int SVcount = SV.size();
 		setWeight(Weight.computeIdentityMat(SVcount));
 
 	}
 
-	public LS(ArrayList<Satellite> SV) {
-		super(SV);
+	public LS(ArrayList<Satellite> SV, Calendar time) {
+		super(SV, time);
 		int SVcount = SV.size();
 		setWeight(Weight.computeIdentityMat(SVcount));
 	}

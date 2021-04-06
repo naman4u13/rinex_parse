@@ -28,15 +28,20 @@ public class LinearLeastSquare {
 	private ArrayList<double[]> AzmEle;
 	private double estVel = 0;
 	private double approxRcvrClkDrift = 0;
+	// Regional GPS time
+	private Calendar time;
 
-	public LinearLeastSquare(ArrayList<Satellite> SV, IonoCoeff ionoCoeff) {
+	public LinearLeastSquare(ArrayList<Satellite> SV, IonoCoeff ionoCoeff, Calendar time) {
 		this.SV = SV;
 		this.ionoCoeff = ionoCoeff;
+		this.time = time;
 
 	}
 
-	public LinearLeastSquare(ArrayList<Satellite> SV) {
+	public LinearLeastSquare(ArrayList<Satellite> SV, Calendar time) {
 		this.SV = SV;
+		this.time = time;
+
 	}
 
 	public void estimate(double[] PR) {
@@ -146,9 +151,8 @@ public class LinearLeastSquare {
 				.mapToDouble(x -> ComputeIonoCorr.computeIonoCorr(AzmEle.get(x)[0], AzmEle.get(x)[1], refLatLon[0],
 						refLatLon[1], (long) SV.get(x).gettRX(), ionoCoeff))
 				.toArray();
-		// Calendar calendar = Calendar.getInstance();
-		int DoY = SV.get(0).getTime().get(Calendar.DAY_OF_YEAR);
-		ComputeTropoCorr tropo = new ComputeTropoCorr(refLatLon[0], DoY, refLatLon[2]);
+
+		ComputeTropoCorr tropo = new ComputeTropoCorr(refLatLon, SV.get(0).getTime());
 		double[] tropoCorr = IntStream.range(0, SV.size())
 
 				.mapToDouble(x -> tropo.getSlantDelay(AzmEle.get(x)[0])).toArray();
@@ -174,7 +178,7 @@ public class LinearLeastSquare {
 		int SVcount = SV.size();
 		double[][] Weight = new double[SVcount][SVcount];
 		IntStream.range(0, SVcount).forEach(i -> Weight[i][i] = 1);
-		LinearLeastSquare lls = new LinearLeastSquare(SV);
+		LinearLeastSquare lls = new LinearLeastSquare(SV, time);
 		lls.estimate(getPR(), Weight);
 		setEstECEF(lls.getEstECEF());
 		double[] refECEF = estECEF;
@@ -275,5 +279,13 @@ public class LinearLeastSquare {
 
 	public void setSV(ArrayList<Satellite> SV) {
 		this.SV = SV;
+	}
+
+	public Calendar getTime() {
+		return time;
+	}
+
+	public void setTime(Calendar time) {
+		this.time = time;
 	}
 }
