@@ -2,10 +2,13 @@ package com.RINEX_parser.utility;
 
 public class ECEFtoLatLon {
 
-	// Used Equatorial Earth Radius
+	// All are WGS-84 params
+	// Semi-major axis or Equatorial radius
 	public static final double a = 6378137;
-	public static final double f = 0.0034;
-	public static final double b = 6.3568e6;
+	// flattening
+	public static final double f = 1 / 298.257223563;
+	// Semi-minor axis or Polar radius
+	public static final double b = 6356752.314245;
 	public static final double e = Math.sqrt((Math.pow(a, 2) - Math.pow(b, 2)) / Math.pow(a, 2));
 	public static final double e2 = Math.sqrt((Math.pow(a, 2) - Math.pow(b, 2)) / Math.pow(b, 2));
 

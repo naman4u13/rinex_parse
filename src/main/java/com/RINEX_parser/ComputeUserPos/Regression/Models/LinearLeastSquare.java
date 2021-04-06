@@ -146,12 +146,12 @@ public class LinearLeastSquare {
 				.mapToDouble(x -> ComputeIonoCorr.computeIonoCorr(AzmEle.get(x)[0], AzmEle.get(x)[1], refLatLon[0],
 						refLatLon[1], (long) SV.get(x).gettRX(), ionoCoeff))
 				.toArray();
-		Calendar calendar = Calendar.getInstance();
+		// Calendar calendar = Calendar.getInstance();
 		int DoY = SV.get(0).getTime().get(Calendar.DAY_OF_YEAR);
+		ComputeTropoCorr tropo = new ComputeTropoCorr(refLatLon[0], DoY, refLatLon[2]);
 		double[] tropoCorr = IntStream.range(0, SV.size())
 
-				.mapToDouble(x -> ComputeTropoCorr.computeTropoCorr(refLatLon[0], DoY, refLatLon[2], AzmEle.get(x)[0]))
-				.toArray();
+				.mapToDouble(x -> tropo.getSlantDelay(AzmEle.get(x)[0])).toArray();
 
 		System.out.println("TROPO corrections");
 		IntStream.range(0, tropoCorr.length)

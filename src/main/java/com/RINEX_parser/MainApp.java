@@ -62,7 +62,7 @@ public class MainApp {
 		String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\NYA100NOR_S_20201000000_01D_30S_MO.rnx\\NYA100NOR_S_20201000000_01D_30S_MO.rnx";
 
 		Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path);
-		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\test";
+		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\Tropo_NYA2";
 		File output = new File(path + ".txt");
 		PrintStream stream;
 
