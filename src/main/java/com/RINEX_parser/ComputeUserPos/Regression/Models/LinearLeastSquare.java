@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.ejml.simple.SimpleMatrix;
+import org.orekit.models.earth.Geoid;
 
 import com.RINEX_parser.helper.ComputeAzmEle;
 import com.RINEX_parser.helper.ComputeIonoCorr;
@@ -152,18 +153,27 @@ public class LinearLeastSquare {
 						refLatLon[1], (long) SV.get(x).gettRX(), ionoCoeff))
 				.toArray();
 
-		ComputeTropoCorr tropo = new ComputeTropoCorr(refLatLon, SV.get(0).getTime());
+		return IntStream.range(0, PR.length).mapToDouble(x -> PR[x] - ionoCorr[x]).toArray();
+	}
+
+	public double[] getTropoCorrPR(double[] refLatLon, Geoid geoid) {
+		return getTropoCorrPR(this.SV, refLatLon, geoid);
+	}
+
+	public double[] getTropoCorrPR(ArrayList<Satellite> SV, double[] refLatLon, Geoid geoid) {
+		ArrayList<double[]> AzmEle = getAzmEle();
+		double[] PR = getIonoCorrPR();
+		ComputeTropoCorr tropo = new ComputeTropoCorr(refLatLon, time, geoid);
 		double[] tropoCorr = IntStream.range(0, SV.size())
 
 				.mapToDouble(x -> tropo.getSlantDelay(AzmEle.get(x)[0])).toArray();
-
 		System.out.println("TROPO corrections");
 		IntStream.range(0, tropoCorr.length)
 				.forEach(i -> System.out.print("GPS" + SV.get(i).getSVID() + " - " + tropoCorr[i] + " "));
 
 		System.out.println("");
+		return IntStream.range(0, PR.length).mapToDouble(x -> PR[x] - tropoCorr[x]).toArray();
 
-		return IntStream.range(0, PR.length).mapToDouble(x -> PR[x] - ionoCorr[x] - tropoCorr[x]).toArray();
 	}
 
 	public ArrayList<double[]> getAzmEle() {

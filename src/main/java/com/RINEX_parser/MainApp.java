@@ -18,6 +18,14 @@ import java.util.stream.IntStream;
 import org.jfree.ui.RefineryUtilities;
 import org.orekit.data.DataProvidersManager;
 import org.orekit.data.DirectoryCrawler;
+import org.orekit.forces.gravity.potential.GravityFieldFactory;
+import org.orekit.forces.gravity.potential.NormalizedSphericalHarmonicsProvider;
+import org.orekit.frames.Frame;
+import org.orekit.frames.FramesFactory;
+import org.orekit.frames.ITRFVersion;
+import org.orekit.models.earth.Geoid;
+import org.orekit.models.earth.ReferenceEllipsoid;
+import org.orekit.utils.IERSConventions;
 
 import com.RINEX_parser.ComputeUserPos.KalmanFilter.StaticEKF;
 import com.RINEX_parser.ComputeUserPos.Regression.DeltaRange;
@@ -55,16 +63,16 @@ public class MainApp {
 
 	public static void posEstimate(boolean doWeightPlot, boolean doIonoPlot, boolean doPosErrPlot, boolean useSNX,
 			int estimatorType) {
-		buildGeoid();
+		Geoid geoid = buildGeoid();
 		HashMap<Integer, ArrayList<IonoValue>> ionoValueMap = new HashMap<Integer, ArrayList<IonoValue>>();
 		double SpeedofLight = 299792458;
 
 		String nav_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
-		String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\NYA100NOR_S_20201000000_01D_30S_MO.rnx\\NYA100NOR_S_20201000000_01D_30S_MO.rnx";
+		String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRUX00BEL_S_20201000300_15M_01S_MO.crx\\BRUX00BEL_S_20201000300_15M_01S_MO.rnx";
 
 		Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path);
-		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\Tropo_NYAtest";
+		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\Tropo_BRU15";
 		File output = new File(path + ".txt");
 		PrintStream stream;
 
@@ -96,6 +104,7 @@ public class MainApp {
 			userECEF = obsvMsg.getECEF();
 			double[] userLatLon = ECEFtoLatLon.ecef2lla(userECEF);
 			Calendar time = Time.getDate(tRX, weekNo, userLatLon[1]);
+
 			// find out index of nav-msg inside the nav-msg list which is most suitable for
 			// each obs-msg based on time
 			int order[] = obsvMsg.getObsvSat().stream().map(i -> NavMsgs.get(i.getSVID()))
@@ -287,11 +296,26 @@ public class MainApp {
 		return new double[] { nonIonoError, ionoError, nonIonoDiff, ionoDiff };
 	}
 
-	public static void buildGeoid() {
+	public static Geoid buildGeoid() {
+		// Semi-major axis or Equatorial radius
+		final double ae = 6378137;
+		// flattening
+		final double f = 1 / 298.257223563;
+
+		// Earth's rotation rate
+		final double spin = 7.2921151467E-5;
+		// Earth's universal gravitational parameter
+		final double GM = 3.986004418E14;
 
 		File orekitData = new File("C:\\Users\\Naman\\Downloads\\orekit-data-master\\orekit-data-master");
 		DataProvidersManager manager = DataProvidersManager.getInstance();
 		manager.addProvider(new DirectoryCrawler(orekitData));
+		NormalizedSphericalHarmonicsProvider nhsp = GravityFieldFactory.getNormalizedProvider(50, 50);
+		Frame frame = FramesFactory.getITRF(ITRFVersion.ITRF_2014, IERSConventions.IERS_2010, true);
+
+		// ReferenceEllipsoid refElp = new ReferenceEllipsoid(ae, f, frame, GM, spin);
+		Geoid geoid = new Geoid(nhsp, ReferenceEllipsoid.getWgs84(frame));
+		return geoid;
 
 	}
 
