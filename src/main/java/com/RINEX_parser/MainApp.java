@@ -69,10 +69,10 @@ public class MainApp {
 
 		String nav_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
-		String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRUX00BEL_S_20201000300_15M_01S_MO.crx\\BRUX00BEL_S_20201000300_15M_01S_MO.rnx";
+		String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\IISC00IND_R_20201000000_01D_30S_MO.crx\\IISC00IND_R_20201000000_01D_30S_MO.rnx";
 
 		Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path);
-		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\Tropo_BRU15";
+		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\Tropo_IISC3";
 		File output = new File(path + ".txt");
 		PrintStream stream;
 
@@ -104,7 +104,6 @@ public class MainApp {
 			userECEF = obsvMsg.getECEF();
 			double[] userLatLon = ECEFtoLatLon.ecef2lla(userECEF);
 			Calendar time = Time.getDate(tRX, weekNo, userLatLon[1]);
-
 			// find out index of nav-msg inside the nav-msg list which is most suitable for
 			// each obs-msg based on time
 			int order[] = obsvMsg.getObsvSat().stream().map(i -> NavMsgs.get(i.getSVID()))
@@ -145,6 +144,7 @@ public class MainApp {
 				}
 
 			}
+
 			SVlist.add(SV);
 			switch (estimatorType) {
 			case 1:
@@ -154,8 +154,12 @@ public class MainApp {
 				break;
 			case 2:
 				WLS wls = new WLS(SV, ionoCoeff, time);
-				ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
-						.add(estimateError(wls.getEstECEF(), wls.getIonoCorrECEF(), userECEF, time));
+				try {
+					ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
+							.add(estimateError(wls.getIonoCorrECEF(), wls.getTropoCorrECEF(geoid), userECEF, time));
+				} catch (Exception e) {
+					System.out.println(e);
+				}
 //				wls.computeRcvrInfo(true);
 //				RcvrClkMap.computeIfAbsent("Receiver Clock Offset", k -> new ArrayList<Double>())
 //						.add(wls.getRcvrClkOff());
@@ -226,9 +230,9 @@ public class MainApp {
 			System.out.println(avgErr + " " + avgLLdiff + " ION - " + IONavgErr + " " + IONavgLLdiff);
 
 			GraphErrMap.put(key + " ECEF Offset", ErrList);
-			GraphErrMap.put(key + " Iono corrected ECEF Offset", IonErrList);
+			GraphErrMap.put(key + " Atmos corrected ECEF Offset", IonErrList);
 			GraphErrMap.put(key + " LL Offset", LLdiffList);
-			GraphErrMap.put(key + " Iono corrected LL Offset", IonLLdiffList);
+			GraphErrMap.put(key + " Atmos corrected LL Offset", IonLLdiffList);
 
 		}
 		if (estimatorType == 5 || estimatorType == 4) {

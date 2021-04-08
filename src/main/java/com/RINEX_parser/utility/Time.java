@@ -41,4 +41,13 @@ public class Time {
 		return cal;
 
 	}
+
+	public static Calendar convertToUTC(Calendar localGPStime, double longitude) {
+
+		long UTCtime = (localGPStime.getTimeInMillis()) - (long) (4.32 * (1E4) * (longitude / 180) * 1000);
+		Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+		cal.setTimeInMillis(UTCtime);
+		return cal;
+
+	}
 }

@@ -109,6 +109,7 @@ public class LinearLeastSquare {
 			return;
 		}
 		System.out.println("Satellite count is less than 4, can't compute user position");
+
 	}
 
 	public double[] getEstECEF() {
@@ -164,9 +165,8 @@ public class LinearLeastSquare {
 		ArrayList<double[]> AzmEle = getAzmEle();
 		double[] PR = getIonoCorrPR();
 		ComputeTropoCorr tropo = new ComputeTropoCorr(refLatLon, time, geoid);
-		double[] tropoCorr = IntStream.range(0, SV.size())
-
-				.mapToDouble(x -> tropo.getSlantDelay(AzmEle.get(x)[0])).toArray();
+		double[] tropoCorr = IntStream.range(0, SV.size()).mapToDouble(x -> tropo.getSlantDelay(AzmEle.get(x)[0]))
+				.toArray();
 		System.out.println("TROPO corrections");
 		IntStream.range(0, tropoCorr.length)
 				.forEach(i -> System.out.print("GPS" + SV.get(i).getSVID() + " - " + tropoCorr[i] + " "));

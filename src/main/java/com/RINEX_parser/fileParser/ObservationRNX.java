@@ -81,11 +81,13 @@ public class ObservationRNX {
 
 						}
 						try {
+							String doppler = type_index.containsKey("D1C") ? satInfo.get(type_index.get("D1C")) : "0";
+
 							SV.add(new SatelliteModel(SVID, satInfo.get(type_index.get("C1C")),
-									satInfo.get(type_index.get("S1C")), satInfo.get(type_index.get("D1C"))));
+									satInfo.get(type_index.get("S1C")), doppler));
 						} catch (Exception e) {
 							// TODO: handle exception
-							System.out.println("MAIN ERROR - " + msgLine);
+							System.out.println("MAIN ERROR - " + e + "\n" + msgLine);
 
 						}
 

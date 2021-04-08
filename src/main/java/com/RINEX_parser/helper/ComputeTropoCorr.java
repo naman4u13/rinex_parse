@@ -62,12 +62,14 @@ public class ComputeTropoCorr {
 				{ 5.9727542 * 1e-4, 1.5007428 * 1e-3, 4.4626982 * 1e-2 },
 				{ 6.1641693 * 1e-4, 1.7599082 * 1e-3, 5.4736038 * 1e-2 } };
 		this.lat = llh[0];
+		double lon = llh[1];
+		// time = Time.convertToUTC(time, lon);
 		this.D = time.get(Calendar.DAY_OF_YEAR);
 
 		AbsoluteDate date = new AbsoluteDate(time.getTime(), TimeScalesFactory.getGPS());
-		double lon = llh[1];
+
 		// Geoid Height
-		double geoidH = geoid.getUndulation(lat, lon, date);
+		double geoidH = geoid.getUndulation(lat * Math.PI / 180, lon * Math.PI / 180, date);
 		// Ellipsoid Height
 		double ellipH = llh[2];
 		// Orthometric Height or MSL
