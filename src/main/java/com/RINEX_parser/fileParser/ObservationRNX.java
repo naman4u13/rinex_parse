@@ -41,7 +41,7 @@ public class ObservationRNX {
 				}
 			}
 			if (useSNX) {
-				String snxPath = "C:\\Users\\Naman\\Downloads\\igs20P21004.ssc\\igs20P21004.ssc";
+				String snxPath = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\igs20P21004.ssc\\igs20P21004.ssc";
 				ECEF_XYZ = SINEX.sinex_process(snxPath, siteCode);
 			}
 			HashMap<String, Integer> type_index = new HashMap<String, Integer>();

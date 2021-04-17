@@ -4,8 +4,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintStream;
 import java.text.SimpleDateFormat;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -34,6 +32,7 @@ import com.RINEX_parser.ComputeUserPos.Regression.LS;
 import com.RINEX_parser.ComputeUserPos.Regression.WLS;
 import com.RINEX_parser.fileParser.NavigationRNX;
 import com.RINEX_parser.fileParser.ObservationRNX;
+import com.RINEX_parser.fileParser.SBAS;
 import com.RINEX_parser.helper.ComputeAzmEle;
 import com.RINEX_parser.helper.ComputeIonoCorr;
 import com.RINEX_parser.helper.ComputeSatPos;
@@ -53,11 +52,22 @@ import com.RINEX_parser.utility.Time;
 public class MainApp {
 
 	public static void main(String[] args) {
+		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\EGNOS123";
+		File output = new File(path + ".txt");
+		PrintStream stream;
 
-		Instant start = Instant.now();
-		posEstimate(false, false, true, true, 2);
-		Instant end = Instant.now();
-		System.out.println("EXECUTION TIME -  " + Duration.between(start, end));
+		try {
+			stream = new PrintStream(output);
+			System.setOut(stream);
+		} catch (FileNotFoundException e) { // TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		SBAS.sbas_process("C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\EGNOS_2020_100\\123\\h10.ems");
+//		Instant start = Instant.now();
+//		posEstimate(false, false, true, true, 2);
+//		Instant end = Instant.now();
+//		System.out.println("EXECUTION TIME -  " + Duration.between(start, end));
 
 	}
 
@@ -69,10 +79,10 @@ public class MainApp {
 
 		String nav_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
-		String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\IISC00IND_R_20201000000_01D_30S_MO.crx\\IISC00IND_R_20201000000_01D_30S_MO.rnx";
+		String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\MADR00ESP_R_20201001000_01H_30S_MO.crx\\MADR00ESP_R_20201001000_01H_30S_MO.rnx";
 
 		Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path);
-		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\Tropo_IISC3";
+		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\Tropo_MADR";
 		File output = new File(path + ".txt");
 		PrintStream stream;
 
@@ -311,7 +321,8 @@ public class MainApp {
 		// Earth's universal gravitational parameter
 		final double GM = 3.986004418E14;
 
-		File orekitData = new File("C:\\Users\\Naman\\Downloads\\orekit-data-master\\orekit-data-master");
+		File orekitData = new File(
+				"C:\\Users\\Naman\\Desktop\\rinex_parse_files\\orekit\\orekit-data-master\\orekit-data-master");
 		DataProvidersManager manager = DataProvidersManager.getInstance();
 		manager.addProvider(new DirectoryCrawler(orekitData));
 		NormalizedSphericalHarmonicsProvider nhsp = GravityFieldFactory.getNormalizedProvider(50, 50);
