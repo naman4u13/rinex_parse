@@ -4,33 +4,41 @@ import java.util.Calendar;
 
 public class FastCorr extends SbasRoot {
 
-	private double[] PRC;
+	private double PRC = 0;
+	private int IODP;
+	private int IODF;
+	private int UDREI;
 
-	public FastCorr(Calendar time, double[] PRC, int[] UDREI) {
+	public FastCorr(Calendar time, double PRC, int IODP, int IODF, int UDREI) {
 		super(time);
 		// TODO Auto-generated constructor stub
-		int n = PRC.length;
-		this.PRC = new double[n];
-		monitoredPRC(PRC, UDREI, n);
-
-	}
-
-	private void monitoredPRC(double[] PRC, int[] UDREI, int n) {
-		for (int i = 0; i < UDREI.length; i++) {
-			this.PRC[i] = PRC[i];
-			// Do not use condition
-			if (UDREI[i] == 15) {
-				this.PRC[i] = 0.0;
-			}
+		this.PRC = PRC;
+		if (UDREI == 15) {
+			this.PRC = 0;
 		}
+		this.IODP = IODP;
+		this.IODF = IODF;
+		this.UDREI = UDREI;
 	}
 
-	public double[] getPRC() {
+	public double getPRC() {
 		return PRC;
 	}
 
-	public void setPRC(double[] pRC) {
+	public void setPRC(double pRC) {
 		PRC = pRC;
+	}
+
+	public int getIODP() {
+		return IODP;
+	}
+
+	public void setIODP(int iODP) {
+		IODP = iODP;
+	}
+
+	public long getToA() {
+		return getGPStime();
 	}
 
 }

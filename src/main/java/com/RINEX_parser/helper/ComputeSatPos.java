@@ -7,9 +7,10 @@ import java.util.stream.IntStream;
 import org.ejml.simple.SimpleMatrix;
 
 import com.RINEX_parser.models.NavigationMsg;
+import com.RINEX_parser.models.SBAS.LongTermCorr;
 
 public class ComputeSatPos {
-	public static Object[] computeSatPos(NavigationMsg Sat, double tSV, double tRX) {
+	public static Object[] computeSatPos(NavigationMsg Sat, double tSV, double tRX, LongTermCorr ltc) {
 		TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
 		double Mu = 3.986004418E14;// WGS-84 value of the Earth's universal gravitational parameter
 		long NumberSecondsWeek = 604800;
@@ -20,6 +21,21 @@ public class ComputeSatPos {
 		double n0 = Math.sqrt((Mu / (A * A * A)));
 
 		long TOC = Sat.getTOC();
+
+		double[] dX = new double[] { 0, 0, 0, 0 };
+		double[] dXrate = new double[] { 0, 0, 0, 0 };
+		long ToA = 0;
+		// useSBAS corrections
+		if (ltc != null) {
+			dX = ltc.getDeltaX();
+			ToA = ltc.getToA();
+			if (ltc.getVelCode() == 1) {
+				dXrate = ltc.getDeltaXrate();
+			}
+
+		}
+
+		double SV_clock_bias = Sat.getSV_clock_bias() + dX[3] + dXrate[3] * (tSV - ToA);
 
 		/*
 		 * double SatClockOffset = Sat.SV_clock_bias + ((tSV - TOC) *
@@ -42,7 +58,7 @@ public class ComputeSatPos {
 		 * double Ek = assumed_Ek; // Eccentric anomaly
 		 */
 
-		double coeff1 = (Sat.getSV_clock_bias() + ((tSV - TOC) * Sat.getSV_clock_drift()) - Sat.getTGD())
+		double coeff1 = (SV_clock_bias + ((tSV - TOC) * Sat.getSV_clock_drift()) - Sat.getTGD())
 				/ (1 + Sat.getSV_clock_drift());
 		double coeff2 = ((n * F * Sat.getSqrt_A()) / (1 + Sat.getSV_clock_drift())) - 1;
 		double delta_Ek = 0;
@@ -63,7 +79,7 @@ public class ComputeSatPos {
 		double tk = (Mk - Sat.getM0()) / n;
 		double t = tk + Sat.getTOE();
 		double relativistic_error = F * Sat.getE() * Sat.getSqrt_A() * Math.sin(Ek);
-		double SatClockOffset = Sat.getSV_clock_bias() + ((t - TOC) * Sat.getSV_clock_drift()) - Sat.getTGD()
+		double SatClockOffset = SV_clock_bias + ((t - TOC) * Sat.getSV_clock_drift()) - Sat.getTGD()
 				+ relativistic_error;
 
 		// System.out.println(Sat.SVID + " " + relativistic_error * 299792458);
@@ -104,9 +120,11 @@ public class ComputeSatPos {
 
 		double ascNode = Sat.getOMEGA0() + ((Sat.getOMEGA_DOT() - OMEGA_E_DOT) * tk) - (OMEGA_E_DOT * Sat.getTOE());// Corrected
 
-		double xk_ECEF = (xk_orbital * Math.cos(ascNode)) - (yk_orbital * Math.cos(ik) * Math.sin(ascNode));
-		double yk_ECEF = (xk_orbital * Math.sin(ascNode)) + (yk_orbital * Math.cos(ik) * Math.cos(ascNode));
-		double zk_ECEF = yk_orbital * Math.sin(ik);
+		double xk_ECEF = (xk_orbital * Math.cos(ascNode)) - (yk_orbital * Math.cos(ik) * Math.sin(ascNode)) + dX[0]
+				+ dXrate[0] * (tSV - ToA);
+		double yk_ECEF = (xk_orbital * Math.sin(ascNode)) + (yk_orbital * Math.cos(ik) * Math.cos(ascNode)) + dX[1]
+				+ dXrate[1] * (tSV - ToA);
+		double zk_ECEF = yk_orbital * Math.sin(ik) + dX[2] + dXrate[2] * (tSV - ToA);
 
 		// eciArg = Earth_Rotation_Rate *(Propgation_Time)
 		double eciArg = OMEGA_E_DOT * (tRX - t);

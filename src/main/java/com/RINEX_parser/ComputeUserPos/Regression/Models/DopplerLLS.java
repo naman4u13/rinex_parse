@@ -26,7 +26,7 @@ public class DopplerLLS extends LinearLeastSquare {
 	// reference - DopplerLLS-Aided GNSS Position Estimation With Weighted Least
 	// Squares
 	// https://ieeexplore.ieee.org/document/5976479/
-	// reference - A-GPS: Assisted GPS, GNSS, and SBAS: Frank van Diggelen, chapter
+	// reference - A-GPS: Assisted GPS, GNSS, and SBASprint: Frank van Diggelen, chapter
 	// 8
 
 	public void estimate(double[] PR, double[][] Weight, boolean isStatic) {

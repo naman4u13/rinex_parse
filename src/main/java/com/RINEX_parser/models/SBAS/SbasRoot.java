@@ -9,8 +9,7 @@ public class SbasRoot {
 	// GPS time system timestamp in UTC zone
 	private Calendar time;
 	// GPS time in UTC zone
-	private long GPStime;
-	private final long NumberSecondsWeek = 604800;
+	private long GPSTime;
 
 	public Calendar getTime() {
 		return time;
@@ -18,20 +17,22 @@ public class SbasRoot {
 
 	public void setTime(Calendar time) {
 		this.time = time;
+		GPSTime = Time.getGPSTime(time)[0];
 	}
 
 	public long getGPStime() {
-		return GPStime;
+		return GPSTime;
 	}
 
-	public void setGPStime(long GPStime) {
-		this.GPStime = GPStime;
+	public void setGPStime(long GPSTime, long weekNo) {
+		this.GPSTime = GPSTime;
+		this.time = Time.getDate(GPSTime, weekNo, 0);
 	}
 
 	public SbasRoot(Calendar time) {
 		super();
 		this.time = time;
-		GPStime = Time.getGPSTime(time)[0];
+		GPSTime = Time.getGPSTime(time)[0];
 	}
 
 }

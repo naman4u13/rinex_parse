@@ -14,7 +14,7 @@ public class NavigationMsg {
 	private double SV_clock_bias;
 	private double SV_clock_drift;
 	private double SV_clock_drift_rate;
-	private double IODE;
+	private int IODE;
 	private double Crs;
 	private double Delta_n;
 	private double M0;
@@ -37,7 +37,7 @@ public class NavigationMsg {
 	private double SV_Accuracy;
 	private double Health;
 	private double TGD;
-	private double IODC;
+	private int IODC;
 	private double transmission_time_of_msg;
 	private double fit_interval;
 	private long TOC;
@@ -53,7 +53,7 @@ public class NavigationMsg {
 		SV_clock_bias = Double.parseDouble(arr[7].replace('D', 'E'));
 		SV_clock_drift = Double.parseDouble(arr[8].replace('D', 'E'));
 		SV_clock_drift_rate = Double.parseDouble(arr[9].replace('D', 'E'));
-		IODE = Double.parseDouble(arr[10].replace('D', 'E'));
+		IODE = (int) Double.parseDouble(arr[10].replace('D', 'E'));
 		Crs = Double.parseDouble(arr[11].replace('D', 'E'));
 		Delta_n = Double.parseDouble(arr[12].replace('D', 'E'));
 		M0 = Double.parseDouble(arr[13].replace('D', 'E'));
@@ -76,7 +76,7 @@ public class NavigationMsg {
 		SV_Accuracy = Double.parseDouble(arr[30].replace('D', 'E'));
 		Health = Double.parseDouble(arr[31].replace('D', 'E'));
 		TGD = Double.parseDouble(arr[32].replace('D', 'E'));
-		IODC = Double.parseDouble(arr[33].replace('D', 'E'));
+		IODC = (int) Double.parseDouble(arr[33].replace('D', 'E'));
 		transmission_time_of_msg = Double.parseDouble(arr[34].replace('D', 'E'));
 		TOC = Time.getGPSTime(year, month - 1, day, hour, minute, (int) second)[0];
 		// fit_interval = Double.parseDouble(arr[35].replace('D', 'E'));
@@ -94,7 +94,7 @@ public class NavigationMsg {
 		SV_clock_bias = Double.parseDouble(arr[7].replace('D', 'E'));
 		SV_clock_drift = Double.parseDouble(arr[8].replace('D', 'E'));
 		SV_clock_drift_rate = Double.parseDouble(arr[9].replace('D', 'E'));
-		IODE = Double.parseDouble(arr[10].replace('D', 'E'));
+		IODE = (int) Double.parseDouble(arr[10].replace('D', 'E'));
 		Crs = Double.parseDouble(arr[11].replace('D', 'E'));
 		Delta_n = Double.parseDouble(arr[12].replace('D', 'E'));
 		M0 = Double.parseDouble(arr[13].replace('D', 'E'));
@@ -117,7 +117,7 @@ public class NavigationMsg {
 		SV_Accuracy = Double.parseDouble(arr[30].replace('D', 'E'));
 		Health = Double.parseDouble(arr[31].replace('D', 'E'));
 		TGD = Double.parseDouble(arr[32].replace('D', 'E'));
-		IODC = Double.parseDouble(arr[33].replace('D', 'E'));
+		IODC = (int) Double.parseDouble(arr[33].replace('D', 'E'));
 		transmission_time_of_msg = Double.parseDouble(arr[34].replace('D', 'E'));
 		// fit_interval = Double.parseDouble(arr[35].replace('D', 'E'));
 
@@ -177,7 +177,7 @@ public class NavigationMsg {
 		return SV_clock_drift_rate;
 	}
 
-	public double getIODE() {
+	public int getIODE() {
 		return IODE;
 	}
 
@@ -269,7 +269,7 @@ public class NavigationMsg {
 		return TGD;
 	}
 
-	public double getIODC() {
+	public int getIODC() {
 		return IODC;
 	}
 

@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintStream;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -43,6 +45,8 @@ import com.RINEX_parser.models.ObservationMsg;
 import com.RINEX_parser.models.Satellite;
 import com.RINEX_parser.models.SatelliteModel;
 import com.RINEX_parser.models.TimeCorrection;
+import com.RINEX_parser.models.SBAS.Correction;
+import com.RINEX_parser.models.SBAS.LongTermCorr;
 import com.RINEX_parser.utility.Closest;
 import com.RINEX_parser.utility.ECEFtoLatLon;
 import com.RINEX_parser.utility.GraphPlotter;
@@ -52,27 +56,28 @@ import com.RINEX_parser.utility.Time;
 public class MainApp {
 
 	public static void main(String[] args) {
-		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\EGNOS123";
-		File output = new File(path + ".txt");
-		PrintStream stream;
-
-		try {
-			stream = new PrintStream(output);
-			System.setOut(stream);
-		} catch (FileNotFoundException e) { // TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
-		SBAS.sbas_process("C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\EGNOS_2020_100\\123\\h10.ems");
-//		Instant start = Instant.now();
-//		posEstimate(false, false, true, true, 2);
-//		Instant end = Instant.now();
-//		System.out.println("EXECUTION TIME -  " + Duration.between(start, end));
+//		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\EGNOS123";
+//		File output = new File(path + ".txt");
+//		PrintStream stream;
+//
+//		try {
+//			stream = new PrintStream(output);
+//			System.setOut(stream);
+//		} catch (FileNotFoundException e) { // TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//
+//		SBASprint.sbas_process(
+//				"C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\EGNOS_2020_100\\123\\h10.ems");
+		Instant start = Instant.now();
+		posEstimate(false, false, true, true, true, 2);
+		Instant end = Instant.now();
+		System.out.println("EXECUTION TIME -  " + Duration.between(start, end));
 
 	}
 
 	public static void posEstimate(boolean doWeightPlot, boolean doIonoPlot, boolean doPosErrPlot, boolean useSNX,
-			int estimatorType) {
+			boolean useSBAS, int estimatorType) {
 		Geoid geoid = buildGeoid();
 		HashMap<Integer, ArrayList<IonoValue>> ionoValueMap = new HashMap<Integer, ArrayList<IonoValue>>();
 		double SpeedofLight = 299792458;
@@ -81,8 +86,14 @@ public class MainApp {
 
 		String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\MADR00ESP_R_20201001000_01H_30S_MO.crx\\MADR00ESP_R_20201001000_01H_30S_MO.rnx";
 
+		String sbas_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\EGNOS_2020_100\\123\\h10.ems";
+
 		Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path);
-		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\Tropo_MADR";
+		SBAS sbas;
+
+		sbas = new SBAS(sbas_path);
+
+		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\Tropo_MADR_SBAS";
 		File output = new File(path + ".txt");
 		PrintStream stream;
 
@@ -114,6 +125,7 @@ public class MainApp {
 			userECEF = obsvMsg.getECEF();
 			double[] userLatLon = ECEFtoLatLon.ecef2lla(userECEF);
 			Calendar time = Time.getDate(tRX, weekNo, userLatLon[1]);
+
 			// find out index of nav-msg inside the nav-msg list which is most suitable for
 			// each obs-msg based on time
 			int order[] = obsvMsg.getObsvSat().stream().map(i -> NavMsgs.get(i.getSVID()))
@@ -122,15 +134,30 @@ public class MainApp {
 
 			ArrayList<Satellite> SV = new ArrayList<Satellite>();
 
-			// System.out.print("\n");
-
+			sbas.process(tRX);
+			HashMap<Integer, Correction> PRNmap = sbas.getPRNmap();
+			System.out.println();
 			for (int i = 0; i < order.length; i++) {
 
 				SatelliteModel sat = obsvMsg.getObsvSat().get(i);
 				int SVID = sat.getSVID();
+				// SBAS params
+				double PRC = 0;
+				LongTermCorr ltc = null;
+
+				NavigationMsg NavMsg = NavMsgs.get(SVID).get(order[i]);
+				// Incase Msg1 or PRN mask hasn't been assigned PRNmap will be null
+				if (useSBAS && PRNmap != null) {
+					Correction corr = PRNmap.get(SVID);
+					if (corr.getFC() != null) {
+						PRC = corr.getFC().getPRC();
+					}
+					ltc = corr.getLTC().get(NavMsg.getIODE());
+				}
+				sat.setPseudorange(sat.getPseudorange() + PRC);
 				double tSV = tRX - (sat.getPseudorange() / SpeedofLight);
 
-				Object[] SatParams = ComputeSatPos.computeSatPos(NavMsgs.get(SVID).get(order[i]), tSV, tRX);
+				Object[] SatParams = ComputeSatPos.computeSatPos(NavMsg, tSV, tRX, ltc);
 				double[] ECEF_SatClkOff = (double[]) SatParams[0];
 				double[] SatVel = (double[]) SatParams[1];
 				// Note this Clock Drift is derived, it not what we get from Ephemeris
