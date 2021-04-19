@@ -128,7 +128,7 @@ public class ComputeTropoCorr {
 		// Compute Slant Delay
 		// Zenith Delay
 		computeZenithDelay(y);
-		System.out.println("ZENITH DELAY =  " + ZD[0] + "  " + ZD[1]);
+		// System.out.println("ZENITH DELAY = " + ZD[0] + " " + ZD[1]);
 	}
 
 	public double getSlantDelay(double E) {

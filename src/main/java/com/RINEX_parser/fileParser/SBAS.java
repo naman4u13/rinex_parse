@@ -4,9 +4,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.HashMap;
-import java.util.TimeZone;
 import java.util.stream.IntStream;
 
 import com.RINEX_parser.models.SBAS.Correction;
@@ -16,7 +14,7 @@ import com.RINEX_parser.utility.Time;
 
 public class SBAS {
 
-	private final int XIII = Integer.parseInt("111111111111", 2);
+	private final int XII = Integer.parseInt("111111111111", 2);
 	private final int XI = Integer.parseInt("11111111111", 2);
 	private final int X = Integer.parseInt("1111111111", 2);
 	private final int IX = Integer.parseInt("111111111", 2);
@@ -27,7 +25,7 @@ public class SBAS {
 	private HashMap<Integer, Correction> PRNmap = null;
 	private int currentIODP = -999;
 	private ArrayList<Integer> PRNmask;
-	private Calendar time;
+	// private
 	private int PRNsize;
 
 	public SBAS(String path) {
@@ -50,10 +48,10 @@ public class SBAS {
 			String[] msg = line.split("\\s+");
 			int n = msg.length;
 			int[] tArr = IntStream.range(1, 7).map(x -> Integer.parseInt(msg[x])).toArray();
-			time = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-			time.set(tArr[0] + 2000, tArr[1] - 1, tArr[2], tArr[3], tArr[4], tArr[5]);
 
-			long GPSTime = Time.getGPSTime(time)[0];
+			long[] time = Time.getGPSTime(tArr[0] + 2000, tArr[1] - 1, tArr[2], tArr[3], tArr[4], tArr[5]);
+			long GPSTime = time[0];
+			long weekNo = time[1];
 			if (GPSTime > timeBound) {
 				return;
 			}
@@ -80,7 +78,7 @@ public class SBAS {
 					}
 					PRNsize = PRNmask.size();
 				}
-
+				// System.out.println();
 			} else if (PRNmap != null) {
 
 				if (msgType == 2 || msgType == 3 || msgType == 4 || msgType == 5) {
@@ -88,25 +86,25 @@ public class SBAS {
 					int IODF = Integer.parseInt(data[0], 2);
 					int IODP = Integer.parseInt(data[1], 2);
 					String[] strPRC = data[2].split("(?<=\\G.{12})");
-					double[] PRC = Arrays.stream(strPRC).mapToDouble(x -> 0.125 * binToDec(x, XIII)).toArray();
+					double[] PRC = Arrays.stream(strPRC).mapToDouble(x -> 0.125 * binToDec(x, XII)).toArray();
 					String[] strUDREI = data[3].split("(?<=\\G.{4})");
 					int[] UDREI = Arrays.stream(strUDREI).mapToInt(x -> Integer.parseInt(x, 2)).toArray();
 
 					int index = 13 * (msgType - 2);
 					int N = PRNsize - index < 13 ? PRNsize - index : 13;
 					for (int i = 0; i < N; i++) {
-						FastCorr fc = new FastCorr(time, PRC[i], IODP, IODF, UDREI[i]);
+						FastCorr fc = new FastCorr(GPSTime, weekNo, PRC[i], IODP, IODF, UDREI[i]);
 						int prn = PRNmask.get(index + i);
 						PRNmap.get(prn).setFC(fc);
 					}
-
+					// System.out.println();
 				} else if (msgType == 24) {
 					// 102-105 are spare bits
 					String[] data = splitter(strData, 106, 106);
 					String[] FCdata = splitter(data[0], 12 * 6, 4 * 6, 2, 2, 2, 4);
 
 					String[] strPRC = FCdata[0].split("(?<=\\G.{12})");
-					double[] PRC = Arrays.stream(strPRC).mapToDouble(x -> 0.125 * binToDec(x, XIII)).toArray();
+					double[] PRC = Arrays.stream(strPRC).mapToDouble(x -> 0.125 * binToDec(x, XII)).toArray();
 					String[] strUDREI = FCdata[1].split("(?<=\\G.{4})");
 					int[] UDREI = Arrays.stream(strUDREI).mapToInt(x -> Integer.parseInt(x, 2)).toArray();
 					int IODP = Integer.parseInt(FCdata[2], 2);
@@ -116,12 +114,12 @@ public class SBAS {
 					int index = 13 * BlockID;
 					int N = PRNsize - index;
 					for (int i = 0; i < N; i++) {
-						FastCorr fc = new FastCorr(time, PRC[i], IODP, IODF, UDREI[i]);
+						FastCorr fc = new FastCorr(GPSTime, weekNo, PRC[i], IODP, IODF, UDREI[i]);
 						int prn = PRNmask.get(index + i);
 						PRNmap.get(prn).setFC(fc);
 					}
 
-					LTCparse(data[1], time);
+					LTCparse(data[1], GPSTime, weekNo);
 
 				}
 //				if (msgType == 7) {
@@ -137,7 +135,7 @@ public class SBAS {
 
 					String[] halfMsgs = splitter(strData, 106, 106);
 					for (String halfMsg : halfMsgs) {
-						LTCparse(halfMsg, time);
+						LTCparse(halfMsg, GPSTime, weekNo);
 					}
 				}
 			}
@@ -194,7 +192,7 @@ public class SBAS {
 
 	}
 
-	private void LTCparse(String halfMsg, Calendar time) {
+	private void LTCparse(String halfMsg, long GPSTime, long weekNo) {
 
 		if (halfMsg.charAt(0) == '0') {
 			String[] data = splitter(halfMsg, 1, 51, 51, 2, 1);
@@ -210,10 +208,11 @@ public class SBAS {
 					double deltaZ = 0.125 * binToDec(params[4], IX);
 					double deltaClkOff = Math.pow(2, -31) * binToDec(params[5], X);
 					int IODP = Integer.parseInt(data[3], 2);
-					int prn = PRNmask.get(PRNmaskNo);
-					LongTermCorr ltc = new LongTermCorr(time, velCode,
+					int prn = PRNmask.get(PRNmaskNo - 1);
+					LongTermCorr ltc = new LongTermCorr(GPSTime, weekNo, velCode,
 							new double[] { deltaX, deltaY, deltaZ, deltaClkOff });
 					PRNmap.get(prn).setLTC(IODE, ltc);
+					// System.out.println();
 				}
 			}
 
@@ -233,15 +232,15 @@ public class SBAS {
 				double deltaClkDrift = Math.pow(2, -39) * binToDec(data[10], VIII);
 				long ToA = 16 * Long.parseLong(data[11], 2);
 
-				long[] GPSTime = Time.getGPSTime(time);
-				long modGPSTime = GPSTime[0] - (GPSTime[0] % 86400) + ToA;
-				Calendar modTime = Time.getDate(modGPSTime, GPSTime[1], 0);
+				long modGPSTime = GPSTime - (GPSTime % 86400) + ToA;
+
 				int IODP = Integer.parseInt(data[3], 2);
-				int prn = PRNmask.get(PRNmaskNo);
-				LongTermCorr ltc = new LongTermCorr(modTime, velCode,
+				int prn = PRNmask.get(PRNmaskNo - 1);
+				LongTermCorr ltc = new LongTermCorr(modGPSTime, weekNo, velCode,
 						new double[] { deltaX, deltaY, deltaZ, deltaClkOff },
 						new double[] { deltaXrate, deltaYrate, deltaZrate, deltaClkDrift });
 				PRNmap.get(prn).setLTC(IODE, ltc);
+				// System.out.println();
 
 			}
 		}

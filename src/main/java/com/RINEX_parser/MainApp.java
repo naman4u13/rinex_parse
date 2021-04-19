@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -56,19 +57,6 @@ import com.RINEX_parser.utility.Time;
 public class MainApp {
 
 	public static void main(String[] args) {
-//		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\EGNOS123";
-//		File output = new File(path + ".txt");
-//		PrintStream stream;
-//
-//		try {
-//			stream = new PrintStream(output);
-//			System.setOut(stream);
-//		} catch (FileNotFoundException e) { // TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//
-//		SBASprint.sbas_process(
-//				"C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\EGNOS_2020_100\\123\\h10.ems");
 		Instant start = Instant.now();
 		posEstimate(false, false, true, true, true, 2);
 		Instant end = Instant.now();
@@ -86,14 +74,15 @@ public class MainApp {
 
 		String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\MADR00ESP_R_20201001000_01H_30S_MO.crx\\MADR00ESP_R_20201001000_01H_30S_MO.rnx";
 
-		String sbas_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\EGNOS_2020_100\\123\\h10.ems";
+		String sbas_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\EGNOS_2020_100\\136\\h_09_10.ems";
 
 		Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path);
-		SBAS sbas;
-
-		sbas = new SBAS(sbas_path);
-
-		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\Tropo_MADR_SBAS";
+		SBAS sbas = null;
+		if (useSBAS) {
+			sbas = new SBAS(sbas_path);
+		}
+		HashMap<Integer, HashSet<Integer>> IODEmap = new HashMap<Integer, HashSet<Integer>>();
+		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\MADR_test";
 		File output = new File(path + ".txt");
 		PrintStream stream;
 
@@ -133,10 +122,12 @@ public class MainApp {
 					.mapToInt(i -> Closest.findClosest(tRX, i)).toArray();
 
 			ArrayList<Satellite> SV = new ArrayList<Satellite>();
+			HashMap<Integer, Correction> PRNmap = null;
+			if (useSBAS) {
+				sbas.process(tRX);
+				PRNmap = sbas.getPRNmap();
+			}
 
-			sbas.process(tRX);
-			HashMap<Integer, Correction> PRNmap = sbas.getPRNmap();
-			System.out.println();
 			for (int i = 0; i < order.length; i++) {
 
 				SatelliteModel sat = obsvMsg.getObsvSat().get(i);
@@ -153,7 +144,9 @@ public class MainApp {
 						PRC = corr.getFC().getPRC();
 					}
 					ltc = corr.getLTC().get(NavMsg.getIODE());
+
 				}
+				IODEmap.computeIfAbsent(SVID, k -> new HashSet<Integer>()).add(NavMsg.getIODE());
 				sat.setPseudorange(sat.getPseudorange() + PRC);
 				double tSV = tRX - (sat.getPseudorange() / SpeedofLight);
 
@@ -193,7 +186,7 @@ public class MainApp {
 				WLS wls = new WLS(SV, ionoCoeff, time);
 				try {
 					ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
-							.add(estimateError(wls.getIonoCorrECEF(), wls.getTropoCorrECEF(geoid), userECEF, time));
+							.add(estimateError(wls.getEstECEF(), wls.getTropoCorrECEF(geoid), userECEF, time));
 				} catch (Exception e) {
 					System.out.println(e);
 				}
@@ -310,7 +303,16 @@ public class MainApp {
 			RefineryUtilities.positionFrameRandomly(chart);
 			chart.setVisible(true);
 		}
-
+//		System.out.println("IODE MAP");
+//		IODEmap.forEach((k, v) -> System.out
+//				.println("PRN - " + k + " -  " + v.parallelStream().map(x -> x + " ").reduce("", (x, y) -> x + y)));
+//		HashMap<Integer, Correction> _map = sbas.getPRNmap();
+//		System.out.println("SBAS MAP");
+//		for (int prn : _map.keySet()) {
+//			System.out.println("PRN - " + prn + " - "
+//					+ _map.get(prn).getLTC().keySet().parallelStream().map(x -> x + " ").reduce("", (x, y) -> x + y));
+//		}
+//		System.out.print("");
 	}
 
 	public static double[] estimateError(double[] nonIonoECEF, double[] IonoECEF, double[] userECEF, Calendar time) {
@@ -323,7 +325,7 @@ public class MainApp {
 				.map(x -> Math.pow(x, 2)).reduce(0, (a, b) -> a + b));
 		double[] nonIonoLatLon = ECEFtoLatLon.ecef2lla(nonIonoECEF);
 		double[] ionoLatLon = ECEFtoLatLon.ecef2lla(IonoECEF);
-		System.out.println("HEIGHT - " + ionoLatLon[0] + "  " + ionoLatLon[1] + "  " + ionoLatLon[2]);
+
 		double nonIonoDiff = LatLonDiff.getHaversineDistance(nonIonoLatLon, userLatLon);
 		double ionoDiff = LatLonDiff.getHaversineDistance(ionoLatLon, userLatLon);
 		// double nonIonoDiff = LatLonDiff.getVincentyDistance(nonIonoLatLon,

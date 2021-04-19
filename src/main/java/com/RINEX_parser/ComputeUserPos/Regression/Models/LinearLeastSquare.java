@@ -167,11 +167,11 @@ public class LinearLeastSquare {
 		ComputeTropoCorr tropo = new ComputeTropoCorr(refLatLon, time, geoid);
 		double[] tropoCorr = IntStream.range(0, SV.size()).mapToDouble(x -> tropo.getSlantDelay(AzmEle.get(x)[0]))
 				.toArray();
-		System.out.println("TROPO corrections");
-		IntStream.range(0, tropoCorr.length)
-				.forEach(i -> System.out.print("GPS" + SV.get(i).getSVID() + " - " + tropoCorr[i] + " "));
-
-		System.out.println("");
+//		System.out.println("TROPO corrections");
+//		IntStream.range(0, tropoCorr.length)
+//				.forEach(i -> System.out.print("GPS" + SV.get(i).getSVID() + " - " + tropoCorr[i] + " "));
+//
+//		System.out.println("");
 		return IntStream.range(0, PR.length).mapToDouble(x -> PR[x] - tropoCorr[x]).toArray();
 
 	}

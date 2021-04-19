@@ -1,7 +1,5 @@
 package com.RINEX_parser.models.SBAS;
 
-import java.util.Calendar;
-
 public class LongTermCorr extends SbasRoot {
 
 	private int velCode;
@@ -10,16 +8,16 @@ public class LongTermCorr extends SbasRoot {
 	// deltaXrate, deltaYrate, deltaZrate and deltaClkDrift
 	private double[] deltaXrate;
 
-	public LongTermCorr(Calendar time, int velCode, double[] deltaX) {
-		super(time);
+	public LongTermCorr(long GPSTime, long weekNo, int velCode, double[] deltaX) {
+		super(GPSTime, weekNo);
 		// TODO Auto-generated constructor stub
 		this.velCode = velCode;
 		this.deltaX = deltaX;
 
 	}
 
-	public LongTermCorr(Calendar time, int velCode, double[] deltaX, double[] deltaXrate) {
-		super(time);
+	public LongTermCorr(long GPSTime, long weekNo, int velCode, double[] deltaX, double[] deltaXrate) {
+		super(GPSTime, weekNo);
 		// TODO Auto-generated constructor stub
 		this.velCode = velCode;
 		this.deltaX = deltaX;

@@ -1,7 +1,5 @@
 package com.RINEX_parser.models.SBAS;
 
-import java.util.Calendar;
-
 public class FastCorr extends SbasRoot {
 
 	private double PRC = 0;
@@ -9,8 +7,8 @@ public class FastCorr extends SbasRoot {
 	private int IODF;
 	private int UDREI;
 
-	public FastCorr(Calendar time, double PRC, int IODP, int IODF, int UDREI) {
-		super(time);
+	public FastCorr(long GPSTime, long weekNo, double PRC, int IODP, int IODF, int UDREI) {
+		super(GPSTime, weekNo);
 		// TODO Auto-generated constructor stub
 		this.PRC = PRC;
 		if (UDREI == 15) {
