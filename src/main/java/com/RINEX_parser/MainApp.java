@@ -51,14 +51,16 @@ import com.RINEX_parser.models.SBAS.LongTermCorr;
 import com.RINEX_parser.utility.Closest;
 import com.RINEX_parser.utility.ECEFtoLatLon;
 import com.RINEX_parser.utility.GraphPlotter;
+import com.RINEX_parser.utility.IGPgrid;
 import com.RINEX_parser.utility.LatLonDiff;
 import com.RINEX_parser.utility.Time;
 
 public class MainApp {
 
 	public static void main(String[] args) {
+
 		Instant start = Instant.now();
-		posEstimate(false, false, true, true, false, 2);
+		posEstimate(false, false, true, true, true, 2);
 		Instant end = Instant.now();
 		System.out.println("EXECUTION TIME -  " + Duration.between(start, end));
 
@@ -72,17 +74,18 @@ public class MainApp {
 
 		String nav_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
-		String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\TWTF00TWN_R_20201000000_01D_30S_MO.rnx\\TWTF00TWN_R_20201000000_01D_30S_MO.rnx";
+		String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\MADR00ESP_R_20201001000_01H_30S_MO.crx\\MADR00ESP_R_20201001000_01H_30S_MO.rnx";
 
 		String sbas_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\EGNOS_2020_100\\136\\h_09_10.ems";
 
 		Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path);
 		SBAS sbas = null;
 		if (useSBAS) {
-			sbas = new SBAS(sbas_path);
+			int[][][] IGP = IGPgrid.readCSV();
+			sbas = new SBAS(sbas_path, IGP);
 		}
 		HashMap<Integer, HashSet<Integer>> IODEmap = new HashMap<Integer, HashSet<Integer>>();
-		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\TWTF_RMS_tropo";
+		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\MADR_SBAS136_RMS";
 		File output = new File(path + ".txt");
 		PrintStream stream;
 
@@ -123,9 +126,16 @@ public class MainApp {
 
 			ArrayList<Satellite> SV = new ArrayList<Satellite>();
 			HashMap<Integer, Correction> PRNmap = null;
+			HashMap<Integer, HashMap<Integer, Double>> IonoVDelay = null;
 			if (useSBAS) {
 				sbas.process(tRX);
 				PRNmap = sbas.getPRNmap();
+				IonoVDelay = sbas.getIonoVDelay();
+				if (sbas.isIonoEnabled()) {
+					Object[] xyz = IonoVDelay.keySet().toArray();
+					System.out.print("");
+				}
+
 			}
 
 			for (int i = 0; i < order.length; i++) {
@@ -146,6 +156,7 @@ public class MainApp {
 					ltc = corr.getLTC().get(NavMsg.getIODE());
 
 				}
+
 				IODEmap.computeIfAbsent(SVID, k -> new HashSet<Integer>()).add(NavMsg.getIODE());
 				sat.setPseudorange(sat.getPseudorange() + PRC);
 				double tSV = tRX - (sat.getPseudorange() / SpeedofLight);

@@ -29,14 +29,18 @@ public class SBAS {
 	private int PRNsize;
 	private int currentBandCount;
 	private int currentIODI = -999;
-	private HashMap<Integer, ArrayList<Integer>> IGPmask;
-	private HashMap<Integer, HashMap<Integer, ArrayList<Integer>>> IonoVDelay;
+	private HashMap<Integer, ArrayList<Integer>> BandMask;
+	private HashMap<Integer, HashMap<Integer, Double>> IonoVDelay;
+	private int[][][] IGP;
+	private boolean ionoEnabled;
 
-	public SBAS(String path) {
+	public SBAS(String path, int[][][] IGP) {
 
-		currentBandCount = 0;
-		IGPmask = new HashMap<Integer, ArrayList<Integer>>();
-
+		this.currentBandCount = 0;
+		BandMask = new HashMap<Integer, ArrayList<Integer>>();
+		this.IGP = IGP;
+		this.ionoEnabled = false;
+		this.IonoVDelay = new HashMap<Integer, HashMap<Integer, Double>>();
 		try {
 			Path fileName = Path.of(path);
 			String input = Files.readString(fileName);
@@ -94,35 +98,59 @@ public class SBAS {
 				if (currentIODI != IODI) {
 					currentIODI = IODI;
 					currentBandCount = bandCount;
-					IGPmask = new HashMap<Integer, ArrayList<Integer>>();
+					BandMask = new HashMap<Integer, ArrayList<Integer>>();
+					ionoEnabled = false;
+					IonoVDelay = new HashMap<Integer, HashMap<Integer, Double>>();
 				}
-				if (!IGPmask.containsKey(bandNo)) {
+				if (!BandMask.containsKey(bandNo)) {
 					String mask = data[3];
-					ArrayList<Integer> igpmask = new ArrayList<Integer>();
+					ArrayList<Integer> bandMask = new ArrayList<Integer>();
 					for (int i = 0; i < mask.length(); i++) {
 						if (mask.charAt(i) == '1') {
-							igpmask.add(i + 1);
+							bandMask.add(i + 1);
 						}
 
 					}
-					IGPmask.put(bandNo, igpmask);
+					BandMask.put(bandNo, bandMask);
 				}
 			} else if (msgType == 26) {
 				String[] data = splitter(strData, 4, 4, 15 * 13, 2, 7);
-				int bandNo = Integer.parseInt(data[0], 2);
-				int blockID = Integer.parseInt(data[1], 2);
-
-				double[] ionoVDelay = new double[15];
-				Arrays.fill(ionoVDelay, 0.0);
-				int[] GIVEI = new int[15];
-				IntStream.range(0, 15).forEach(i -> {
-					GIVEI[i] = Integer.parseInt(data[2].substring(9, 13), 2);
-					if (GIVEI[i] < 15) {
-						ionoVDelay[i] = 0.125 * Integer.parseInt(data[2].substring(0, 9), 2);
-					}
-				});
 				int IODI = Integer.parseInt(data[3], 2);
-				IonoVDelay.computeIfAbsent(IODI, k -> new HashMap<Integer, ArrayList<Integer>>()).get(bandNo);
+				if (IODI == currentIODI) {
+
+					int bandNo = Integer.parseInt(data[0], 2);
+					if (BandMask != null && BandMask.containsKey(bandNo)) {
+						int blockID = Integer.parseInt(data[1], 2);
+
+						double[] ionoVDelay = new double[15];
+						Arrays.fill(ionoVDelay, 0.0);
+						int[] GIVEI = new int[15];
+						String[] strIono = data[2].split("(?<=\\G.{13})");
+						IntStream.range(0, 15).forEach(i -> {
+							GIVEI[i] = Integer.parseInt(strIono[i].substring(9, 13), 2);
+							if (GIVEI[i] < 15) {
+								ionoVDelay[i] = 0.125 * Integer.parseInt(strIono[i].substring(0, 9), 2);
+							}
+						});
+						ArrayList<Integer> mask = BandMask.get(bandNo);
+						int start = 15 * blockID;
+						int end = Math.min(15 * (1 + blockID), mask.size());
+						int[][] points = new int[end - start][];
+						for (int i = start; i < end; i++) {
+							points[i - start] = IGP[bandNo][mask.get(i) - 1];
+						}
+
+						for (int i = 0; i < points.length; i++) {
+							int lat = points[i][0];
+							int lon = points[i][1];
+							IonoVDelay.computeIfAbsent(lat, k -> new HashMap<Integer, Double>()).put(lon,
+									ionoVDelay[i]);
+						}
+						isIonoGridActive();
+
+					}
+
+				}
 
 			}
 
@@ -295,8 +323,32 @@ public class SBAS {
 
 	}
 
+	private void isIonoGridActive() {
+
+		if (!ionoEnabled && currentBandCount == BandMask.size()) {
+			int size1 = BandMask.values().stream().mapToInt(i -> i.size()).reduce(0, (i, j) -> i + j);
+			int size2 = IonoVDelay.values().stream().mapToInt(i -> i.size()).reduce(0, (i, j) -> i + j);
+			if (size1 == size2) {
+				ionoEnabled = true;
+			}
+
+		}
+
+	}
+
 	public HashMap<Integer, Correction> getPRNmap() {
 		return PRNmap;
+	}
+
+	public HashMap<Integer, HashMap<Integer, Double>> getIonoVDelay() {
+		if (!ionoEnabled) {
+			System.out.println("WARNING: IGP grid is incomplete ! ");
+		}
+		return IonoVDelay;
+	}
+
+	public boolean isIonoEnabled() {
+		return ionoEnabled;
 	}
 
 }
