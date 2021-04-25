@@ -95,11 +95,13 @@ public class ComputeIonoCorr {
 		if (Math.abs(temp_phase) < 1.57) {
 			temp_iono_time = obliquity_factor
 					* (5E-9 + (temp_AMP * (1 - (Math.pow(temp_phase, 2) / 2) + (Math.pow(temp_phase, 4) / 24))));
+
 		} else {
 			temp_iono_time = obliquity_factor * 5E-9;
+
 		}
 		double temp_iono_corr = temp_iono_time * SpeedofLight;
-		return iono_corr;
+		return temp_iono_corr;
 
 		/*
 		 * temp_earth_central_angle = temp_earth_central_angle * 180; temp_IPP_lat =

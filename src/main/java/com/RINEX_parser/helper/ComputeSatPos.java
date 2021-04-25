@@ -12,7 +12,8 @@ import com.RINEX_parser.models.SBAS.LongTermCorr;
 public class ComputeSatPos {
 	public static Object[] computeSatPos(NavigationMsg Sat, double tSV, double tRX, LongTermCorr ltc) {
 		TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
-		double Mu = 3.986004418E14;// WGS-84 value of the Earth's universal gravitational parameter
+		double Mu = 3.986005E14;// WGS-84 value of the Earth's universal gravitational parameter in GPS-IS
+
 		long NumberSecondsWeek = 604800;
 		double OMEGA_E_DOT = 7.2921151467E-5;// WGS-84 value of the Earth's rotation rate
 		double F = -4.442807633E-10;

@@ -27,8 +27,15 @@ public class SBAS {
 	private ArrayList<Integer> PRNmask;
 	// private
 	private int PRNsize;
+	private int currentBandCount;
+	private int currentIODI = -999;
+	private HashMap<Integer, ArrayList<Integer>> IGPmask;
+	private HashMap<Integer, HashMap<Integer, ArrayList<Integer>>> IonoVDelay;
 
 	public SBAS(String path) {
+
+		currentBandCount = 0;
+		IGPmask = new HashMap<Integer, ArrayList<Integer>>();
 
 		try {
 			Path fileName = Path.of(path);
@@ -79,7 +86,47 @@ public class SBAS {
 					PRNsize = PRNmask.size();
 				}
 				// System.out.println();
-			} else if (PRNmap != null) {
+			} else if (msgType == 18) {
+				String[] data = splitter(strData, 4, 4, 2, 201, 1);
+				int bandCount = Integer.parseInt(data[0], 2);
+				int bandNo = Integer.parseInt(data[1], 2);
+				int IODI = Integer.parseInt(data[2], 2);
+				if (currentIODI != IODI) {
+					currentIODI = IODI;
+					currentBandCount = bandCount;
+					IGPmask = new HashMap<Integer, ArrayList<Integer>>();
+				}
+				if (!IGPmask.containsKey(bandNo)) {
+					String mask = data[3];
+					ArrayList<Integer> igpmask = new ArrayList<Integer>();
+					for (int i = 0; i < mask.length(); i++) {
+						if (mask.charAt(i) == '1') {
+							igpmask.add(i + 1);
+						}
+
+					}
+					IGPmask.put(bandNo, igpmask);
+				}
+			} else if (msgType == 26) {
+				String[] data = splitter(strData, 4, 4, 15 * 13, 2, 7);
+				int bandNo = Integer.parseInt(data[0], 2);
+				int blockID = Integer.parseInt(data[1], 2);
+
+				double[] ionoVDelay = new double[15];
+				Arrays.fill(ionoVDelay, 0.0);
+				int[] GIVEI = new int[15];
+				IntStream.range(0, 15).forEach(i -> {
+					GIVEI[i] = Integer.parseInt(data[2].substring(9, 13), 2);
+					if (GIVEI[i] < 15) {
+						ionoVDelay[i] = 0.125 * Integer.parseInt(data[2].substring(0, 9), 2);
+					}
+				});
+				int IODI = Integer.parseInt(data[3], 2);
+				IonoVDelay.computeIfAbsent(IODI, k -> new HashMap<Integer, ArrayList<Integer>>()).get(bandNo);
+
+			}
+
+			else if (PRNmap != null) {
 
 				if (msgType == 2 || msgType == 3 || msgType == 4 || msgType == 5) {
 					String[] data = splitter(strData, 2, 2, 13 * 12, 13 * 4);
@@ -131,13 +178,14 @@ public class SBAS {
 //					
 //
 //				}
-				if (msgType == 25) {
+				else if (msgType == 25) {
 
 					String[] halfMsgs = splitter(strData, 106, 106);
 					for (String halfMsg : halfMsgs) {
 						LTCparse(halfMsg, GPSTime, weekNo);
 					}
 				}
+
 			}
 			lineCtr++;
 

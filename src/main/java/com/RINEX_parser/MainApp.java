@@ -58,7 +58,7 @@ public class MainApp {
 
 	public static void main(String[] args) {
 		Instant start = Instant.now();
-		posEstimate(false, false, true, true, true, 2);
+		posEstimate(false, false, true, true, false, 2);
 		Instant end = Instant.now();
 		System.out.println("EXECUTION TIME -  " + Duration.between(start, end));
 
@@ -72,7 +72,7 @@ public class MainApp {
 
 		String nav_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
-		String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\MADR00ESP_R_20201001000_01H_30S_MO.crx\\MADR00ESP_R_20201001000_01H_30S_MO.rnx";
+		String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\TWTF00TWN_R_20201000000_01D_30S_MO.rnx\\TWTF00TWN_R_20201000000_01D_30S_MO.rnx";
 
 		String sbas_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\EGNOS_2020_100\\136\\h_09_10.ems";
 
@@ -82,7 +82,7 @@ public class MainApp {
 			sbas = new SBAS(sbas_path);
 		}
 		HashMap<Integer, HashSet<Integer>> IODEmap = new HashMap<Integer, HashSet<Integer>>();
-		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\MADR_test";
+		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\TWTF_RMS_tropo";
 		File output = new File(path + ".txt");
 		PrintStream stream;
 
@@ -216,7 +216,7 @@ public class MainApp {
 				break;
 			}
 			timeList.add(time);
-
+			System.out.println();
 		}
 
 		if (estimatorType == 6) {
@@ -248,17 +248,17 @@ public class MainApp {
 			ArrayList<Double> IonLLdiffList = (ArrayList<Double>) ErrMap.get(key).stream().map(i -> i[3])
 					.collect(Collectors.toList());
 			double minErr = Collections.min(ErrList);
-			double avgErr = ErrList.stream().mapToDouble(x -> x).average().orElse(Double.NaN);
 			double minLLdiff = Collections.min(LLdiffList);
-			double avgLLdiff = LLdiffList.stream().mapToDouble(x -> x).average().orElse(Double.NaN);
 			double IONminErr = Collections.min(IonErrList);
-			double IONavgErr = IonErrList.stream().mapToDouble(x -> x).average().orElse(Double.NaN);
 			double IONminLLdiff = Collections.min(IonLLdiffList);
-			double IONavgLLdiff = IonLLdiffList.stream().mapToDouble(x -> x).average().orElse(Double.NaN);
-
+			System.out.println("MIN - ");
 			System.out.println(minErr + " " + minLLdiff + " ION - " + IONminErr + " " + IONminLLdiff);
-			System.out.println(avgErr + " " + avgLLdiff + " ION - " + IONavgErr + " " + IONavgLLdiff);
-
+			System.out.println("RMS - ");
+			System.out.println(
+					RMS(ErrList) + " " + RMS(LLdiffList) + " ION - " + RMS(IonErrList) + " " + RMS(IonLLdiffList));
+			System.out.println("MAE - ");
+			System.out.println(
+					MAE(ErrList) + " " + MAE(LLdiffList) + " ION - " + MAE(IonErrList) + " " + MAE(IonLLdiffList));
 			GraphErrMap.put(key + " ECEF Offset", ErrList);
 			GraphErrMap.put(key + " Atmos corrected ECEF Offset", IonErrList);
 			GraphErrMap.put(key + " LL Offset", LLdiffList);
@@ -337,6 +337,14 @@ public class MainApp {
 				+ ionoError + " non Iono LL Diff - " + nonIonoDiff + " Iono LL Diff - " + ionoDiff);
 
 		return new double[] { nonIonoError, ionoError, nonIonoDiff, ionoDiff };
+	}
+
+	public static double RMS(ArrayList<Double> list) {
+		return Math.sqrt(list.stream().mapToDouble(x -> x * x).average().orElse(Double.NaN));
+	}
+
+	public static double MAE(ArrayList<Double> list) {
+		return list.stream().mapToDouble(x -> x).average().orElse(Double.NaN);
 	}
 
 	public static Geoid buildGeoid() {
