@@ -130,6 +130,11 @@ public class SBAS {
 							GIVEI[i] = Integer.parseInt(strIono[i].substring(9, 13), 2);
 							if (GIVEI[i] < 15) {
 								ionoVDelay[i] = 0.125 * Integer.parseInt(strIono[i].substring(0, 9), 2);
+								if (ionoVDelay[i] > 63.75) {
+									ionoVDelay[i] = 100;// Do not Use
+								}
+							} else {
+								ionoVDelay[i] = 101; // Not monitored
 							}
 						});
 						ArrayList<Integer> mask = BandMask.get(bandNo);
@@ -141,8 +146,10 @@ public class SBAS {
 						}
 
 						for (int i = 0; i < points.length; i++) {
+
 							int lat = points[i][0];
 							int lon = points[i][1];
+
 							IonoVDelay.computeIfAbsent(lat, k -> new HashMap<Integer, Double>()).put(lon,
 									ionoVDelay[i]);
 						}
