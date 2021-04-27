@@ -2,6 +2,7 @@ package com.RINEX_parser.ComputeUserPos.Regression;
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 
 import org.orekit.models.earth.Geoid;
 
@@ -33,6 +34,16 @@ public class WLS extends LinearLeastSquare {
 		// 3).trace()));
 		return super.getEstECEF();
 
+	}
+
+	public double[] getIonoCorrECEF(HashMap<Integer, HashMap<Integer, Double>> sbasIVD) {
+
+		estimate(getIonoCorrPR(sbasIVD));
+		// System.out.println("Iono WPDOP - " + Math.sqrt(getCovdX().extractMatrix(0, 3,
+		// 0, 3).trace()));
+//		computeRcvrInfo(true);
+//		System.out.println("Rcvr Velocity - " + getEstVel() + "  Rcvr Clk Drift - " + getRcvrClkDrift());
+		return super.getEstECEF();
 	}
 
 	public double[] getIonoCorrECEF() {

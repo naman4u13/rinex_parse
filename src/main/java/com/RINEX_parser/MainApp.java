@@ -52,7 +52,7 @@ import com.RINEX_parser.utility.Closest;
 import com.RINEX_parser.utility.ECEFtoLatLon;
 import com.RINEX_parser.utility.GraphPlotter;
 import com.RINEX_parser.utility.IGPgrid;
-import com.RINEX_parser.utility.LatLonDiff;
+import com.RINEX_parser.utility.LatLonUtil;
 import com.RINEX_parser.utility.Time;
 
 public class MainApp {
@@ -126,14 +126,16 @@ public class MainApp {
 
 			ArrayList<Satellite> SV = new ArrayList<Satellite>();
 			HashMap<Integer, Correction> PRNmap = null;
-			HashMap<Integer, HashMap<Integer, Double>> IonoVDelay = null;
+			HashMap<Integer, HashMap<Integer, Double>> sbasIVD = null;
 			if (useSBAS) {
 				sbas.process(tRX);
 				PRNmap = sbas.getPRNmap();
-				IonoVDelay = sbas.getIonoVDelay();
 				if (sbas.isIonoEnabled()) {
-					Object[] xyz = IonoVDelay.keySet().toArray();
-					System.out.print("");
+					sbasIVD = sbas.getIonoVDelay();
+
+				} else {
+					System.out.println("NO SBAS Iono Corr");
+
 				}
 
 			}
@@ -148,7 +150,7 @@ public class MainApp {
 
 				NavigationMsg NavMsg = NavMsgs.get(SVID).get(order[i]);
 				// Incase Msg1 or PRN mask hasn't been assigned PRNmap will be null
-				if (useSBAS && PRNmap != null) {
+				if (false && useSBAS && PRNmap != null) {
 					Correction corr = PRNmap.get(SVID);
 					if (corr.getFC() != null) {
 						PRC = corr.getFC().getPRC();
@@ -157,7 +159,8 @@ public class MainApp {
 
 				}
 
-				IODEmap.computeIfAbsent(SVID, k -> new HashSet<Integer>()).add(NavMsg.getIODE());
+				// IODEmap.computeIfAbsent(SVID, k -> new
+				// HashSet<Integer>()).add(NavMsg.getIODE());
 				sat.setPseudorange(sat.getPseudorange() + PRC);
 				double tSV = tRX - (sat.getPseudorange() / SpeedofLight);
 
@@ -197,7 +200,7 @@ public class MainApp {
 				WLS wls = new WLS(SV, ionoCoeff, time);
 				try {
 					ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
-							.add(estimateError(wls.getEstECEF(), wls.getTropoCorrECEF(geoid), userECEF, time));
+							.add(estimateError(wls.getIonoCorrECEF(), wls.getIonoCorrECEF(sbasIVD), userECEF, time));
 				} catch (Exception e) {
 					System.out.println(e);
 				}
@@ -337,11 +340,11 @@ public class MainApp {
 		double[] nonIonoLatLon = ECEFtoLatLon.ecef2lla(nonIonoECEF);
 		double[] ionoLatLon = ECEFtoLatLon.ecef2lla(IonoECEF);
 
-		double nonIonoDiff = LatLonDiff.getHaversineDistance(nonIonoLatLon, userLatLon);
-		double ionoDiff = LatLonDiff.getHaversineDistance(ionoLatLon, userLatLon);
-		// double nonIonoDiff = LatLonDiff.getVincentyDistance(nonIonoLatLon,
+		double nonIonoDiff = LatLonUtil.getHaversineDistance(nonIonoLatLon, userLatLon);
+		double ionoDiff = LatLonUtil.getHaversineDistance(ionoLatLon, userLatLon);
+		// double nonIonoDiff = LatLonUtil.getVincentyDistance(nonIonoLatLon,
 		// userLatLon);
-		// double ionoDiff = LatLonDiff.getVincentyDistance(ionoLatLon, userLatLon);
+		// double ionoDiff = LatLonUtil.getVincentyDistance(ionoLatLon, userLatLon);
 		SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/YYYY hh:mm:ss");
 
 		System.out.println(sdf.format(time.getTime()) + " non Iono ECEF diff " + nonIonoError + " Iono ECEF diff "

@@ -2,6 +2,7 @@ package com.RINEX_parser.ComputeUserPos.Regression.Models;
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -12,6 +13,7 @@ import org.orekit.models.earth.Geoid;
 import com.RINEX_parser.helper.ComputeAzmEle;
 import com.RINEX_parser.helper.ComputeIonoCorr;
 import com.RINEX_parser.helper.ComputeTropoCorr;
+import com.RINEX_parser.helper.SBAS.Flag;
 import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.Satellite;
 import com.RINEX_parser.utility.ECEFtoLatLon;
@@ -139,10 +141,14 @@ public class LinearLeastSquare {
 	}
 
 	public double[] getIonoCorrPR() {
-		return getIonoCorrPR(this.SV);
+		return getIonoCorrPR(this.SV, null);
 	}
 
-	public double[] getIonoCorrPR(ArrayList<Satellite> SV) {
+	public double[] getIonoCorrPR(HashMap<Integer, HashMap<Integer, Double>> sbasIVD) {
+		return getIonoCorrPR(this.SV, sbasIVD);
+	}
+
+	public double[] getIonoCorrPR(ArrayList<Satellite> SV, HashMap<Integer, HashMap<Integer, Double>> sbasIVD) {
 		if (Optional.ofNullable(ionoCoeff).isEmpty()) {
 			System.out.println("You have not provided IonoCoeff");
 			return null;
@@ -154,6 +160,17 @@ public class LinearLeastSquare {
 						refLatLon[1], (long) SV.get(x).gettRX(), ionoCoeff))
 				.toArray();
 
+		if (sbasIVD != null) {
+			com.RINEX_parser.helper.SBAS.ComputeIonoCorr sbasIC = new com.RINEX_parser.helper.SBAS.ComputeIonoCorr();
+			for (int i = 0; i < SV.size(); i++) {
+				double sbasIonoCorr = sbasIC.computeIonoCorr(AzmEle.get(i)[0], AzmEle.get(i)[1], refLatLon[0],
+						refLatLon[1], sbasIVD);
+				if (sbasIC.getIonoFlag() == Flag.VIABLE) {
+					ionoCorr[i] = sbasIonoCorr;
+				}
+				System.out.print("");
+			}
+		}
 		return IntStream.range(0, PR.length).mapToDouble(x -> PR[x] - ionoCorr[x]).toArray();
 	}
 

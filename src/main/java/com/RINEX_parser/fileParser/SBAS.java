@@ -149,7 +149,9 @@ public class SBAS {
 
 							int lat = points[i][0];
 							int lon = points[i][1];
-
+							if (ionoVDelay[i] == 101) {
+								System.out.println();
+							}
 							IonoVDelay.computeIfAbsent(lat, k -> new HashMap<Integer, Double>()).put(lon,
 									ionoVDelay[i]);
 						}

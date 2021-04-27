@@ -1,6 +1,6 @@
 package com.RINEX_parser.utility;
 
-public class LatLonDiff {
+public class LatLonUtil {
 	public static double getHaversineDistance(double[] LatLon1, double[] LatLon2) {
 
 		double lat1 = LatLon1[0];
@@ -114,6 +114,42 @@ public class LatLonDiff {
 
 		double s = b * A * (sigma - deltaSigma);
 		return s;
+	}
+
+	public static int lonAdd(int lon, int diff) {
+		lon = lon + diff;
+		if (lon >= 180) {
+			lon -= 360;
+		} else if (lon < -180) {
+			lon += 360;
+		}
+		return lon;
+	}
+
+	public static double lonAddD(double lon, int diff) {
+		lon = lon + diff;
+		if (lon >= 180) {
+			lon -= 360;
+		} else if (lon < -180) {
+			lon += 360;
+		}
+		return lon;
+	}
+
+	// Only for IGP grid selection
+	// accounting for continuous longitude
+	public static double lonDiff(double x1, double x2) {
+		// Because the IGP grid class/algo this func will be used will only work with
+		// lats below 75, therefore lon
+		// spacing will never be greater than 10
+		if (Math.abs(x2 - x1) > 10) {
+			double diff = 360 - x1 + x2;
+			if (x2 > 0) {
+				diff *= -1;
+			}
+			return diff;
+		}
+		return x2 - x1;
 	}
 
 }
