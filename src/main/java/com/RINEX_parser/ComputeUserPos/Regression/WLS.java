@@ -39,10 +39,7 @@ public class WLS extends LinearLeastSquare {
 	public double[] getIonoCorrECEF(HashMap<Integer, HashMap<Integer, Double>> sbasIVD) {
 
 		estimate(getIonoCorrPR(sbasIVD));
-		// System.out.println("Iono WPDOP - " + Math.sqrt(getCovdX().extractMatrix(0, 3,
-		// 0, 3).trace()));
-//		computeRcvrInfo(true);
-//		System.out.println("Rcvr Velocity - " + getEstVel() + "  Rcvr Clk Drift - " + getRcvrClkDrift());
+
 		return super.getEstECEF();
 	}
 
@@ -63,9 +60,16 @@ public class WLS extends LinearLeastSquare {
 		return super.getEstECEF();
 	}
 
+	public double[] getTropoCorrECEF(Geoid geoid, HashMap<Integer, HashMap<Integer, Double>> sbasIVD) {
+		double[] ionoCorrECEF = getIonoCorrECEF(sbasIVD);
+		double[] ionoCorrLLH = ECEFtoLatLon.ecef2lla(ionoCorrECEF);
+		estimate(getTropoCorrPR(ionoCorrLLH, geoid));
+		return super.getEstECEF();
+	}
+
 	public void setWeight(ArrayList<Satellite> SV) {
 
-		super.setWeight(Weight.computeWeight(SV, getTime()));
+		super.setWeight(Weight.computeWeight(this));
 	}
 
 }

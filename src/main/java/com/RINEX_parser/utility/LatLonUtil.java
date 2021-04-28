@@ -142,14 +142,18 @@ public class LatLonUtil {
 		// Because the IGP grid class/algo this func will be used will only work with
 		// lats below 75, therefore lon
 		// spacing will never be greater than 10
+		double diff;
 		if (Math.abs(x2 - x1) > 10) {
-			double diff = 360 - x1 + x2;
-			if (x2 > 0) {
-				diff *= -1;
+
+			if (x2 < 0) {
+				diff = 360 - x1 + x2;
+				return diff;
 			}
+			diff = -360 - x1 + x2;
 			return diff;
 		}
-		return x2 - x1;
+		diff = x2 - x1;
+		return diff;
 	}
 
 }

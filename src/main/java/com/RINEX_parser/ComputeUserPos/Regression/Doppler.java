@@ -51,14 +51,14 @@ public class Doppler extends DopplerLLS {
 	@Override
 	public void computeRcvrInfo(boolean isStatic) {
 		// TODO Auto-generated method stub
-		super.setWeight(Weight.computeWeight(getSV(), getTime()));
+		super.setWeight(Weight.computeWeight(this));
 		super.computeRcvrInfo(isStatic);
 	}
 
 	@Override
 	public void computeRcvrInfo(double[] userECEF, boolean isStatic) {
 		// TODO Auto-generated method stub
-		super.setWeight(Weight.computeWeight(getSV(), getTime()));
+		super.setWeight(Weight.computeWeight(this));
 		super.computeRcvrInfo(userECEF, isStatic);
 	}
 

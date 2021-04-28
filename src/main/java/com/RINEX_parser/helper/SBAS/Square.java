@@ -61,11 +61,11 @@ public class Square extends Polygon {
 
 		}
 
-		double xpp = getX() - x1 / (x2 - x1);
-		double ypp = LatLonUtil.lonDiff(y1, getY()) / LatLonUtil.lonDiff(y1, y2);
+		double xpp = Math.abs(LatLonUtil.lonDiff(x1, getX()) / LatLonUtil.lonDiff(x1, x2));
+		double ypp = Math.abs((getY() - y1) / (y2 - y1));
 		double W11 = (1 - xpp) * (1 - ypp);
-		double W12 = xpp * (1 - ypp);
-		double W21 = (1 - xpp) * ypp;
+		double W12 = (1 - xpp) * ypp;
+		double W21 = xpp * (1 - ypp);
 		double W22 = xpp * ypp;
 		// interpolated vertical IPP delay
 		double IVD = (W11 * val11) + (W12 * val12) + (W21 * val21) + (W22 * val22);

@@ -30,7 +30,7 @@ public class Triangle extends Polygon {
 		for (int i = 0; i < 4; i++) {
 			triPts = new int[3][2];
 			for (int j = i; j < i + 3; j++) {
-				int k = j % 4;
+				int k = j % 3;
 				triPts[k] = pts[k];
 			}
 			if (isInside(triPts, P)) {
@@ -71,7 +71,7 @@ public class Triangle extends Polygon {
 		int[] P2 = triPts[1];
 		int[] P3 = triPts[2];
 
-		double dX = Math.abs(getX() - P2[0]);
+		double dX = Math.abs(LatLonUtil.lonDiff(P2[0], getX()));
 		double dY = Math.abs(getY() - P2[1]);
 		int[] V21 = vecSub(P2, P1);
 		int[] V23 = vecSub(P2, P3);

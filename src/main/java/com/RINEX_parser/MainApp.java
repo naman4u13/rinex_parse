@@ -85,7 +85,7 @@ public class MainApp {
 			sbas = new SBAS(sbas_path, IGP);
 		}
 		HashMap<Integer, HashSet<Integer>> IODEmap = new HashMap<Integer, HashSet<Integer>>();
-		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\MADR_SBAS136_RMS";
+		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\test";
 		File output = new File(path + ".txt");
 		PrintStream stream;
 
@@ -194,7 +194,7 @@ public class MainApp {
 			case 1:
 				LS ls = new LS(SV, ionoCoeff, time);
 				ErrMap.computeIfAbsent("LS", k -> new ArrayList<double[]>())
-						.add(estimateError(ls.getEstECEF(), ls.getIonoCorrECEF(), userECEF, time));
+						.add(estimateError(ls.getIonoCorrECEF(), ls.getTropoCorrECEF(geoid), userECEF, time));
 				break;
 			case 2:
 				WLS wls = new WLS(SV, ionoCoeff, time);
@@ -220,10 +220,10 @@ public class MainApp {
 			case 4:
 				ls = new LS(SV, ionoCoeff, time);
 				ErrMap.computeIfAbsent("LS", k -> new ArrayList<double[]>())
-						.add(estimateError(ls.getEstECEF(), ls.getIonoCorrECEF(), userECEF, time));
+						.add(estimateError(ls.getIonoCorrECEF(), ls.getTropoCorrECEF(geoid), userECEF, time));
 				wls = new WLS(SV, ionoCoeff, time);
 				ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
-						.add(estimateError(wls.getEstECEF(), wls.getIonoCorrECEF(), userECEF, time));
+						.add(estimateError(wls.getIonoCorrECEF(), wls.getTropoCorrECEF(geoid), userECEF, time));
 //				doppler = new Doppler(SV, ionoCoeff);
 //				ErrMap.computeIfAbsent("DopplerWLS", k -> new ArrayList<double[]>())
 //						.add(estimateError(doppler.getEstECEF(true), doppler.getIonoCorrECEF(true), userECEF, time));

@@ -1,7 +1,6 @@
 package com.RINEX_parser.utility;
 
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.stream.IntStream;
 
 import com.RINEX_parser.ComputeUserPos.Regression.Models.LinearLeastSquare;
@@ -29,9 +28,11 @@ public class Weight {
 		return W;
 	}
 
-	public static double[][] computeWeight(ArrayList<Satellite> SV, Calendar time) {
-		int SVcount = SV.size();
-		ArrayList<double[]> AzmEle = new LinearLeastSquare(SV, time).getAzmEle();
+	public static double[][] computeWeight(LinearLeastSquare lls) {
+
+		ArrayList<double[]> AzmEle = lls.getAzmEle();
+		int SVcount = AzmEle.size();
+		ArrayList<Satellite> SV = lls.getSV();
 		double[][] weight = new double[SVcount][SVcount];
 		IntStream.range(0, SVcount)
 				.forEach(i -> weight[i][i] = 1 / Weight.computeCoVariance(SV.get(i).getCNo(), AzmEle.get(i)[0]));

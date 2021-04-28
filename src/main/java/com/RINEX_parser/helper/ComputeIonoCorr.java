@@ -18,6 +18,7 @@ public class ComputeIonoCorr {
 		// double AzmAng_rad = Math.toRadians(AzmAng_deg);
 		double userLat_rad = Math.toRadians(userLat_deg);
 		double userLong_rad = Math.toRadians(userLong_deg);
+
 		double earth_central_angle = ((Math.PI) / 2) - ElevAng_rad
 				- Math.asin(((Earth_Radius) / (Earth_Radius + max_electron_density)) * Math.cos(ElevAng_rad));
 		double IPP_lat = Math.asin((Math.sin(userLat_rad) * Math.cos(earth_central_angle))

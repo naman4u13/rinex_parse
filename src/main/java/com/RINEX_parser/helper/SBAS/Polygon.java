@@ -32,53 +32,68 @@ public abstract class Polygon {
 		int[] Y1;
 		int[] X1;
 
-		double mod = y % lat_cell;
+		double mod = Math.abs(y % lat_cell);
 		int n = lat_cell / 5;
 		if (mod == 0 || mod == 5) {
 			Y1 = new int[n + 1];
 			Y1[0] = (int) y;
+			int diff = (y > 0 ? -5 : +5);
 			for (int i = 1; i <= n; i++) {
-				Y1[i] = Y1[i - 1] - 5;
+				Y1[i] = Y1[i - 1] + diff;
 			}
 		} else if (mod < 5) {
 			Y1 = new int[n];
-			Y1[0] = (int) Math.floor(y - mod);
+			Y1[0] = ((int) (y / lat_cell)) * lat_cell;
+			int diff = (y > 0 ? -5 : +5);
 			for (int i = 1; i < n; i++) {
-				Y1[i] = Y1[i - 1] - 5;
+				Y1[i] = Y1[i - 1] + diff;
 			}
 		} else {
 			Y1 = new int[2];
-			Y1[0] = (int) Math.floor(y - mod);
-			Y1[1] = Y1[0] + 5;
+			Y1[0] = ((int) (y / lat_cell)) * lat_cell;
+			int diff = (y > 0 ? 5 : -5);
+			Y1[1] = Y1[0] + diff;
 		}
 
-		if (y <= 60) {
-			mod = x % lon_cell;
+		if (Math.abs(y) <= 60) {
+			mod = Math.abs(x % lon_cell);
 			n = lon_cell / 5;
 			if (mod == 0 || mod == 5) {
 				X1 = new int[n + 1];
 				X1[0] = (int) x;
+				int diff = (x > 0 ? -5 : +5);
 				for (int i = 1; i <= n; i++) {
-					X1[i] = LatLonUtil.lonAdd(X1[i - 1], -5);
+					X1[i] = LatLonUtil.lonAdd(X1[i - 1], diff);
 
 				}
 			} else if (mod < 5) {
 				X1 = new int[n];
-				X1[0] = (int) Math.floor(x - mod);
+				X1[0] = ((int) (x / lon_cell)) * lon_cell;
+				int diff = (x > 0 ? -5 : +5);
 				for (int i = 1; i < n; i++) {
-					X1[i] = LatLonUtil.lonAdd(X1[i - 1], -5);
+					X1[i] = LatLonUtil.lonAdd(X1[i - 1], diff);
 
 				}
 			} else {
 				X1 = new int[2];
-				X1[0] = (int) Math.floor(x - mod);
-				X1[1] = LatLonUtil.lonAdd(X1[0], 5);
+				X1[0] = ((int) (x / lon_cell)) * lon_cell;
+				int diff = (x > 0 ? 5 : -5);
+				X1[1] = LatLonUtil.lonAdd(X1[0], diff);
 
 			}
-		} else {
-			X1 = new int[1];
-			mod = x % lon_cell;
-			X1[0] = (int) Math.floor(x - mod);
+		} else { // In the case when lat is in (60-75) range and lon spacing is 10 deg
+
+			mod = Math.abs(x % lon_cell);
+			if (mod == 0) {
+				X1 = new int[2];
+				X1[0] = (int) x;
+				int diff = (x > 0 ? -10 : +10);
+				X1[1] = LatLonUtil.lonAdd(X1[0], diff);
+			} else {
+				X1 = new int[1];
+				X1[0] = ((int) (x / lon_cell)) * lon_cell;
+			}
+
 		}
 
 		int[][] win = new int[2][];
@@ -94,13 +109,15 @@ public abstract class Polygon {
 		int[] Y1 = win[1];
 
 		for (int i = 0; i < X1.length; i++) {
+			int x1 = X1[i];
+			int diffX = x < 0 ? -lon_cell : lon_cell;
+			int x2 = LatLonUtil.lonAdd(x1, diffX);
 			for (int j = 0; j < Y1.length; j++) {
-				int x1 = X1[i];
-				int diff = x1 < 0 ? -lon_cell : lon_cell;
 
-				int x2 = LatLonUtil.lonAdd(x1, diff);
 				int y1 = Y1[j];
-				int y2 = y1 + lat_cell;
+				int diffY = y < 0 ? -lat_cell : lat_cell;
+				int y2 = y1 + diffY;
+
 				beginCheck(x1, y1, x2, y2);
 			}
 			if (flag != Flag.UNVIABLE) {
