@@ -108,11 +108,11 @@ public abstract class Polygon {
 		int[] X1 = win[0];
 		int[] Y1 = win[1];
 
-		for (int i = 0; i < X1.length; i++) {
+		for (int i = 0; i < X1.length && flag == Flag.UNVIABLE; i++) {
 			int x1 = X1[i];
 			int diffX = x < 0 ? -lon_cell : lon_cell;
 			int x2 = LatLonUtil.lonAdd(x1, diffX);
-			for (int j = 0; j < Y1.length; j++) {
+			for (int j = 0; j < Y1.length && flag == Flag.UNVIABLE; j++) {
 
 				int y1 = Y1[j];
 				int diffY = y < 0 ? -lat_cell : lat_cell;
@@ -120,9 +120,7 @@ public abstract class Polygon {
 
 				beginCheck(x1, y1, x2, y2);
 			}
-			if (flag != Flag.UNVIABLE) {
-				break;
-			}
+
 		}
 
 	}

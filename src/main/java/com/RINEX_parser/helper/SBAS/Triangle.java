@@ -30,8 +30,8 @@ public class Triangle extends Polygon {
 		for (int i = 0; i < 4; i++) {
 			triPts = new int[3][2];
 			for (int j = i; j < i + 3; j++) {
-				int k = j % 3;
-				triPts[k] = pts[k];
+				int k = j % 4;
+				triPts[j - i] = pts[k];
 			}
 			if (isInside(triPts, P)) {
 
@@ -45,6 +45,7 @@ public class Triangle extends Polygon {
 						val1 = map.get(P1[1]).get(P1[0]);
 						val2 = map.get(P2[1]).get(P2[0]);
 						val3 = map.get(P3[1]).get(P3[0]);
+						System.out.println();
 						if (val1 == 101 || val2 == 101 || val3 == 101) {
 							setFlag(Flag.UNVIABLE);
 							continue;
@@ -79,15 +80,17 @@ public class Triangle extends Polygon {
 		double W1;
 		double W2;
 		double W3;
+		double ypp;
+		double xpp;
 		if (V21[0] == 0) {
-			double ypp = dY / Math.abs(V21[1]);
-			double xpp = dX / Math.abs(V23[0]);
+			ypp = dY / Math.abs(V21[1]);
+			xpp = dX / Math.abs(V23[0]);
 			W1 = ypp;
 			W2 = 1 - xpp - ypp;
 			W3 = xpp;
 		} else {
-			double ypp = dY / Math.abs(V23[1]);
-			double xpp = dX / Math.abs(V21[0]);
+			ypp = dY / Math.abs(V23[1]);
+			xpp = dX / Math.abs(V21[0]);
 			W1 = xpp;
 			W2 = 1 - xpp - ypp;
 			W3 = ypp;
@@ -121,8 +124,9 @@ public class Triangle extends Polygon {
 		double u = (dot11 * dot02 - dot01 * dot12) * invDenom;
 		double v = (dot00 * dot12 - dot01 * dot02) * invDenom;
 
+		boolean isIns = (u >= 0) && (v >= 0) && (u + v < 1);
 		// Check if point is in triangle
-		return (u >= 0) && (v >= 0) && (u + v < 1);
+		return isIns;
 
 	}
 

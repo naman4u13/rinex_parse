@@ -180,10 +180,12 @@ public class LinearLeastSquare {
 					ionoCorrSBAS[i] = sbasIonoCorr;
 				}
 			}
+			System.out.println();
+			System.out.println("SVID   KLOBUCHLAR   SBAS   RATIO");
+			IntStream.range(0, SV.size()).forEach(i -> System.out.println(SV.get(i).getSVID() + "," + ionoCorrKlob[i]
+					+ "," + ionoCorrSBAS[i] + "," + ionoCorrSBAS[i] / ionoCorrKlob[i]));
+			System.out.println();
 		}
-		System.out.println();
-		System.out.println("KLOBUCHLAR   SBAS");
-		IntStream.range(0, SV.size()).forEach(i -> System.out.println(ionoCorrKlob[i] + "   " + ionoCorrSBAS[i]));
 
 		return IntStream.range(0, PR.length).mapToDouble(x -> PR[x] - ionoCorr[x]).toArray();
 	}

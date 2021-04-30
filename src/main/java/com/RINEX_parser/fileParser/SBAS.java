@@ -58,7 +58,13 @@ public class SBAS {
 			String line = lines[lineCtr];
 			String[] msg = line.split("\\s+");
 			int n = msg.length;
-			int[] tArr = IntStream.range(1, 7).map(x -> Integer.parseInt(msg[x])).toArray();
+			int[] tArr = null;
+			try {
+				tArr = IntStream.range(1, 7).map(x -> Integer.parseInt(msg[x])).toArray();
+			} catch (Exception e) {
+				// TODO: handle exception
+				System.out.println(line);
+			}
 
 			long[] time = Time.getGPSTime(tArr[0] + 2000, tArr[1] - 1, tArr[2], tArr[3], tArr[4], tArr[5]);
 			long GPSTime = time[0];

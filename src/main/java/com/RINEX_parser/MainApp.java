@@ -74,9 +74,9 @@ public class MainApp {
 
 		String nav_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
-		String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\MADR00ESP_R_20201001000_01H_30S_MO.crx\\MADR00ESP_R_20201001000_01H_30S_MO.rnx";
+		String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\HERS00GBR_R_20201000000_01D_30S_MO.crx\\HERS00GBR_R_20201000000_01D_30S_MO.rnx";
 
-		String sbas_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\EGNOS_2020_100\\136\\h_09_10.ems";
+		String sbas_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\EGNOS_2020_100\\123\\D100.ems";
 
 		Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path);
 		SBAS sbas = null;
@@ -85,7 +85,7 @@ public class MainApp {
 			sbas = new SBAS(sbas_path, IGP);
 		}
 		HashMap<Integer, HashSet<Integer>> IODEmap = new HashMap<Integer, HashSet<Integer>>();
-		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\test";
+		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\test3";
 		File output = new File(path + ".txt");
 		PrintStream stream;
 
@@ -152,10 +152,12 @@ public class MainApp {
 				// Incase Msg1 or PRN mask hasn't been assigned PRNmap will be null
 				if (false && useSBAS && PRNmap != null) {
 					Correction corr = PRNmap.get(SVID);
-					if (corr.getFC() != null) {
-						PRC = corr.getFC().getPRC();
+					if (corr != null) {
+						if (corr.getFC() != null) {
+							PRC = corr.getFC().getPRC();
+						}
+						ltc = corr.getLTC().get(NavMsg.getIODE());
 					}
-					ltc = corr.getLTC().get(NavMsg.getIODE());
 
 				}
 
@@ -351,6 +353,32 @@ public class MainApp {
 				+ ionoError + " non Iono LL Diff - " + nonIonoDiff + " Iono LL Diff - " + ionoDiff);
 
 		return new double[] { nonIonoError, ionoError, nonIonoDiff, ionoDiff };
+	}
+
+	public static double[] estimateError(double[] ECEF1, double[] ECEF2, double[] ECEF3, double[] userECEF,
+			Calendar time) {
+
+		double[] userLatLon = ECEFtoLatLon.ecef2lla(userECEF);
+
+		double ErrXYZ1 = Math.sqrt(IntStream.range(0, 3).mapToDouble(x -> userECEF[x] - ECEF1[x])
+				.map(x -> Math.pow(x, 2)).reduce(0, (a, b) -> a + b));
+		double ErrXYZ2 = Math.sqrt(IntStream.range(0, 3).mapToDouble(x -> userECEF[x] - ECEF2[x])
+				.map(x -> Math.pow(x, 2)).reduce(0, (a, b) -> a + b));
+		double ErrXYZ3 = Math.sqrt(IntStream.range(0, 3).mapToDouble(x -> userECEF[x] - ECEF3[x])
+				.map(x -> Math.pow(x, 2)).reduce(0, (a, b) -> a + b));
+
+		double[] LL1 = ECEFtoLatLon.ecef2lla(ECEF1);
+		double[] LL2 = ECEFtoLatLon.ecef2lla(ECEF2);
+		double[] LL3 = ECEFtoLatLon.ecef2lla(ECEF3);
+
+		double ErrLL1 = LatLonUtil.getHaversineDistance(LL1, userLatLon);
+		double ErrLL2 = LatLonUtil.getHaversineDistance(LL2, userLatLon);
+		double ErrLL3 = LatLonUtil.getHaversineDistance(LL3, userLatLon);
+		SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/YYYY hh:mm:ss");
+
+		System.out.println(sdf.format(time.getTime()) + " ECEF1 diff " + ErrXYZ1 + " ECEF2 diff " + ErrXYZ2
+				+ " ECEF3 diff " + ErrXYZ3 + " LL1 diff " + ErrLL1 + " LL2 diff " + ErrLL2 + " LL3 diff " + ErrLL3);
+		return new double[] { ErrXYZ1, ErrXYZ2, ErrXYZ3, ErrLL1, ErrLL2, ErrLL3 };
 	}
 
 	public static double RMS(ArrayList<Double> list) {
