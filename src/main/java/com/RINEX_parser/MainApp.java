@@ -60,7 +60,7 @@ public class MainApp {
 	public static void main(String[] args) {
 
 		Instant start = Instant.now();
-		posEstimate(false, false, true, true, true, 2);
+		posEstimate(false, false, true, true, false, 2);
 		Instant end = Instant.now();
 		System.out.println("EXECUTION TIME -  " + Duration.between(start, end));
 
@@ -74,7 +74,7 @@ public class MainApp {
 
 		String nav_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
-		String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\HERS00GBR_R_20201000000_01D_30S_MO.crx\\HERS00GBR_R_20201000000_01D_30S_MO.rnx";
+		String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\NYA100NOR_S_20201000000_01D_30S_MO.rnx\\NYA100NOR_S_20201000000_01D_30S_MO.rnx";
 
 		String sbas_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\EGNOS_2020_100\\123\\D100.ems";
 
@@ -85,7 +85,7 @@ public class MainApp {
 			sbas = new SBAS(sbas_path, IGP);
 		}
 		HashMap<Integer, HashSet<Integer>> IODEmap = new HashMap<Integer, HashSet<Integer>>();
-		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\test3";
+		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\NYA1_L1";
 		File output = new File(path + ".txt");
 		PrintStream stream;
 
@@ -110,6 +110,8 @@ public class MainApp {
 		ArrayList<Calendar> timeList = new ArrayList<Calendar>();
 		ArrayList<ArrayList<Satellite>> SVlist = new ArrayList<ArrayList<Satellite>>();
 		double[] userECEF = null;
+
+		ArrayList<String[]> IPPdelay = new ArrayList<String[]>();
 		for (ObservationMsg obsvMsg : ObsvMsgs) {
 
 			long tRX = obsvMsg.getTRX();
@@ -133,6 +135,13 @@ public class MainApp {
 				if (sbas.isIonoEnabled()) {
 					sbasIVD = sbas.getIonoVDelay();
 
+					for (int lat : sbasIVD.keySet()) {
+						for (int lon : sbasIVD.get(lat).keySet()) {
+							double val = sbasIVD.get(lat).get(lon);
+							IPPdelay.add(new String[] { "" + lat, "" + lon, "" + tRX, "" + val });
+						}
+					}
+
 				} else {
 					System.out.println("NO SBAS Iono Corr");
 
@@ -150,7 +159,7 @@ public class MainApp {
 
 				NavigationMsg NavMsg = NavMsgs.get(SVID).get(order[i]);
 				// Incase Msg1 or PRN mask hasn't been assigned PRNmap will be null
-				if (false && useSBAS && PRNmap != null) {
+				if (useSBAS && PRNmap != null) {
 					Correction corr = PRNmap.get(SVID);
 					if (corr != null) {
 						if (corr.getFC() != null) {
@@ -196,13 +205,13 @@ public class MainApp {
 			case 1:
 				LS ls = new LS(SV, ionoCoeff, time);
 				ErrMap.computeIfAbsent("LS", k -> new ArrayList<double[]>())
-						.add(estimateError(ls.getIonoCorrECEF(), ls.getTropoCorrECEF(geoid), userECEF, time));
+						.add(estimateError(ls.getEstECEF(), ls.getIonoCorrECEF(), userECEF, time));
 				break;
 			case 2:
 				WLS wls = new WLS(SV, ionoCoeff, time);
 				try {
 					ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
-							.add(estimateError(wls.getIonoCorrECEF(), wls.getIonoCorrECEF(sbasIVD), userECEF, time));
+							.add(estimateError(wls.getIonoCorrECEF(), wls.getTropoCorrECEF(geoid), userECEF, time));
 				} catch (Exception e) {
 					System.out.println(e);
 				}
@@ -222,10 +231,10 @@ public class MainApp {
 			case 4:
 				ls = new LS(SV, ionoCoeff, time);
 				ErrMap.computeIfAbsent("LS", k -> new ArrayList<double[]>())
-						.add(estimateError(ls.getIonoCorrECEF(), ls.getTropoCorrECEF(geoid), userECEF, time));
+						.add(estimateError(ls.getEstECEF(), ls.getTropoCorrECEF(geoid), userECEF, time));
 				wls = new WLS(SV, ionoCoeff, time);
 				ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
-						.add(estimateError(wls.getIonoCorrECEF(), wls.getTropoCorrECEF(geoid), userECEF, time));
+						.add(estimateError(wls.getEstECEF(), wls.getTropoCorrECEF(geoid), userECEF, time));
 //				doppler = new Doppler(SV, ionoCoeff);
 //				ErrMap.computeIfAbsent("DopplerWLS", k -> new ArrayList<double[]>())
 //						.add(estimateError(doppler.getEstECEF(true), doppler.getIonoCorrECEF(true), userECEF, time));
@@ -234,7 +243,7 @@ public class MainApp {
 			timeList.add(time);
 			System.out.println();
 		}
-
+//		IGPgrid.recordIPPdelay(IPPdelay);
 		if (estimatorType == 6) {
 			for (int i = 1; i < SVlist.size(); i++) {
 				DeltaRange dr = new DeltaRange(SVlist.get(i), SVlist.get(i - 1), timeList.get(i));
@@ -281,7 +290,7 @@ public class MainApp {
 			GraphErrMap.put(key + " Atmos corrected LL Offset", IonLLdiffList);
 
 		}
-		if (estimatorType == 5 || estimatorType == 4) {
+		if (estimatorType == 5) {
 			ArrayList<Double> KalmanErr = new StaticEKF(SVlist, userECEF, ionoCoeff, timeList).compute(path);
 			GraphErrMap.put("KALMAN ECEF", KalmanErr);
 

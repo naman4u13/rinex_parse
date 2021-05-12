@@ -119,6 +119,7 @@ public abstract class Polygon {
 				int y2 = y1 + diffY;
 
 				beginCheck(x1, y1, x2, y2);
+
 			}
 
 		}

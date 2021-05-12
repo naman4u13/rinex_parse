@@ -45,7 +45,7 @@ public class Triangle extends Polygon {
 						val1 = map.get(P1[1]).get(P1[0]);
 						val2 = map.get(P2[1]).get(P2[0]);
 						val3 = map.get(P3[1]).get(P3[0]);
-						System.out.println();
+
 						if (val1 == 101 || val2 == 101 || val3 == 101) {
 							setFlag(Flag.UNVIABLE);
 							continue;

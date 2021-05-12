@@ -82,7 +82,10 @@ public class ObservationRNX {
 						}
 						try {
 							String doppler = type_index.containsKey("D1C") ? satInfo.get(type_index.get("D1C")) : "0";
-
+//							double phase = type_index.containsKey("L1C")
+//									? Double.parseDouble(satInfo.get(type_index.get("L1C"))) * 0.1915
+//									: 0.0;
+//							double PR = Double.parseDouble(satInfo.get(type_index.get("C1C")));
 							SV.add(new SatelliteModel(SVID, satInfo.get(type_index.get("C1C")),
 									satInfo.get(type_index.get("S1C")), doppler));
 						} catch (Exception e) {

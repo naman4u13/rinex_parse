@@ -55,6 +55,7 @@ public class ComputeIonoCorr {
 			if (flag != Flag.UNVIABLE) {
 				return getIonoDelay(sqr);
 			}
+
 			tri.checkViablilty(5, 5);
 			flag = tri.getFlag();
 			if (flag != Flag.UNVIABLE) {

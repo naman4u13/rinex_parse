@@ -3,6 +3,7 @@ package com.RINEX_parser.utility;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.stream.IntStream;
 
@@ -144,6 +145,29 @@ public class IGPgrid {
 			// TODO: handle exception
 		}
 		return IGPgrid;
+	}
+
+	public static void recordIPPdelay(ArrayList<String[]> IPPdelay) {
+		String[] header = { "Lat", "Lon", "GPS TOW", "IPP Zenith Delay(m)" };
+		String filePath = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\SBAS_IPP\\2020_100_PRN123.csv";
+		CSVWriter writer = null;
+
+		File file = new File(filePath);
+		// create FileWriter object with file as parameter
+		FileWriter outputfile;
+		try {
+			outputfile = new FileWriter(file);
+			// create CSVWriter object filewriter object as parameter
+			writer = new CSVWriter(outputfile);
+			writer.writeNext(header);
+			writer.writeAll(IPPdelay);
+			writer.close();
+
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
 	}
 
 }

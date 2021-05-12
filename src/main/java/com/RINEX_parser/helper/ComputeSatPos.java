@@ -36,7 +36,7 @@ public class ComputeSatPos {
 
 		}
 
-		double SV_clock_bias = Sat.getSV_clock_bias() + dX[3] + dXrate[3] * (tSV - ToA);
+		double SV_clock_bias = Sat.getSV_clock_bias() + dX[3] + (dXrate[3] * (tSV - ToA));
 
 		/*
 		 * double SatClockOffset = Sat.SV_clock_bias + ((tSV - TOC) *
