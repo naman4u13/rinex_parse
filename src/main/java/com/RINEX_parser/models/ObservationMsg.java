@@ -1,6 +1,7 @@
 package com.RINEX_parser.models;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import com.RINEX_parser.utility.Time;
 
@@ -16,11 +17,11 @@ public class ObservationMsg {
 	private int minute;
 	private double second;
 	private int ObsvSatCount;
-	private ArrayList<SatelliteModel> obsvSat = new ArrayList<SatelliteModel>();
+	private HashMap<Character, HashMap<Integer, HashMap<Character, ArrayList<Observable>>>> obsvSat = new HashMap<Character, HashMap<Integer, HashMap<Character, ArrayList<Observable>>>>();
 	private long tRX;
 	private long weekNo;
 
-	public void setObsvSat(ArrayList<SatelliteModel> obsvSat) {
+	public void setObsvSat(HashMap<Character, HashMap<Integer, HashMap<Character, ArrayList<Observable>>>> obsvSat) {
 		this.obsvSat = obsvSat;
 		ObsvSatCount = obsvSat.size();
 	}
@@ -86,8 +87,16 @@ public class ObservationMsg {
 				+ ObsvSatCount + ", obsvSat=" + obsvSat + "]";
 	}
 
-	public ArrayList<SatelliteModel> getObsvSat() {
+	public HashMap<Character, HashMap<Integer, HashMap<Character, ArrayList<Observable>>>> getObsvSat() {
 		return obsvSat;
+	}
+
+	public ArrayList<Observable> getObsvSat(String codeObsv) {
+		char SSI = codeObsv.charAt(0);
+		int freqID = Integer.parseInt(codeObsv.charAt(1) + "");
+		char codeID = codeObsv.charAt(2);
+
+		return obsvSat.get(SSI).get(freqID).get(codeID);
 	}
 
 	public long getTRX() {

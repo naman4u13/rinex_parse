@@ -1,15 +1,16 @@
 package com.RINEX_parser.models;
 
-public class SatelliteModel {
+public class Observable {
 
-	private final double SpeedofLight = 299792458;
-	private final double L1_frequency = 1575.42E6;
-	private final double L1_wavelength = SpeedofLight / L1_frequency;
+	private static final double SPEED_OF_LIGHT = 299792458;
+	private final double carrier_frequency;
+	private final double carrier_wavelength;
 	private int SVID;
 	private double pseudorange;
 	private double CNo;
 	private double doppler;
-	private double PseudoRangeRate;
+	private double pseudoRangeRate;
+	private double phase;
 
 	public int getSVID() {
 		return SVID;
@@ -19,34 +20,45 @@ public class SatelliteModel {
 		return pseudorange;
 	}
 
-	public SatelliteModel(String SVID, String pseudorange, String CNo, String doppler) {
+	public Observable(String SVID, String pseudorange, String CNo, String doppler, String phase,
+			String carrier_frequency) {
 		this.SVID = Integer.parseInt(SVID.replaceAll("[A-Z]", ""));
-		this.pseudorange = Double.parseDouble(pseudorange);
-		this.CNo = Double.parseDouble(CNo);
-		this.doppler = Double.parseDouble(doppler);
-		this.PseudoRangeRate = -this.doppler * L1_wavelength;
+		this.pseudorange = pseudorange != null ? Double.parseDouble(pseudorange) : 0;
+		this.CNo = CNo != null ? Double.parseDouble(CNo) : 0;
+		this.doppler = doppler != null ? Double.parseDouble(doppler) : 0;
+		this.phase = phase != null ? Double.parseDouble(phase) : 0;
+		this.carrier_frequency = Double.parseDouble(carrier_frequency);
+		this.carrier_wavelength = SPEED_OF_LIGHT / this.carrier_frequency;
+		this.pseudoRangeRate = -this.doppler * this.carrier_wavelength;
 	}
 
-	public SatelliteModel(int SVID, double pseudorange, double CNo, double doppler) {
+	public Observable(int SVID, double pseudorange, double CNo, double doppler, double phase,
+			double carrier_frequency) {
 		this.SVID = SVID;
 		this.pseudorange = pseudorange;
 		this.CNo = CNo;
 		this.doppler = doppler;
-		this.PseudoRangeRate = -this.doppler * L1_wavelength;
+		this.phase = phase;
+		this.carrier_frequency = carrier_frequency;
+		this.carrier_wavelength = SPEED_OF_LIGHT / this.carrier_frequency;
+		this.pseudoRangeRate = -this.doppler * this.carrier_wavelength;
 	}
 
-	public SatelliteModel(SatelliteModel satModel) {
+	public Observable(Observable satModel) {
 		this.SVID = satModel.getSVID();
 		this.pseudorange = satModel.getPseudorange();
 		this.CNo = satModel.getCNo();
 		this.doppler = satModel.getDoppler();
-		this.PseudoRangeRate = -this.doppler * L1_wavelength;
+		this.phase = satModel.phase;
+		this.carrier_frequency = satModel.carrier_frequency;
+		this.carrier_wavelength = satModel.carrier_wavelength;
+		this.pseudoRangeRate = satModel.pseudoRangeRate;
 	}
 
 	@Override
 	public String toString() {
-		return "SatelliteModel [SVID=" + SVID + ", pseudorange=" + pseudorange + ", CNo=" + CNo + ", doppler=" + doppler
-				+ ", PseudoRangeRate=" + PseudoRangeRate + "]";
+		return "Observable [SVID=" + SVID + ", pseudorange=" + pseudorange + ", CNo=" + CNo + ", doppler=" + doppler
+				+ ", pseudoRangeRate=" + pseudoRangeRate + "]";
 	}
 
 	public double getCNo() {
@@ -74,10 +86,10 @@ public class SatelliteModel {
 	}
 
 	public double getPseudoRangeRate() {
-		return PseudoRangeRate;
+		return pseudoRangeRate;
 	}
 
 	public void setPseudoRangeRate(double pseudoRangeRate) {
-		PseudoRangeRate = pseudoRangeRate;
+		this.pseudoRangeRate = pseudoRangeRate;
 	}
 }

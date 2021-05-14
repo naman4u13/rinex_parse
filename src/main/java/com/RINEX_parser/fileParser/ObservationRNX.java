@@ -5,10 +5,12 @@ import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Scanner;
 
+import com.RINEX_parser.constants.Constellation;
+import com.RINEX_parser.models.Observable;
 import com.RINEX_parser.models.ObservationMsg;
-import com.RINEX_parser.models.SatelliteModel;
 
 public class ObservationRNX {
 
@@ -24,7 +26,8 @@ public class ObservationRNX {
 
 			double[] ECEF_XYZ = new double[3];
 			String siteCode = null;
-			ArrayList<String> obs_types = new ArrayList<String>();
+			HashMap<Character, HashSet<String>> availObs = new HashMap<Character, HashSet<String>>();
+			HashMap<Character, HashMap<String, Integer>> type_index_map = new HashMap<Character, HashMap<String, Integer>>();
 			while (header.hasNextLine()) {
 
 				// Remove leading and trailing whitespace, as split method adds them
@@ -37,20 +40,27 @@ public class ObservationRNX {
 							.toArray();
 
 				} else if (line.contains("SYS / # / OBS TYPES")) {
-					obs_types.addAll(Arrays.asList(line.replaceAll("SYS / # / OBS TYPES", "").split("\\s+")));
+					String[] types_arr = line.replaceAll("SYS / # / OBS TYPES", "").split("\\s+");
+
+					HashMap<String, Integer> type_index = new HashMap<String, Integer>();
+					HashSet<String> avail = new HashSet<String>();
+					for (int i = 0; i < Integer.parseInt(types_arr[1]); i++) {
+						String code = types_arr[i + 2].trim();
+						type_index.put(code, i);
+						if (code.charAt(0) == 'C') {
+							avail.add(code.substring(1));
+						}
+
+					}
+					char SSI = types_arr[0].trim().charAt(0);
+					type_index_map.put(SSI, type_index);
+					availObs.put(SSI, avail);
+
 				}
 			}
 			if (useSNX) {
 				String snxPath = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\igs20P21004.ssc\\igs20P21004.ssc";
 				ECEF_XYZ = SINEX.sinex_process(snxPath, siteCode);
-			}
-			HashMap<String, Integer> type_index = new HashMap<String, Integer>();
-			int GPSindex = obs_types.indexOf("G");
-
-			for (int i = 0; i < Integer.parseInt(obs_types.get(GPSindex + 1)); i++) {
-				String type = obs_types.get(GPSindex + 2 + i).trim();
-
-				type_index.put(type, i);
 			}
 
 			String[] obsv_msgs = input.next().trim().split(">");
@@ -59,7 +69,7 @@ public class ObservationRNX {
 					continue;
 				}
 
-				ArrayList<SatelliteModel> SV = new ArrayList<SatelliteModel>();
+				HashMap<Character, HashMap<Integer, HashMap<Character, ArrayList<Observable>>>> SV = new HashMap<Character, HashMap<Integer, HashMap<Character, ArrayList<Observable>>>>();
 				ObservationMsg Msg = new ObservationMsg();
 				msg = msg.trim();
 
@@ -67,34 +77,45 @@ public class ObservationRNX {
 				for (int i = 1; i < msgLines.length; i++) {
 					String msgLine = msgLines[i];
 					String SVID = msgLine.substring(0, 3);
-					if (msgLine.trim().charAt(0) == 'G') {
-						msgLine = msgLine.substring(3);
-						String[] tokens = msgLine.split("(?<=\\G.{16})");
-						ArrayList<String> satInfo = new ArrayList<String>();
-						for (String token : tokens) {
-							token = token.trim();
-							if (token.isBlank()) {
-								satInfo.add("");
-							} else {
-								satInfo.add(token.split("\\s+")[0].trim());
-							}
+					char SSI = SVID.charAt(0);// Satellite System Indentifier
+					int obsSize = type_index_map.get(SSI).size();
+					String[] obsvs = new String[obsSize];
+					msgLine = msgLine.substring(3);
+					String[] tokens = msgLine.split("(?<=\\G.{16})");
 
-						}
-						try {
-							String doppler = type_index.containsKey("D1C") ? satInfo.get(type_index.get("D1C")) : "0";
-//							double phase = type_index.containsKey("L1C")
-//									? Double.parseDouble(satInfo.get(type_index.get("L1C"))) * 0.1915
-//									: 0.0;
-//							double PR = Double.parseDouble(satInfo.get(type_index.get("C1C")));
-							SV.add(new SatelliteModel(SVID, satInfo.get(type_index.get("C1C")),
-									satInfo.get(type_index.get("S1C")), doppler));
-						} catch (Exception e) {
-							// TODO: handle exception
-							System.out.println("MAIN ERROR - " + e + "\n" + msgLine);
+					for (int j = 0; j < tokens.length; j++) {
+						String token = tokens[j];
+						token = token.trim();
+						if (token.isBlank()) {
+							obsvs[j] = null;
+						} else {
+							obsvs[j] = token.split("\\s+")[0].trim();
 
 						}
 
 					}
+
+					HashMap<String, Integer> type_index = type_index_map.get(SSI);
+					for (String str : availObs.get(SSI)) {
+
+						String pseudorange = type_index.containsKey('C' + str) ? obsvs[type_index.get('C' + str)]
+								: null;
+						if (pseudorange == null) {
+							continue;
+						}
+						String CNo = type_index.containsKey('S' + str) ? obsvs[type_index.get('S' + str)] : null;
+						String doppler = type_index.containsKey('D' + str) ? obsvs[type_index.get('D' + str)] : null;
+						String phase = type_index.containsKey('L' + str) ? obsvs[type_index.get('L' + str)] : null;
+						int freqID = Integer.parseInt(str.charAt(0) + "");
+						char codeID = str.charAt(1);
+						String frequency = Constellation.frequency.get(SSI).get(freqID) + "";
+						SV.computeIfAbsent(SSI, k -> new HashMap<Integer, HashMap<Character, ArrayList<Observable>>>())
+								.computeIfAbsent(freqID, k -> new HashMap<Character, ArrayList<Observable>>())
+								.computeIfAbsent(codeID, k -> new ArrayList<Observable>())
+								.add(new Observable(SVID, pseudorange, CNo, doppler, phase, frequency));
+
+					}
+
 				}
 
 				Msg.set_ECEF_XYZ(ECEF_XYZ);

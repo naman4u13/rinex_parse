@@ -3,15 +3,15 @@ package com.RINEX_parser.models;
 import java.util.Arrays;
 import java.util.Calendar;
 
-public class Satellite extends SatelliteModel {
+public class Satellite extends Observable {
 
 	private double[] ECEF;
-	private double SatClkOff;
+	private double satClkOff;
 	// Note this is GPS System time at time of Transmission
 	private double t;
-	private double[] SatVel;
+	private double[] satVel;
 	// Note this Clock Drift is derived, its not what we get from Ephemeris
-	private double SatClkDrift;
+	private double satClkDrift;
 	private double[] ECI;
 	// Note this is GPS System time at time of Reception + Receiver clock offset
 	private double tRX;
@@ -46,38 +46,39 @@ public class Satellite extends SatelliteModel {
 
 	}
 
-	public Satellite(int SVID, double pseudorange, double CNo, double doppler, double[] eCEF, double satClkOff,
-			double t, double tRX, double[] satVel, double satClkDrift, double[] ECI, Calendar time) {
-		super(SVID, pseudorange, CNo, doppler);
+	public Satellite(int SVID, double pseudorange, double CNo, double doppler, double phase, double carrier_frequency,
+			double[] eCEF, double satClkOff, double t, double tRX, double[] satVel, double satClkDrift, double[] ECI,
+			Calendar time) {
+		super(SVID, pseudorange, CNo, doppler, phase, carrier_frequency);
 		ECEF = eCEF;
-		SatClkOff = satClkOff;
+		this.satClkOff = satClkOff;
 		this.t = t;
 		this.tRX = tRX;
-		SatVel = satVel;
-		SatClkDrift = satClkDrift;
+		this.satVel = satVel;
+		this.satClkDrift = satClkDrift;
 		this.ECI = ECI;
 		this.time = time;
 	}
 
-	public Satellite(SatelliteModel satModel, double[] eCEF, double satClkOff, double t, double tRX, double[] satVel,
+	public Satellite(Observable satModel, double[] eCEF, double satClkOff, double t, double tRX, double[] satVel,
 			double satClkDrift, double[] ECI, Calendar time) {
 		super(satModel);
 		ECEF = eCEF;
-		SatClkOff = satClkOff;
+		this.satClkOff = satClkOff;
 		this.t = t;
 		this.tRX = tRX;
-		SatVel = satVel;
-		SatClkDrift = satClkDrift;
+		this.satVel = satVel;
+		this.satClkDrift = satClkDrift;
 		this.ECI = ECI;
 		this.time = time;
 	}
 
 	public double getSatClkOff() {
-		return SatClkOff;
+		return satClkOff;
 	}
 
 	public void setSatClkOff(double satClkOff) {
-		SatClkOff = satClkOff;
+		this.satClkOff = satClkOff;
 	}
 
 	public double getT() {
@@ -90,25 +91,25 @@ public class Satellite extends SatelliteModel {
 
 	@Override
 	public String toString() {
-		return super.toString() + "Satellite [ECEF=" + Arrays.toString(ECEF) + ", SatClkOff=" + SatClkOff + ", t=" + t
-				+ ", tRX=" + tRX + ", SatVel=" + Arrays.toString(SatVel) + ", SatClkDrift=" + SatClkDrift + ", ECI="
+		return super.toString() + "Satellite [ECEF=" + Arrays.toString(ECEF) + ", satClkOff=" + satClkOff + ", t=" + t
+				+ ", tRX=" + tRX + ", satVel=" + Arrays.toString(satVel) + ", satClkDrift=" + satClkDrift + ", ECI="
 				+ Arrays.toString(ECI) + "]";
 	}
 
 	public double[] getSatVel() {
-		return SatVel;
+		return satVel;
 	}
 
 	public void setSatVel(double[] satVel) {
-		SatVel = satVel;
+		this.satVel = satVel;
 	}
 
 	public double getSatClkDrift() {
-		return SatClkDrift;
+		return satClkDrift;
 	}
 
 	public void setSatClkDrift(double satClkDrift) {
-		SatClkDrift = satClkDrift;
+		this.satClkDrift = satClkDrift;
 	}
 
 	public double gettRX() {

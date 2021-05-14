@@ -42,9 +42,9 @@ import com.RINEX_parser.helper.ComputeSatPos;
 import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.IonoValue;
 import com.RINEX_parser.models.NavigationMsg;
+import com.RINEX_parser.models.Observable;
 import com.RINEX_parser.models.ObservationMsg;
 import com.RINEX_parser.models.Satellite;
-import com.RINEX_parser.models.SatelliteModel;
 import com.RINEX_parser.models.TimeCorrection;
 import com.RINEX_parser.models.SBAS.Correction;
 import com.RINEX_parser.models.SBAS.LongTermCorr;
@@ -57,20 +57,21 @@ import com.RINEX_parser.utility.Time;
 
 public class MainApp {
 
+	final static double SpeedofLight = 299792458;
+
 	public static void main(String[] args) {
 
 		Instant start = Instant.now();
-		posEstimate(false, false, true, true, false, 2);
+		posEstimate(false, false, true, true, false, 2, "G2W");
 		Instant end = Instant.now();
 		System.out.println("EXECUTION TIME -  " + Duration.between(start, end));
 
 	}
 
 	public static void posEstimate(boolean doWeightPlot, boolean doIonoPlot, boolean doPosErrPlot, boolean useSNX,
-			boolean useSBAS, int estimatorType) {
+			boolean useSBAS, int estimatorType, String obsvCode) {
 		Geoid geoid = buildGeoid();
 		HashMap<Integer, ArrayList<IonoValue>> ionoValueMap = new HashMap<Integer, ArrayList<IonoValue>>();
-		double SpeedofLight = 299792458;
 
 		String nav_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
@@ -85,7 +86,7 @@ public class MainApp {
 			sbas = new SBAS(sbas_path, IGP);
 		}
 		HashMap<Integer, HashSet<Integer>> IODEmap = new HashMap<Integer, HashSet<Integer>>();
-		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\NYA1_L1";
+		String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\test";
 		File output = new File(path + ".txt");
 		PrintStream stream;
 
@@ -119,10 +120,10 @@ public class MainApp {
 			userECEF = obsvMsg.getECEF();
 			double[] userLatLon = ECEFtoLatLon.ecef2lla(userECEF);
 			Calendar time = Time.getDate(tRX, weekNo, userLatLon[1]);
-
+			ArrayList<Observable> observables = obsvMsg.getObsvSat(obsvCode);
 			// find out index of nav-msg inside the nav-msg list which is most suitable for
 			// each obs-msg based on time
-			int order[] = obsvMsg.getObsvSat().stream().map(i -> NavMsgs.get(i.getSVID()))
+			int order[] = observables.stream().map(i -> NavMsgs.get(i.getSVID()))
 					.map(i -> (ArrayList<Long>) i.stream().map(j -> j.getTOC()).collect(Collectors.toList()))
 					.mapToInt(i -> Closest.findClosest(tRX, i)).toArray();
 
@@ -151,7 +152,7 @@ public class MainApp {
 
 			for (int i = 0; i < order.length; i++) {
 
-				SatelliteModel sat = obsvMsg.getObsvSat().get(i);
+				Observable sat = observables.get(i);
 				int SVID = sat.getSVID();
 				// SBAS params
 				double PRC = 0;
