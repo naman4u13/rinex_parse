@@ -10,6 +10,7 @@ import java.util.stream.IntStream;
 import com.RINEX_parser.models.SBAS.Correction;
 import com.RINEX_parser.models.SBAS.FastCorr;
 import com.RINEX_parser.models.SBAS.LongTermCorr;
+import com.RINEX_parser.utility.StringUtil;
 import com.RINEX_parser.utility.Time;
 
 public class SBAS {
@@ -79,7 +80,7 @@ public class SBAS {
 			String strData = bin.substring(14, 226);
 
 			if (msgType == 1) {
-				String[] data = splitter(strData, 210, 2);
+				String[] data = StringUtil.splitter(strData, 210, 2);
 				String mask = data[0];
 				int IODP = Integer.parseInt(data[1], 2);
 				if (currentIODP != IODP) {
@@ -97,7 +98,7 @@ public class SBAS {
 				}
 				// System.out.println();
 			} else if (msgType == 18) {
-				String[] data = splitter(strData, 4, 4, 2, 201, 1);
+				String[] data = StringUtil.splitter(strData, 4, 4, 2, 201, 1);
 				int bandCount = Integer.parseInt(data[0], 2);
 				int bandNo = Integer.parseInt(data[1], 2);
 				int IODI = Integer.parseInt(data[2], 2);
@@ -120,7 +121,7 @@ public class SBAS {
 					BandMask.put(bandNo, bandMask);
 				}
 			} else if (msgType == 26) {
-				String[] data = splitter(strData, 4, 4, 15 * 13, 2, 7);
+				String[] data = StringUtil.splitter(strData, 4, 4, 15 * 13, 2, 7);
 				int IODI = Integer.parseInt(data[3], 2);
 				if (IODI == currentIODI) {
 
@@ -170,7 +171,7 @@ public class SBAS {
 			else if (PRNmap != null) {
 
 				if (msgType == 2 || msgType == 3 || msgType == 4 || msgType == 5) {
-					String[] data = splitter(strData, 2, 2, 13 * 12, 13 * 4);
+					String[] data = StringUtil.splitter(strData, 2, 2, 13 * 12, 13 * 4);
 					int IODF = Integer.parseInt(data[0], 2);
 					int IODP = Integer.parseInt(data[1], 2);
 					String[] strPRC = data[2].split("(?<=\\G.{12})");
@@ -188,8 +189,8 @@ public class SBAS {
 					// System.out.println();
 				} else if (msgType == 24) {
 					// 102-105 are spare bits
-					String[] data = splitter(strData, 106, 106);
-					String[] FCdata = splitter(data[0], 12 * 6, 4 * 6, 2, 2, 2, 4);
+					String[] data = StringUtil.splitter(strData, 106, 106);
+					String[] FCdata = StringUtil.splitter(data[0], 12 * 6, 4 * 6, 2, 2, 2, 4);
 
 					String[] strPRC = FCdata[0].split("(?<=\\G.{12})");
 					double[] PRC = Arrays.stream(strPRC).mapToDouble(x -> 0.125 * binToDec(x, XII)).toArray();
@@ -211,7 +212,7 @@ public class SBAS {
 
 				}
 //				if (msgType == 7) {
-//					String[] data = splitter(strData, 4, 2, 2, 204);
+//					String[] data = StringUtil.splitter(strData, 4, 2, 2, 204);
 //					int SysLatency = Integer.parseInt(data[0], 2);
 //					int IODP = Integer.parseInt(data[1], 2);
 //					String[] strAi = data[3].split("(?<=\\G.{4})");
@@ -221,7 +222,7 @@ public class SBAS {
 //				}
 				else if (msgType == 25) {
 
-					String[] halfMsgs = splitter(strData, 106, 106);
+					String[] halfMsgs = StringUtil.splitter(strData, 106, 106);
 					for (String halfMsg : halfMsgs) {
 						LTCparse(halfMsg, GPSTime, weekNo);
 					}
@@ -264,31 +265,14 @@ public class SBAS {
 		return dec;
 	}
 
-	private String[] splitter(String str, int... lens) {
-
-		if (Arrays.stream(lens).sum() != str.length()) {
-			System.out.println("ERROR: splitter args are incorrect");
-			return null;
-		}
-		int pos = 0;
-		int n = lens.length;
-		String[] arr = new String[n];
-		for (int i = 0; i < n; i++) {
-			arr[i] = str.substring(pos, pos + lens[i]);
-			pos += lens[i];
-		}
-		return arr;
-
-	}
-
 	private void LTCparse(String halfMsg, long GPSTime, long weekNo) {
 
 		if (halfMsg.charAt(0) == '0') {
-			String[] data = splitter(halfMsg, 1, 51, 51, 2, 1);
+			String[] data = StringUtil.splitter(halfMsg, 1, 51, 51, 2, 1);
 			int velCode = Integer.parseInt(data[0]);
 			String[] qtrMsgs = new String[] { data[1], data[2] };
 			for (String qtrMsg : qtrMsgs) {
-				String[] params = splitter(qtrMsg, 6, 8, 9, 9, 9, 10);
+				String[] params = StringUtil.splitter(qtrMsg, 6, 8, 9, 9, 9, 10);
 				int PRNmaskNo = Integer.parseInt(params[0], 2);
 				if (PRNmaskNo != 0) {
 					int IODE = Integer.parseInt(params[1], 2);
@@ -306,7 +290,7 @@ public class SBAS {
 			}
 
 		} else {
-			String[] data = splitter(halfMsg, 1, 6, 8, 11, 11, 11, 11, 8, 8, 8, 8, 13, 2);
+			String[] data = StringUtil.splitter(halfMsg, 1, 6, 8, 11, 11, 11, 11, 8, 8, 8, 8, 13, 2);
 			int velCode = Integer.parseInt(data[0]);
 			int PRNmaskNo = Integer.parseInt(data[1], 2);
 			if (PRNmaskNo != 0) {

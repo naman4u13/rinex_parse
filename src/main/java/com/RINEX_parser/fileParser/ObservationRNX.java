@@ -1,12 +1,12 @@
 package com.RINEX_parser.fileParser;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Scanner;
+import java.util.stream.Collectors;
 
 import com.RINEX_parser.constants.Constellation;
 import com.RINEX_parser.models.Observable;
@@ -14,7 +14,7 @@ import com.RINEX_parser.models.ObservationMsg;
 
 public class ObservationRNX {
 
-	public static ArrayList<ObservationMsg> rinex_obsv_process(String path, boolean useSNX) {
+	public static ArrayList<ObservationMsg> rinex_obsv_process(String path, boolean useSNX) throws Exception {
 		File file = new File(path);
 		ArrayList<ObservationMsg> ObsvMsgs = new ArrayList<ObservationMsg>();
 		try {
@@ -28,6 +28,7 @@ public class ObservationRNX {
 			String siteCode = null;
 			HashMap<Character, HashSet<String>> availObs = new HashMap<Character, HashSet<String>>();
 			HashMap<Character, HashMap<String, Integer>> type_index_map = new HashMap<Character, HashMap<String, Integer>>();
+			ArrayList<String> typeList = new ArrayList<String>();
 			while (header.hasNextLine()) {
 
 				// Remove leading and trailing whitespace, as split method adds them
@@ -40,23 +41,33 @@ public class ObservationRNX {
 							.toArray();
 
 				} else if (line.contains("SYS / # / OBS TYPES")) {
-					String[] types_arr = line.replaceAll("SYS / # / OBS TYPES", "").split("\\s+");
+					typeList.addAll(Arrays.stream(line.replaceAll("SYS / # / OBS TYPES", "").split("\\s+"))
+							.map(x -> x.trim()).collect(Collectors.toList()));
 
+				}
+			}
+			{
+
+				for (int i = 0; i < typeList.size();) {
+					char SSI = typeList.get(i).charAt(0);
+					int count = Integer.parseInt(typeList.get(i + 1));
+					String[] type_arr = typeList.subList(i + 2, i + 2 + count).toArray(String[]::new);
 					HashMap<String, Integer> type_index = new HashMap<String, Integer>();
 					HashSet<String> avail = new HashSet<String>();
-					for (int i = 0; i < Integer.parseInt(types_arr[1]); i++) {
-						String code = types_arr[i + 2].trim();
-						type_index.put(code, i);
+					for (int j = 0; j < count; j++) {
+						String code = type_arr[j].trim();
+						type_index.put(code, j);
 						if (code.charAt(0) == 'C') {
 							avail.add(code.substring(1));
 						}
 
 					}
-					char SSI = types_arr[0].trim().charAt(0);
+
 					type_index_map.put(SSI, type_index);
 					availObs.put(SSI, avail);
-
+					i += 2 + count;
 				}
+
 			}
 			if (useSNX) {
 				String snxPath = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\igs20P21004.ssc\\igs20P21004.ssc";
@@ -127,11 +138,10 @@ public class ObservationRNX {
 			}
 			input.close();
 
-		} catch (
-
-		FileNotFoundException e) {
-			// TODO Auto-generated catch block
+		} catch (Exception e) {
 			e.printStackTrace();
+			throw new Exception("Error occured during parsing of Observation RINEX(.rnx) file \n" + e);
+
 		}
 		return ObsvMsgs;
 	}

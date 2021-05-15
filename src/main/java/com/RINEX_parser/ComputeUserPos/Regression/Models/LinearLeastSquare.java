@@ -158,9 +158,8 @@ public class LinearLeastSquare {
 			System.out.println("You have not provided IonoCoeff");
 			return null;
 		}
-		// double[] userECEF = { 4849202.21916189, -360328.671883732, 4114913.38661992
-		// };
-		ArrayList<double[]> AzmEle = getAzmEle();// (userECEF, true);
+
+		ArrayList<double[]> AzmEle = getAzmEle();
 		double[] PR = getPR();
 		double[] ionoCorr = IntStream.range(0, SV.size())
 				.mapToDouble(x -> ComputeIonoCorr.computeIonoCorr(AzmEle.get(x)[0], AzmEle.get(x)[1], refLatLon[0],
@@ -220,13 +219,13 @@ public class LinearLeastSquare {
 		return getAzmEle(this.SV, null, false);
 	}
 
-	public ArrayList<double[]> getAzmEle(double[] userECEF, boolean recomp) {
+	public ArrayList<double[]> getAzmEle(double[] userECEF, boolean reComp) {
 
-		return getAzmEle(this.SV, userECEF, recomp);
+		return getAzmEle(this.SV, userECEF, reComp);
 	}
 
-	public ArrayList<double[]> getAzmEle(ArrayList<Satellite> SV, double[] userECEF, boolean recomp) {
-		if (Optional.ofNullable(AzmEle).isPresent() && !recomp) {
+	public ArrayList<double[]> getAzmEle(ArrayList<Satellite> SV, double[] userECEF, boolean reComp) {
+		if (Optional.ofNullable(AzmEle).isPresent() && !reComp) {
 			return AzmEle;
 		}
 		double[] refECEF = null;

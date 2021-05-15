@@ -91,10 +91,10 @@ public class ObservationMsg {
 		return obsvSat;
 	}
 
-	public ArrayList<Observable> getObsvSat(String codeObsv) {
-		char SSI = codeObsv.charAt(0);
-		int freqID = Integer.parseInt(codeObsv.charAt(1) + "");
-		char codeID = codeObsv.charAt(2);
+	public ArrayList<Observable> getObsvSat(String obsvCode) {
+		char SSI = obsvCode.charAt(0);
+		int freqID = Integer.parseInt(obsvCode.charAt(1) + "");
+		char codeID = obsvCode.charAt(2);
 
 		return obsvSat.get(SSI).get(freqID).get(codeID);
 	}

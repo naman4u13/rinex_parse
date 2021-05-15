@@ -6,7 +6,6 @@ import java.util.Calendar;
 import java.util.stream.IntStream;
 
 import com.RINEX_parser.ComputeUserPos.Regression.LS;
-import com.RINEX_parser.ComputeUserPos.Regression.WLS;
 import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.Satellite;
 
@@ -27,11 +26,6 @@ public class SatUtil {
 
 	public SatUtil(double[] trueECEF) {
 		approxECEF = trueECEF;
-	}
-
-	public double[][] getWeightMat(ArrayList<Satellite> SV, Calendar time) {
-		WLS wls = new WLS(SV, time);
-		return wls.getWeight();
 	}
 
 	public double[][] getUnitLOS(ArrayList<Satellite> SV) {

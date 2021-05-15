@@ -10,7 +10,7 @@ import com.RINEX_parser.models.NavigationMsg;
 import com.RINEX_parser.models.SBAS.LongTermCorr;
 
 public class ComputeSatPos {
-	public static Object[] computeSatPos(NavigationMsg Sat, double tSV, double tRX, LongTermCorr ltc) {
+	public static Object[] computeSatPos(NavigationMsg Sat, double tSV, double tRX, LongTermCorr ltc, double DCB) {
 		TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
 		double Mu = 3.986005E14;// WGS-84 value of the Earth's universal gravitational parameter in GPS-IS
 
@@ -36,7 +36,7 @@ public class ComputeSatPos {
 
 		}
 
-		double SV_clock_bias = Sat.getSV_clock_bias() + dX[3] + (dXrate[3] * (tSV - ToA));
+		double SV_clock_bias = Sat.getSV_clock_bias() + dX[3] + (dXrate[3] * (tSV - ToA)) - DCB;
 
 		/*
 		 * double SatClockOffset = Sat.SV_clock_bias + ((tSV - TOC) *
