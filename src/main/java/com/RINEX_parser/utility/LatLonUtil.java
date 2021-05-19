@@ -156,4 +156,16 @@ public class LatLonUtil {
 		return diff;
 	}
 
+	public static double[] ENUtoECEF(double[] enu, double[] ECEFr) {
+		double[] LLH = ECEFtoLatLon.ecef2lla(ECEFr);
+		double lat = LLH[0];
+		double lon = LLH[1];
+		double[] ECEF = new double[3];
+		ECEF[0] = (-Math.sin(lon) * enu[0]) + (-Math.sin(lat) * Math.cos(lon) * enu[1])
+				+ (Math.cos(lat) * Math.cos(lon) * enu[2]) + ECEFr[0];
+		ECEF[1] = (Math.cos(lon) * enu[0]) + (-Math.sin(lat) * Math.sin(lon) * enu[1])
+				+ (Math.cos(lat) * Math.sin(lon) * enu[2]) + ECEFr[1];
+		ECEF[2] = (0 * enu[0]) + (Math.cos(lat) * enu[1]) + (Math.sin(lat) * enu[2]) + ECEFr[2];
+		return ECEF;
+	}
 }

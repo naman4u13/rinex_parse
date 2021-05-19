@@ -14,7 +14,8 @@ import com.RINEX_parser.models.ObservationMsg;
 
 public class ObservationRNX {
 
-	public static ArrayList<ObservationMsg> rinex_obsv_process(String path, boolean useSNX) throws Exception {
+	public static ArrayList<ObservationMsg> rinex_obsv_process(String path, boolean useSNX, String sinex_path,
+			String obsvCode) throws Exception {
 		File file = new File(path);
 		ArrayList<ObservationMsg> ObsvMsgs = new ArrayList<ObservationMsg>();
 		try {
@@ -70,8 +71,7 @@ public class ObservationRNX {
 
 			}
 			if (useSNX) {
-				String snxPath = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\igs20P21004.ssc\\igs20P21004.ssc";
-				ECEF_XYZ = SINEX.sinex_process(snxPath, siteCode);
+				ECEF_XYZ = SINEX.sinex_process(sinex_path, siteCode, obsvCode);
 			}
 
 			String[] obsv_msgs = input.next().trim().split(">");

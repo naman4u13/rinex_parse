@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintStream;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -60,18 +62,10 @@ public class MainApp {
 
 	public static void main(String[] args) {
 
-		try {
-
-			System.out.println();
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
-//		Instant start = Instant.now();
-//		posEstimate(false, false, true, true, false, true, 2, "G1C");
-//		Instant end = Instant.now();
-//		System.out.println("EXECUTION TIME -  " + Duration.between(start, end));
+		Instant start = Instant.now();
+		posEstimate(false, false, true, true, false, true, 2, "G1C");
+		Instant end = Instant.now();
+		System.out.println("EXECUTION TIME -  " + Duration.between(start, end));
 
 	}
 
@@ -93,7 +87,7 @@ public class MainApp {
 
 			String nav_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
-			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\HERS00GBR_R_20201001000_01H_30S_MO.crx\\HERS00GBR_R_20201001000_01H_30S_MO.rnx";
+			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\IISC00IND_R_20201000000_01D_30S_MO.crx\\IISC00IND_R_20201000000_01D_30S_MO.rnx";
 
 			String sbas_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\EGNOS_2020_100\\123\\D100.ems";
 
@@ -101,7 +95,9 @@ public class MainApp {
 
 			String orbit_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\igs21004.sp3\\igs21004.sp3";
 
-			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\test";
+			String sinex_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\igs20P21004.snx\\igs20P21004.snx";
+
+			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\test4";
 			File output = new File(path + ".txt");
 			PrintStream stream;
 
@@ -112,16 +108,22 @@ public class MainApp {
 				e.printStackTrace();
 			}
 
+			Instant start = Instant.now();
 			Geoid geoid = buildGeoid();
+			Instant end = Instant.now();
+			System.out.println("Tropo EXECUTION TIME -  " + Duration.between(start, end));
 
+			start = Instant.now();
 			Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path);
 			@SuppressWarnings("unchecked")
 			HashMap<Integer, ArrayList<NavigationMsg>> NavMsgs = (HashMap<Integer, ArrayList<NavigationMsg>>) NavMsgComp
 					.get("NavMsgs");
 			IonoCoeff ionoCoeff = (IonoCoeff) NavMsgComp.get("ionoCoeff");
 			TimeCorrection timeCorr = (TimeCorrection) NavMsgComp.get("timeCorr");
-			ArrayList<ObservationMsg> ObsvMsgs = ObservationRNX.rinex_obsv_process(obs_path, useSNX);
-
+			ArrayList<ObservationMsg> ObsvMsgs = ObservationRNX.rinex_obsv_process(obs_path, useSNX, sinex_path,
+					obsvCode);
+			end = Instant.now();
+			System.out.println("parsing EXECUTION TIME -  " + Duration.between(start, end));
 			// HashMap<Character, ArrayList<IGSOrbit>> IGSOrbitMap =
 			// Orbit.orbit_process(orbit_path);
 
