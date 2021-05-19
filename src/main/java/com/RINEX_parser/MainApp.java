@@ -4,8 +4,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintStream;
 import java.text.SimpleDateFormat;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -62,10 +60,18 @@ public class MainApp {
 
 	public static void main(String[] args) {
 
-		Instant start = Instant.now();
-		posEstimate(false, false, true, true, false, true, 2, "G1C");
-		Instant end = Instant.now();
-		System.out.println("EXECUTION TIME -  " + Duration.between(start, end));
+		try {
+
+			System.out.println();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+//		Instant start = Instant.now();
+//		posEstimate(false, false, true, true, false, true, 2, "G1C");
+//		Instant end = Instant.now();
+//		System.out.println("EXECUTION TIME -  " + Duration.between(start, end));
 
 	}
 
@@ -93,7 +99,9 @@ public class MainApp {
 
 			String bias_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\CAS0MGXRAP_20201000000_01D_01D_DCB.BSX\\CAS0MGXRAP_20201000000_01D_01D_DCB.BSX";
 
-			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\Test3";
+			String orbit_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\igs21004.sp3\\igs21004.sp3";
+
+			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\test";
 			File output = new File(path + ".txt");
 			PrintStream stream;
 
@@ -113,6 +121,9 @@ public class MainApp {
 			IonoCoeff ionoCoeff = (IonoCoeff) NavMsgComp.get("ionoCoeff");
 			TimeCorrection timeCorr = (TimeCorrection) NavMsgComp.get("timeCorr");
 			ArrayList<ObservationMsg> ObsvMsgs = ObservationRNX.rinex_obsv_process(obs_path, useSNX);
+
+			// HashMap<Character, ArrayList<IGSOrbit>> IGSOrbitMap =
+			// Orbit.orbit_process(orbit_path);
 
 			if (useSBAS) {
 				int[][][] IGP = IGPgrid.readCSV();
