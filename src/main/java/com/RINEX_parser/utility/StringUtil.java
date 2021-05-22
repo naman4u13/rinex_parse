@@ -39,4 +39,21 @@ public class StringUtil {
 
 	}
 
+	public static double[][] str2mArr(String str) {
+		str = str.substring(2, str.length() - 2);
+		String[] strArr = str.split("\\]\\s*,\\s*\\[");
+		int n = strArr.length;
+		double[][] mArr = new double[n][];
+		for (int i = 0; i < n; i++) {
+			mArr[i] = Arrays.stream(strArr[i].split(",")).mapToDouble(Double::parseDouble).toArray();
+		}
+		return mArr;
+	}
+
+	public static double[] str2arr(String str) {
+		str = str.substring(1, str.length() - 1);
+		double[] arr = Arrays.stream(str.split(",")).mapToDouble(Double::parseDouble).toArray();
+		return arr;
+	}
+
 }

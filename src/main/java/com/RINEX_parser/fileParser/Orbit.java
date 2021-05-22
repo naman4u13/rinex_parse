@@ -39,13 +39,13 @@ public class Orbit {
 					if (symbol == 'P') {
 						char constellation = line[1].charAt(0);
 						int PRN = Integer.parseInt(line[1].substring(1));
-						double x = Double.parseDouble(line[2]);
-						double y = Double.parseDouble(line[3]);
-						double z = Double.parseDouble(line[4]);
+						double x = Double.parseDouble(line[2]) * 1000;
+						double y = Double.parseDouble(line[3]) * 1000;
+						double z = Double.parseDouble(line[4]) * 1000;
 						if (x == 0.0 || y == 0.0 || z == 0.0) {
 							continue;
 						}
-						double satClkOff = Double.parseDouble(line[5]);
+						double satClkOff = Double.parseDouble(line[5]) * 1e-6;
 						satECEF.computeIfAbsent(constellation, k -> new HashMap<Integer, double[]>()).put(PRN,
 								new double[] { x, y, z, satClkOff });
 

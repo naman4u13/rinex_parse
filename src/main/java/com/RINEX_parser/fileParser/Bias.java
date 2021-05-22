@@ -17,8 +17,9 @@ public class Bias {
 	}
 
 	private void bsx_process() throws Exception {
-		File file = new File(path);
+
 		try {
+			File file = new File(path);
 			biasMap = new HashMap<Character, HashMap<Integer, HashMap<String, HashMap<String, Double>>>>();
 			Scanner input = new Scanner(file);
 			input.useDelimiter("\\+BIAS/SOLUTION|\\-BIAS/SOLUTION");

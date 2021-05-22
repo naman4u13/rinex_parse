@@ -13,6 +13,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -62,10 +63,10 @@ public class MainApp {
 
 	public static void main(String[] args) {
 
-		Instant start = Instant.now();
-		posEstimate(false, false, true, true, false, true, 2, "G1C");
-		Instant end = Instant.now();
-		System.out.println("EXECUTION TIME -  " + Duration.between(start, end));
+//		Instant start = Instant.now();
+//		posEstimate(false, false, true, true, false, true, 2, "G1C");
+//		Instant end = Instant.now();
+//		System.out.println("EXECUTION TIME -  " + Duration.between(start, end));
 
 	}
 
@@ -96,6 +97,8 @@ public class MainApp {
 			String orbit_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\igs21004.sp3\\igs21004.sp3";
 
 			String sinex_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\igs20P21004.snx\\igs20P21004.snx";
+
+			String antenna_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\igs14.atx\\igs14.atx";
 
 			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\test4";
 			File output = new File(path + ".txt");
@@ -420,7 +423,7 @@ public class MainApp {
 		double ErrLL2 = LatLonUtil.getHaversineDistance(LL2, userLatLon);
 		double ErrLL3 = LatLonUtil.getHaversineDistance(LL3, userLatLon);
 		SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/YYYY hh:mm:ss");
-
+		sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
 		System.out.println(sdf.format(time.getTime()) + " ECEF1 diff " + ErrXYZ1 + " ECEF2 diff " + ErrXYZ2
 				+ " ECEF3 diff " + ErrXYZ3 + " LL1 diff " + ErrLL1 + " LL2 diff " + ErrLL2 + " LL3 diff " + ErrLL3);
 		return new double[] { ErrXYZ1, ErrXYZ2, ErrXYZ3, ErrLL1, ErrLL2, ErrLL3 };
