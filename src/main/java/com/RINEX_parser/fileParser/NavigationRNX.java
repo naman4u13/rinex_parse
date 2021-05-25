@@ -15,7 +15,7 @@ import com.RINEX_parser.utility.SymbolToken;
 
 public class NavigationRNX {
 
-	public static Map<String, Object> rinex_nav_process(String path) {
+	public static Map<String, Object> rinex_nav_process(String path, boolean getIonoOnly) {
 
 		File file = new File(path);
 		// HashMap<String, Object> resMap = new HashMap<String, Object>();
@@ -42,6 +42,9 @@ public class NavigationRNX {
 						double[] GPSB = Arrays.stream(line.split("\\s+")).skip(1).limit(4)
 								.mapToDouble(x -> Double.parseDouble(x)).toArray();
 						ionoCoeff.setGPSB(GPSB);
+						if (getIonoOnly) {
+							return Map.of("NavMsgs", null, "ionoCoeff", ionoCoeff, "timeCorr", null);
+						}
 					}
 				} else if (line.contains("TIME SYSTEM CORR") && line.contains("GPUT")) {
 

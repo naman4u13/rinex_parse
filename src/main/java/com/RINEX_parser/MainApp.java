@@ -35,8 +35,10 @@ import com.RINEX_parser.ComputeUserPos.Regression.Doppler;
 import com.RINEX_parser.ComputeUserPos.Regression.LS;
 import com.RINEX_parser.ComputeUserPos.Regression.WLS;
 import com.RINEX_parser.fileParser.Bias;
+import com.RINEX_parser.fileParser.Clock;
 import com.RINEX_parser.fileParser.NavigationRNX;
 import com.RINEX_parser.fileParser.ObservationRNX;
+import com.RINEX_parser.fileParser.Orbit;
 import com.RINEX_parser.fileParser.SBAS;
 import com.RINEX_parser.helper.ComputeAzmEle;
 import com.RINEX_parser.helper.ComputeIonoCorr;
@@ -63,15 +65,15 @@ public class MainApp {
 
 	public static void main(String[] args) {
 
-//		Instant start = Instant.now();
-//		posEstimate(false, false, true, true, false, true, 2, "G1C");
-//		Instant end = Instant.now();
-//		System.out.println("EXECUTION TIME -  " + Duration.between(start, end));
+		Instant start = Instant.now();
+		posEstimate(false, false, true, true, false, true, false, 2, "G1C");
+		Instant end = Instant.now();
+		System.out.println("EXECUTION TIME -  " + Duration.between(start, end));
 
 	}
 
 	public static void posEstimate(boolean doWeightPlot, boolean doIonoPlot, boolean doPosErrPlot, boolean useSNX,
-			boolean useSBAS, boolean useBias, int estimatorType, String obsvCode) {
+			boolean useSBAS, boolean useBias, boolean useIGS, int estimatorType, String obsvCode) {
 		try {
 
 			HashMap<Integer, ArrayList<IonoValue>> ionoValueMap = new HashMap<Integer, ArrayList<IonoValue>>();
@@ -85,6 +87,8 @@ public class MainApp {
 			SBAS sbas = null;
 			Bias bias = null;
 			HashMap<Integer, HashSet<Integer>> IODEmap = new HashMap<Integer, HashSet<Integer>>();
+			Orbit orbit = null;
+			Clock clock = null;
 
 			String nav_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
@@ -100,7 +104,9 @@ public class MainApp {
 
 			String antenna_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\igs14.atx\\igs14.atx";
 
-			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\test4";
+			String clock_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\igs21004.clk_30s\\igs21004.clk_30s";
+
+			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\test3";
 			File output = new File(path + ".txt");
 			PrintStream stream;
 
@@ -111,13 +117,8 @@ public class MainApp {
 				e.printStackTrace();
 			}
 
-			Instant start = Instant.now();
 			Geoid geoid = buildGeoid();
-			Instant end = Instant.now();
-			System.out.println("Tropo EXECUTION TIME -  " + Duration.between(start, end));
-
-			start = Instant.now();
-			Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path);
+			Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path, false);
 			@SuppressWarnings("unchecked")
 			HashMap<Integer, ArrayList<NavigationMsg>> NavMsgs = (HashMap<Integer, ArrayList<NavigationMsg>>) NavMsgComp
 					.get("NavMsgs");
@@ -125,8 +126,7 @@ public class MainApp {
 			TimeCorrection timeCorr = (TimeCorrection) NavMsgComp.get("timeCorr");
 			ArrayList<ObservationMsg> ObsvMsgs = ObservationRNX.rinex_obsv_process(obs_path, useSNX, sinex_path,
 					obsvCode);
-			end = Instant.now();
-			System.out.println("parsing EXECUTION TIME -  " + Duration.between(start, end));
+
 			// HashMap<Character, ArrayList<IGSOrbit>> IGSOrbitMap =
 			// Orbit.orbit_process(orbit_path);
 
@@ -139,6 +139,12 @@ public class MainApp {
 				bias = new Bias(bias_path);
 
 			}
+			if (useIGS) {
+
+				orbit = new Orbit(orbit_path, obsvCode);
+				clock = new Clock(clock_path, bias);
+
+			}
 
 			for (ObservationMsg obsvMsg : ObsvMsgs) {
 
@@ -148,92 +154,142 @@ public class MainApp {
 				double[] userLatLon = ECEFtoLatLon.ecef2lla(userECEF);
 				Calendar time = Time.getDate(tRX, weekNo, userLatLon[1]);
 				ArrayList<Observable> observables = obsvMsg.getObsvSat(obsvCode);
-				// find out index of nav-msg inside the nav-msg list which is most suitable for
-				// each obs-msg based on time
-				int order[] = observables.stream().map(i -> NavMsgs.get(i.getSVID()))
-						.map(i -> (ArrayList<Long>) i.stream().map(j -> j.getTOC()).collect(Collectors.toList()))
-						.mapToInt(i -> Closest.findClosest(tRX, i)).toArray();
-
 				ArrayList<Satellite> SV = new ArrayList<Satellite>();
-				HashMap<Integer, Correction> PRNmap = null;
-				HashMap<Integer, HashMap<Integer, Double>> sbasIVD = null;
-				if (useSBAS) {
-					sbas.process(tRX);
-					PRNmap = sbas.getPRNmap();
-					if (sbas.isIonoEnabled()) {
-						sbasIVD = sbas.getIonoVDelay();
+				int satCount = observables.size();
 
-						for (int lat : sbasIVD.keySet()) {
-							for (int lon : sbasIVD.get(lat).keySet()) {
-								double val = sbasIVD.get(lat).get(lon);
-								IPPdelay.add(new String[] { "" + lat, "" + lon, "" + tRX, "" + val });
+				if (useIGS) {
+
+					orbit.findPts(tRX, 10);
+					clock.findPts(tRX);
+					for (int i = 0; i < satCount; i++) {
+						Observable sat = observables.get(i);
+						// PRN
+						int SVID = sat.getSVID();
+						double tSV = tRX - (sat.getPseudorange() / SpeedofLight);
+
+						double satClkOff = clock.getBias(tSV, SVID, obsvCode);
+						// GPS System transmission time
+						double t = tSV - satClkOff;
+						double[][] satPV = orbit.getPV(t, SVID, 10);
+						double[] satECEF = satPV[0];
+						double[] satVel = satPV[1];
+
+						double dotProd = 0;
+						for (int j = 0; j < 3; j++) {
+							dotProd += satECEF[j] * satVel[j];
+						}
+						double relativistic_error = -2 * (dotProd) / Math.pow(SpeedofLight, 2);
+						// Correct sat clock offset for relativistic error and recompute the Sat coords
+						satClkOff += relativistic_error;
+						t = tSV - satClkOff;
+						satPV = orbit.getPV(t, SVID, 10);
+						satECEF = satPV[0];
+						satVel = satPV[1];
+
+						Satellite _sat = new Satellite(sat, satECEF, satClkOff, t, tRX, satVel, 0.0, null, time);
+						_sat.compECI();
+
+//						double ISC = bias.getISC(obsvCode, SVID);
+//						NavigationMsg NavMsg = NavMsgs.get(SVID).get(order[i]);
+//						Object[] SatParams = ComputeSatPos.computeSatPos(NavMsg, tSV, tRX, null, ISC);
+//						double[] ECEF_SatClkOff = (double[]) SatParams[0];
+//						double XYZdiff = Math
+//								.sqrt(IntStream.range(0, 3).mapToDouble(j -> satECEF[j] - ECEF_SatClkOff[j])
+//										.map(j -> j * j).reduce(0, (j, k) -> j + k));
+//						double clkDiff = SpeedofLight
+//								* ((satClkOff + relativistic_error) - (ECEF_SatClkOff[3] + NavMsg.getTGD()));
+//						double TGDdiff = SpeedofLight * (temp[1] - (NavMsg.getTGD()));
+
+						SV.add(_sat);
+
+					}
+
+				} else {
+					// find out index of nav-msg inside the nav-msg list which is most suitable for
+					// each obs-msg based on time
+					int order[] = observables.stream().map(i -> NavMsgs.get(i.getSVID()))
+							.map(i -> (ArrayList<Long>) i.stream().map(j -> j.getTOC()).collect(Collectors.toList()))
+							.mapToInt(i -> Closest.findClosest(tRX, i)).toArray();
+
+					HashMap<Integer, Correction> PRNmap = null;
+					HashMap<Integer, HashMap<Integer, Double>> sbasIVD = null;
+					if (useSBAS) {
+						sbas.process(tRX);
+						PRNmap = sbas.getPRNmap();
+						if (sbas.isIonoEnabled()) {
+							sbasIVD = sbas.getIonoVDelay();
+
+							for (int lat : sbasIVD.keySet()) {
+								for (int lon : sbasIVD.get(lat).keySet()) {
+									double val = sbasIVD.get(lat).get(lon);
+									IPPdelay.add(new String[] { "" + lat, "" + lon, "" + tRX, "" + val });
+								}
 							}
+
+						} else {
+							System.out.println("NO SBAS Iono Corr");
+
 						}
 
-					} else {
-						System.out.println("NO SBAS Iono Corr");
-
 					}
 
-				}
+					for (int i = 0; i < order.length; i++) {
 
-				for (int i = 0; i < order.length; i++) {
-
-					Observable sat = observables.get(i);
-					// PRN
-					int SVID = sat.getSVID();
-					// SBAS params
-					double PRC = 0;
-					LongTermCorr ltc = null;
-					// IGS .BSX file DCB
-					double DCB = 0;
-					NavigationMsg NavMsg = NavMsgs.get(SVID).get(order[i]);
-					// Incase Msg1 or PRN mask hasn't been assigned PRNmap will be null
-					if (useSBAS && PRNmap != null) {
-						Correction corr = PRNmap.get(SVID);
-						if (corr != null) {
-							if (corr.getFC() != null) {
-								PRC = corr.getFC().getPRC();
+						Observable sat = observables.get(i);
+						// PRN
+						int SVID = sat.getSVID();
+						// SBAS params
+						double PRC = 0;
+						LongTermCorr ltc = null;
+						// IGS .BSX file DCB
+						double ISC = 0;
+						NavigationMsg NavMsg = NavMsgs.get(SVID).get(order[i]);
+						// Incase Msg1 or PRN mask hasn't been assigned PRNmap will be null
+						if (useSBAS && PRNmap != null) {
+							Correction corr = PRNmap.get(SVID);
+							if (corr != null) {
+								if (corr.getFC() != null) {
+									PRC = corr.getFC().getPRC();
+								}
+								ltc = corr.getLTC().get(NavMsg.getIODE());
 							}
-							ltc = corr.getLTC().get(NavMsg.getIODE());
+
+						}
+						if (useBias) {
+							ISC = bias.getISC(obsvCode, SVID);
+						}
+
+						// IODEmap.computeIfAbsent(SVID, k -> new
+						// HashSet<Integer>()).add(NavMsg.getIODE());
+						sat.setPseudorange(sat.getPseudorange() + PRC);
+						double tSV = tRX - (sat.getPseudorange() / SpeedofLight);
+
+						Object[] SatParams = ComputeSatPos.computeSatPos(NavMsg, tSV, tRX, ltc, ISC);
+						double[] ECEF_SatClkOff = (double[]) SatParams[0];
+						double[] SatVel = (double[]) SatParams[1];
+						// Note this Clock Drift is derived, it not what we get from Ephemeris
+						double SatClkDrift = (double) SatParams[2];
+						// GPS System time at time of transmission
+						double t = (double) SatParams[3];
+						// ECI coordinates
+						double[] ECI = (double[]) SatParams[4];
+						SV.add(new Satellite(sat, Arrays.copyOfRange(ECEF_SatClkOff, 0, 3), ECEF_SatClkOff[3], t, tRX,
+								SatVel, SatClkDrift, ECI, time));
+						if (doIonoPlot) {
+
+							double[] AzmEle = ComputeAzmEle.computeAzmEle(userECEF,
+									Arrays.copyOfRange(ECEF_SatClkOff, 0, 3));
+
+							double ionoCorr = ComputeIonoCorr.computeIonoCorr(AzmEle[0], AzmEle[1], userLatLon[0],
+									userLatLon[1], tRX, ionoCoeff);
+
+							ionoValueMap.computeIfAbsent(SVID, k -> new ArrayList<IonoValue>())
+									.add(new IonoValue(time.getTime(), ionoCorr, SVID));
+
 						}
 
 					}
-					if (useBias) {
-						DCB = bias.getDCB(obsvCode, SVID);
-					}
-
-					// IODEmap.computeIfAbsent(SVID, k -> new
-					// HashSet<Integer>()).add(NavMsg.getIODE());
-					sat.setPseudorange(sat.getPseudorange() + PRC);
-					double tSV = tRX - (sat.getPseudorange() / SpeedofLight);
-
-					Object[] SatParams = ComputeSatPos.computeSatPos(NavMsg, tSV, tRX, ltc, DCB);
-					double[] ECEF_SatClkOff = (double[]) SatParams[0];
-					double[] SatVel = (double[]) SatParams[1];
-					// Note this Clock Drift is derived, it not what we get from Ephemeris
-					double SatClkDrift = (double) SatParams[2];
-					// GPS System time at time of transmission time
-					double t = (double) SatParams[3];
-					// ECI coordinates
-					double[] ECI = (double[]) SatParams[4];
-					SV.add(new Satellite(sat, Arrays.copyOfRange(ECEF_SatClkOff, 0, 3), ECEF_SatClkOff[3], t, tRX,
-							SatVel, SatClkDrift, ECI, time));
-					if (doIonoPlot) {
-
-						double[] AzmEle = ComputeAzmEle.computeAzmEle(userECEF,
-								Arrays.copyOfRange(ECEF_SatClkOff, 0, 3));
-
-						double ionoCorr = ComputeIonoCorr.computeIonoCorr(AzmEle[0], AzmEle[1], userLatLon[0],
-								userLatLon[1], tRX, ionoCoeff);
-
-						ionoValueMap.computeIfAbsent(SVID, k -> new ArrayList<IonoValue>())
-								.add(new IonoValue(time.getTime(), ionoCorr, SVID));
-
-					}
-
 				}
-
 				SVlist.add(SV);
 				switch (estimatorType) {
 				case 1:
@@ -244,6 +300,7 @@ public class MainApp {
 				case 2:
 					WLS wls = new WLS(SV, ionoCoeff, time);
 					try {
+
 						ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
 								.add(estimateError(wls.getIonoCorrECEF(), wls.getTropoCorrECEF(geoid), userECEF, time));
 					} catch (Exception e) {

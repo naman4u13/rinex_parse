@@ -62,11 +62,19 @@ public class Bias {
 
 	}
 
-	public double getDCB(String obsvCode, int PRN) {
+	public double getISC(String obsvCode, int PRN) {
 		char SSI = obsvCode.charAt(0);
 		// Observable/Observation code in RINEX format
 		String _obsvCode = 'C' + obsvCode.substring(1);
-		double DCB = biasMap.get(SSI).get(PRN).get(_obsvCode).get("C1W");
-		return DCB;
+		HashMap<String, HashMap<String, Double>> _biasMap = biasMap.get(SSI).get(PRN);
+		double ISC = 0;
+		if (_biasMap.containsKey("C1W") && _biasMap.get("C1W").containsKey(_obsvCode)) {
+
+			ISC = _biasMap.get("C1W").get(_obsvCode);
+		} else {
+			ISC = -_biasMap.get(_obsvCode).get("C1W");
+		}
+
+		return ISC;
 	}
 }

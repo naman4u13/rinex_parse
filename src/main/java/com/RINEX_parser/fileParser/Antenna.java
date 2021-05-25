@@ -81,7 +81,7 @@ public class Antenna {
 				if (temp[1].equalsIgnoreCase("VALID FROM")) {
 
 					String[] _validFrom = temp[0].split("\\s+");
-					validFrom = getTime(_validFrom);
+					validFrom = Time.getGPSTime(_validFrom);
 					index++;
 				}
 
@@ -91,7 +91,7 @@ public class Antenna {
 				if (temp[1].equalsIgnoreCase("VALID UNTIL")) {
 
 					String[] _validUntil = temp[0].split("\\s+");
-					validUntil = getTime(_validUntil);
+					validUntil = Time.getGPSTime(_validUntil);
 					index++;
 				}
 				while (true) {
@@ -143,11 +143,4 @@ public class Antenna {
 
 	}
 
-	private static long[] getTime(String[] strTime) {
-
-		int[] tArr = IntStream.range(0, 5).map(x -> Integer.parseInt(strTime[x])).toArray();
-		int sec = (int) Math.round(Double.parseDouble(strTime[5]));
-		long[] GPStime = Time.getGPSTime(tArr[0] + 2000, tArr[1] - 1, tArr[2], tArr[3], tArr[4], sec);
-		return GPStime;
-	}
 }

@@ -2,6 +2,7 @@ package com.RINEX_parser.utility;
 
 import java.util.Calendar;
 import java.util.TimeZone;
+import java.util.stream.IntStream;
 
 public class Time {
 	private static final long NumberMilliSecondsWeek = 604800000;
@@ -62,6 +63,14 @@ public class Time {
 		cal.setTimeInMillis(UTCtime);
 		return cal;
 
+	}
+
+	public static long[] getGPSTime(String[] strTime) {
+
+		int[] tArr = IntStream.range(0, 5).map(x -> Integer.parseInt(strTime[x])).toArray();
+		int sec = (int) Math.round(Double.parseDouble(strTime[5]));
+		long[] GPStime = getGPSTime(tArr[0] + 2000, tArr[1] - 1, tArr[2], tArr[3], tArr[4], sec);
+		return GPStime;
 	}
 
 }

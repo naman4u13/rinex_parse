@@ -35,11 +35,20 @@ public class Satellite extends Observable {
 	}
 
 	public void updateECI(double rcvrClkOff) {
+		compECI(rcvrClkOff);
+
+	}
+
+	public void compECI() {
+		compECI(0);
+	}
+
+	public void compECI(double time) {
 		ECI = new double[3];
 		final double OMEGA_E_DOT = 7.2921151467E-5;// WGS-84 value of the Earth's rotation rate
 
 		// eciArg = Earth_Rotation_Rate *(Propgation_Time)
-		double eciArg = OMEGA_E_DOT * (tRX - rcvrClkOff - t);
+		double eciArg = OMEGA_E_DOT * (tRX - time - t);
 		ECI[0] = (ECEF[0] * Math.cos(eciArg)) + (ECEF[1] * Math.sin(eciArg));
 		ECI[1] = -(ECEF[0] * Math.sin(eciArg)) + (ECEF[1] * Math.cos(eciArg));
 		ECI[2] = ECEF[2];
