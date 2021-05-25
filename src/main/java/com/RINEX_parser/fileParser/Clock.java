@@ -90,7 +90,7 @@ public class Clock {
 		}
 		if (x == IGSClockList.get(n - 1).getTime()) {
 			pts = new int[] { n - 2, n - 1 };
-			System.out.println();
+
 		}
 
 	}

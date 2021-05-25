@@ -39,6 +39,7 @@
 			<artifactId>ejml-simple</artifactId>
 			<version>0.39</version>
 		</dependency>
+		
 		<!-- https://mvnrepository.com/artifact/org.jfree/jfreechart -->
 		<dependency>
 		    <groupId>org.jfree</groupId>

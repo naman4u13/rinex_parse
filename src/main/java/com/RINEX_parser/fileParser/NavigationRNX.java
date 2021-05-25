@@ -43,7 +43,8 @@ public class NavigationRNX {
 								.mapToDouble(x -> Double.parseDouble(x)).toArray();
 						ionoCoeff.setGPSB(GPSB);
 						if (getIonoOnly) {
-							return Map.of("NavMsgs", null, "ionoCoeff", ionoCoeff, "timeCorr", null);
+
+							return Map.of("ionoCoeff", ionoCoeff);
 						}
 					}
 				} else if (line.contains("TIME SYSTEM CORR") && line.contains("GPUT")) {

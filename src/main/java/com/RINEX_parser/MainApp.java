@@ -34,6 +34,7 @@ import com.RINEX_parser.ComputeUserPos.Regression.DeltaRange;
 import com.RINEX_parser.ComputeUserPos.Regression.Doppler;
 import com.RINEX_parser.ComputeUserPos.Regression.LS;
 import com.RINEX_parser.ComputeUserPos.Regression.WLS;
+import com.RINEX_parser.fileParser.Antenna;
 import com.RINEX_parser.fileParser.Bias;
 import com.RINEX_parser.fileParser.Clock;
 import com.RINEX_parser.fileParser.NavigationRNX;
@@ -66,7 +67,7 @@ public class MainApp {
 	public static void main(String[] args) {
 
 		Instant start = Instant.now();
-		posEstimate(false, false, true, true, false, true, false, 2, "G1C");
+		posEstimate(false, false, true, true, false, true, true, 2, "G1C");
 		Instant end = Instant.now();
 		System.out.println("EXECUTION TIME -  " + Duration.between(start, end));
 
@@ -89,6 +90,7 @@ public class MainApp {
 			HashMap<Integer, HashSet<Integer>> IODEmap = new HashMap<Integer, HashSet<Integer>>();
 			Orbit orbit = null;
 			Clock clock = null;
+			Antenna antenna = null;
 
 			String nav_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
@@ -104,9 +106,11 @@ public class MainApp {
 
 			String antenna_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\igs14.atx\\igs14.atx";
 
+			String antenna_csv_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\antenna.csv";
+
 			String clock_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\igs21004.clk_30s\\igs21004.clk_30s";
 
-			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\test3";
+			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\PPPres\\test2";
 			File output = new File(path + ".txt");
 			PrintStream stream;
 
@@ -118,17 +122,17 @@ public class MainApp {
 			}
 
 			Geoid geoid = buildGeoid();
-			Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path, false);
+
+			Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path, useIGS);
 			@SuppressWarnings("unchecked")
 			HashMap<Integer, ArrayList<NavigationMsg>> NavMsgs = (HashMap<Integer, ArrayList<NavigationMsg>>) NavMsgComp
-					.get("NavMsgs");
+					.getOrDefault("NavMsgs", null);
 			IonoCoeff ionoCoeff = (IonoCoeff) NavMsgComp.get("ionoCoeff");
-			TimeCorrection timeCorr = (TimeCorrection) NavMsgComp.get("timeCorr");
+			TimeCorrection timeCorr = (TimeCorrection) NavMsgComp.getOrDefault("timeCorr", null);
 			ArrayList<ObservationMsg> ObsvMsgs = ObservationRNX.rinex_obsv_process(obs_path, useSNX, sinex_path,
 					obsvCode);
 
-			// HashMap<Character, ArrayList<IGSOrbit>> IGSOrbitMap =
-			// Orbit.orbit_process(orbit_path);
+			
 
 			if (useSBAS) {
 				int[][][] IGP = IGPgrid.readCSV();
@@ -143,12 +147,17 @@ public class MainApp {
 
 				orbit = new Orbit(orbit_path, obsvCode);
 				clock = new Clock(clock_path, bias);
+				antenna = new Antenna(antenna_csv_path);
 
 			}
 
 			for (ObservationMsg obsvMsg : ObsvMsgs) {
 
 				long tRX = obsvMsg.getTRX();
+				long dayTime = tRX % 86400;
+				if (dayTime < 7200 || dayTime > 79200) {
+					continue;
+				}
 				long weekNo = obsvMsg.getWeekNo();
 				userECEF = obsvMsg.getECEF();
 				double[] userLatLon = ECEFtoLatLon.ecef2lla(userECEF);
@@ -158,8 +167,8 @@ public class MainApp {
 				int satCount = observables.size();
 
 				if (useIGS) {
-
-					orbit.findPts(tRX, 10);
+					int polyOrder = 10;
+					orbit.findPts(tRX, polyOrder);
 					clock.findPts(tRX);
 					for (int i = 0; i < satCount; i++) {
 						Observable sat = observables.get(i);
@@ -170,7 +179,7 @@ public class MainApp {
 						double satClkOff = clock.getBias(tSV, SVID, obsvCode);
 						// GPS System transmission time
 						double t = tSV - satClkOff;
-						double[][] satPV = orbit.getPV(t, SVID, 10);
+						double[][] satPV = orbit.getPV(t, SVID, polyOrder);
 						double[] satECEF = satPV[0];
 						double[] satVel = satPV[1];
 
@@ -182,10 +191,12 @@ public class MainApp {
 						// Correct sat clock offset for relativistic error and recompute the Sat coords
 						satClkOff += relativistic_error;
 						t = tSV - satClkOff;
-						satPV = orbit.getPV(t, SVID, 10);
-						satECEF = satPV[0];
-						satVel = satPV[1];
 
+//						satPV = orbit.getPV(t, SVID, polyOrder);
+//
+//						satECEF = satPV[0];
+//						satVel = satPV[1];
+						satECEF = antenna.getSatPC(SVID, obsvCode, tRX, weekNo, satECEF);
 						Satellite _sat = new Satellite(sat, satECEF, satClkOff, t, tRX, satVel, 0.0, null, time);
 						_sat.compECI();
 
@@ -243,6 +254,7 @@ public class MainApp {
 						LongTermCorr ltc = null;
 						// IGS .BSX file DCB
 						double ISC = 0;
+
 						NavigationMsg NavMsg = NavMsgs.get(SVID).get(order[i]);
 						// Incase Msg1 or PRN mask hasn't been assigned PRNmap will be null
 						if (useSBAS && PRNmap != null) {
@@ -257,6 +269,7 @@ public class MainApp {
 						}
 						if (useBias) {
 							ISC = bias.getISC(obsvCode, SVID);
+
 						}
 
 						// IODEmap.computeIfAbsent(SVID, k -> new

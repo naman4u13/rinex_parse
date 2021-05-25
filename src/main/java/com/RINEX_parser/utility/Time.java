@@ -69,7 +69,7 @@ public class Time {
 
 		int[] tArr = IntStream.range(0, 5).map(x -> Integer.parseInt(strTime[x])).toArray();
 		int sec = (int) Math.round(Double.parseDouble(strTime[5]));
-		long[] GPStime = getGPSTime(tArr[0] + 2000, tArr[1] - 1, tArr[2], tArr[3], tArr[4], sec);
+		long[] GPStime = getGPSTime(tArr[0], tArr[1] - 1, tArr[2], tArr[3], tArr[4], sec);
 		return GPStime;
 	}
 

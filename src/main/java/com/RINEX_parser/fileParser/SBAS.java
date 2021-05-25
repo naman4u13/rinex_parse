@@ -67,7 +67,7 @@ public class SBAS {
 				System.out.println(line);
 			}
 
-			long[] time = Time.getGPSTime(tArr[0] + 2000, tArr[1] - 1, tArr[2], tArr[3], tArr[4], tArr[5]);
+			long[] time = Time.getGPSTime(tArr[0], tArr[1] - 1, tArr[2], tArr[3], tArr[4], tArr[5]);
 			long GPSTime = time[0];
 			long weekNo = time[1];
 			if (GPSTime > timeBound) {
