@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.Locale;
+import java.util.TimeZone;
 
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
@@ -98,12 +100,14 @@ public class GraphPlotter extends ApplicationFrame {
 	private TimePeriodValuesCollection createDatasetError(ArrayList<Calendar> timeList,
 			HashMap<String, ArrayList<Double>> _map) {
 		TimePeriodValuesCollection coll = new TimePeriodValuesCollection();
+
 		for (String _type : _map.keySet()) {
 			TimePeriodValues series = new TimePeriodValues(_type);
 			ArrayList<Double> _list = _map.get(_type);
 			for (int i = 0; i < _list.size(); i++) {
 
-				series.add(new Second(timeList.get(i).getTime()), _list.get(i));
+				series.add(new Second(timeList.get(i).getTime(), TimeZone.getTimeZone("UTC"), Locale.UK), _list.get(i));
+
 			}
 
 			coll.addSeries(series);

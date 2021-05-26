@@ -76,7 +76,7 @@ public class MainApp {
 	public static void posEstimate(boolean doWeightPlot, boolean doIonoPlot, boolean doPosErrPlot, boolean useSNX,
 			boolean useSBAS, boolean useBias, boolean useIGS, int estimatorType, String obsvCode) {
 		try {
-
+			TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
 			HashMap<Integer, ArrayList<IonoValue>> ionoValueMap = new HashMap<Integer, ArrayList<IonoValue>>();
 			HashMap<String, ArrayList<double[]>> ErrMap = new HashMap<String, ArrayList<double[]>>();
 			HashMap<String, ArrayList<Double>> RcvrClkMap = new HashMap<String, ArrayList<Double>>();
@@ -94,7 +94,7 @@ public class MainApp {
 
 			String nav_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
-			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\IISC00IND_R_20201000000_01D_30S_MO.crx\\IISC00IND_R_20201000000_01D_30S_MO.rnx";
+			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\MADR00ESP_R_20201001000_01H_30S_MO.crx\\MADR00ESP_R_20201001000_01H_30S_MO.rnx";
 
 			String sbas_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\EGNOS_2020_100\\123\\D100.ems";
 
@@ -110,7 +110,7 @@ public class MainApp {
 
 			String clock_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\igs21004.clk_30s\\igs21004.clk_30s";
 
-			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\PPPres\\test2";
+			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\PPPres\\MADR_30s_PPP";
 			File output = new File(path + ".txt");
 			PrintStream stream;
 
@@ -131,8 +131,6 @@ public class MainApp {
 			TimeCorrection timeCorr = (TimeCorrection) NavMsgComp.getOrDefault("timeCorr", null);
 			ArrayList<ObservationMsg> ObsvMsgs = ObservationRNX.rinex_obsv_process(obs_path, useSNX, sinex_path,
 					obsvCode);
-
-			
 
 			if (useSBAS) {
 				int[][][] IGP = IGPgrid.readCSV();
@@ -162,6 +160,8 @@ public class MainApp {
 				userECEF = obsvMsg.getECEF();
 				double[] userLatLon = ECEFtoLatLon.ecef2lla(userECEF);
 				Calendar time = Time.getDate(tRX, weekNo, userLatLon[1]);
+				timeList.add(time);
+
 				ArrayList<Observable> observables = obsvMsg.getObsvSat(obsvCode);
 				ArrayList<Satellite> SV = new ArrayList<Satellite>();
 				int satCount = observables.size();
@@ -192,24 +192,20 @@ public class MainApp {
 						satClkOff += relativistic_error;
 						t = tSV - satClkOff;
 
-//						satPV = orbit.getPV(t, SVID, polyOrder);
-//
-//						satECEF = satPV[0];
-//						satVel = satPV[1];
 						satECEF = antenna.getSatPC(SVID, obsvCode, tRX, weekNo, satECEF);
 						Satellite _sat = new Satellite(sat, satECEF, satClkOff, t, tRX, satVel, 0.0, null, time);
 						_sat.compECI();
 
-//						double ISC = bias.getISC(obsvCode, SVID);
+						// double ISC = bias.getISC(obsvCode, SVID);
 //						NavigationMsg NavMsg = NavMsgs.get(SVID).get(order[i]);
-//						Object[] SatParams = ComputeSatPos.computeSatPos(NavMsg, tSV, tRX, null, ISC);
-//						double[] ECEF_SatClkOff = (double[]) SatParams[0];
+//						Object[] SatParams = ComputeSatPos.computeSatPos(NavMsg, tSV, tRX, null, 0);
+						// double[] ECEF_SatClkOff = (double[]) SatParams[0];
 //						double XYZdiff = Math
 //								.sqrt(IntStream.range(0, 3).mapToDouble(j -> satECEF[j] - ECEF_SatClkOff[j])
 //										.map(j -> j * j).reduce(0, (j, k) -> j + k));
 //						double clkDiff = SpeedofLight
 //								* ((satClkOff + relativistic_error) - (ECEF_SatClkOff[3] + NavMsg.getTGD()));
-//						double TGDdiff = SpeedofLight * (temp[1] - (NavMsg.getTGD()));
+//					double TGDdiff = SpeedofLight * (temp[1] - (NavMsg.getTGD()));
 
 						SV.add(_sat);
 
@@ -344,7 +340,7 @@ public class MainApp {
 //						.add(estimateError(doppler.getEstECEF(true), doppler.getIonoCorrECEF(true), userECEF, time));
 					break;
 				}
-				timeList.add(time);
+
 				System.out.println();
 			}
 //		IGPgrid.recordIPPdelay(IPPdelay);
@@ -466,6 +462,7 @@ public class MainApp {
 		// userLatLon);
 		// double ionoDiff = LatLonUtil.getVincentyDistance(ionoLatLon, userLatLon);
 		SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/YYYY hh:mm:ss");
+		sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
 
 		System.out.println(sdf.format(time.getTime()) + " non Iono ECEF diff " + nonIonoError + " Iono ECEF diff "
 				+ ionoError + " non Iono LL Diff - " + nonIonoDiff + " Iono LL Diff - " + ionoDiff);
