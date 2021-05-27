@@ -14,15 +14,15 @@ import com.RINEX_parser.utility.Weight;
 
 public class LS extends LinearLeastSquare {
 
-	public LS(ArrayList<Satellite> SV, IonoCoeff ionoCoeff, Calendar time) {
-		super(SV, ionoCoeff, time);
+	public LS(ArrayList<Satellite> SV, double[] PCO, IonoCoeff ionoCoeff, Calendar time) {
+		super(SV, PCO, ionoCoeff, time);
 		int SVcount = SV.size();
 		setWeight(Weight.computeIdentityMat(SVcount));
 
 	}
 
-	public LS(ArrayList<Satellite> SV, Calendar time) {
-		super(SV, time);
+	public LS(ArrayList<Satellite> SV, double[] PCO, Calendar time) {
+		super(SV, PCO, time);
 		int SVcount = SV.size();
 		setWeight(Weight.computeIdentityMat(SVcount));
 	}

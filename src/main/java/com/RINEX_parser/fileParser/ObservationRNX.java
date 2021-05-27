@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.stream.Collectors;
 
@@ -14,18 +15,19 @@ import com.RINEX_parser.models.ObservationMsg;
 
 public class ObservationRNX {
 
-	public static ArrayList<ObservationMsg> rinex_obsv_process(String path, boolean useSNX, String sinex_path,
-			String obsvCode) throws Exception {
+	public static HashMap<String, Object> rinex_obsv_process(String path, boolean useSNX, String sinex_path,
+			String[] obsvCode) throws Exception {
 		File file = new File(path);
 		ArrayList<ObservationMsg> ObsvMsgs = new ArrayList<ObservationMsg>();
+		Map<String, Object> ARP_PCO = null;
 		try {
 			Scanner input = new Scanner(file);
 
 			input.useDelimiter("HEADER");
 
 			Scanner header = new Scanner(input.next());
+			int fN = obsvCode.length;
 
-			double[] ECEF_XYZ = new double[3];
 			String siteCode = null;
 			HashMap<Character, HashSet<String>> availObs = new HashMap<Character, HashSet<String>>();
 			HashMap<Character, HashMap<String, Integer>> type_index_map = new HashMap<Character, HashMap<String, Integer>>();
@@ -38,8 +40,10 @@ public class ObservationRNX {
 					siteCode = line.split("\\s+")[0].trim().substring(0, 4);
 
 				} else if (line.contains("APPROX POSITION XYZ")) {
-					ECEF_XYZ = Arrays.stream(line.split("\\s+")).limit(3).mapToDouble(x -> Double.parseDouble(x))
-							.toArray();
+					double[] ECEF_XYZ = Arrays.stream(line.split("\\s+")).limit(3)
+							.mapToDouble(x -> Double.parseDouble(x)).toArray();
+					// Note ECEF_XYZ is MM not ARP, PCO is not zero
+					ARP_PCO = Map.of("ARP", ECEF_XYZ, "PCO", new double[obsvCode.length][3]);
 
 				} else if (line.contains("SYS / # / OBS TYPES")) {
 					typeList.addAll(Arrays.stream(line.replaceAll("SYS / # / OBS TYPES", "").split("\\s+"))
@@ -47,31 +51,30 @@ public class ObservationRNX {
 
 				}
 			}
-			{
 
-				for (int i = 0; i < typeList.size();) {
-					char SSI = typeList.get(i).charAt(0);
-					int count = Integer.parseInt(typeList.get(i + 1));
-					String[] type_arr = typeList.subList(i + 2, i + 2 + count).toArray(String[]::new);
-					HashMap<String, Integer> type_index = new HashMap<String, Integer>();
-					HashSet<String> avail = new HashSet<String>();
-					for (int j = 0; j < count; j++) {
-						String code = type_arr[j].trim();
-						type_index.put(code, j);
-						if (code.charAt(0) == 'C') {
-							avail.add(code.substring(1));
-						}
-
+			for (int i = 0; i < typeList.size();) {
+				char SSI = typeList.get(i).charAt(0);
+				int count = Integer.parseInt(typeList.get(i + 1));
+				String[] type_arr = typeList.subList(i + 2, i + 2 + count).toArray(String[]::new);
+				HashMap<String, Integer> type_index = new HashMap<String, Integer>();
+				HashSet<String> avail = new HashSet<String>();
+				for (int j = 0; j < count; j++) {
+					String code = type_arr[j].trim();
+					type_index.put(code, j);
+					if (code.charAt(0) == 'C') {
+						avail.add(code.substring(1));
 					}
 
-					type_index_map.put(SSI, type_index);
-					availObs.put(SSI, avail);
-					i += 2 + count;
 				}
 
+				type_index_map.put(SSI, type_index);
+				availObs.put(SSI, avail);
+				i += 2 + count;
 			}
+
 			if (useSNX) {
-				ECEF_XYZ = SINEX.sinex_process(sinex_path, siteCode, obsvCode);
+				ARP_PCO = SINEX.sinex_process(sinex_path, siteCode, obsvCode);
+
 			}
 
 			String[] obsv_msgs = input.next().trim().split(">");
@@ -129,8 +132,6 @@ public class ObservationRNX {
 
 				}
 
-				Msg.set_ECEF_XYZ(ECEF_XYZ);
-
 				Msg.set_RxTime(msgLines[0].trim().split("\\s+"));
 				Msg.setObsvSat(SV);
 				ObsvMsgs.add(Msg);
@@ -143,7 +144,10 @@ public class ObservationRNX {
 			throw new Exception("Error occured during parsing of Observation RINEX(.rnx) file \n" + e);
 
 		}
-		return ObsvMsgs;
+		HashMap<String, Object> result = new HashMap<String, Object>();
+		result.putAll(ARP_PCO);
+		result.put("ObsvMsgs", ObsvMsgs);
+		return result;
 	}
 
 }

@@ -15,9 +15,9 @@ public class SatUtil {
 	private double[] approxECEF;
 	private double rcvrClkOff;
 
-	public SatUtil(ArrayList<Satellite> SV, Calendar time) {
+	public SatUtil(ArrayList<Satellite> SV, double[] PCO, Calendar time) {
 
-		LS ls = new LS(SV, time);
+		LS ls = new LS(SV, PCO, time);
 		ls.estimate(ls.getPR());
 		approxECEF = ls.getEstECEF();
 		rcvrClkOff = ls.getRcvrClkOff();
@@ -43,8 +43,8 @@ public class SatUtil {
 
 	}
 
-	public double[] getIonoCorrPR(ArrayList<Satellite> SV, IonoCoeff ionoCoeff, Calendar time) {
-		LS ls = new LS(SV, ionoCoeff, time);
+	public double[] getIonoCorrPR(ArrayList<Satellite> SV, double[] PCO, IonoCoeff ionoCoeff, Calendar time) {
+		LS ls = new LS(SV, PCO, ionoCoeff, time);
 		return ls.getIonoCorrPR();
 	}
 

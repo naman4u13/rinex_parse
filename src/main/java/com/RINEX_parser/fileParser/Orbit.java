@@ -17,9 +17,9 @@ public class Orbit {
 	private ArrayList<IGSOrbit> IGSOrbitList;
 	private int[] pts;
 
-	public Orbit(String path, String obsvCode) throws Exception {
+	public Orbit(String path, char SSI) throws Exception {
 		HashMap<Character, ArrayList<IGSOrbit>> IGSOrbitMap = orbit_process(path);
-		char SSI = obsvCode.charAt(0);
+
 		IGSOrbitList = IGSOrbitMap.get(SSI);
 	}
 

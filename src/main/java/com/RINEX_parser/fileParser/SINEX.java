@@ -3,6 +3,7 @@ package com.RINEX_parser.fileParser;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 
 import com.RINEX_parser.utility.LatLonUtil;
@@ -10,7 +11,7 @@ import com.RINEX_parser.utility.StringUtil;
 
 public class SINEX {
 
-	public static double[] sinex_process(String path, String siteCode, String obsvCode) throws Exception {
+	public static Map<String, Object> sinex_process(String path, String siteCode, String[] obsvCode) throws Exception {
 		File file = new File(path);
 		try {
 			siteCode = siteCode.trim();
@@ -111,8 +112,7 @@ public class SINEX {
 
 			}
 			input.close();
-			double[] stationAPC = computeAPC(MM, deltaARP, PCO, obsvCode);
-			return stationAPC;
+			return compute_ARP_PCO(MM, deltaARP, PCO, obsvCode);
 
 		} catch (
 
@@ -122,13 +122,22 @@ public class SINEX {
 
 	}
 
-	private static double[] computeAPC(double[] MM, double[] deltaARP,
-			HashMap<Character, HashMap<Integer, double[]>> PCO, String obsvCode) {
-		char SSI = obsvCode.charAt(0);
-		int freq = Integer.parseInt(obsvCode.charAt(1) + "");
-		double[] pco = PCO.get(SSI).get(freq);
-		double[] APC = LatLonUtil.ENUtoECEF(deltaARP, MM);
-		APC = LatLonUtil.ENUtoECEF(pco, APC);
-		return APC;
+	private static Map<String, Object> compute_ARP_PCO(double[] MM, double[] deltaARP,
+			HashMap<Character, HashMap<Integer, double[]>> PCO, String[] obsvCode) {
+		int fN = obsvCode.length;
+		double[][] PCO_ECEF = new double[fN][3];
+		double[] ARP = LatLonUtil.ENUtoECEF(deltaARP, MM);
+		for (int i = 0; i < fN; i++) {
+			char SSI = obsvCode[i].charAt(0);
+			int freq = Integer.parseInt(obsvCode[i].charAt(1) + "");
+			double[] pco = PCO.get(SSI).get(freq);
+
+			double[] APC = LatLonUtil.ENUtoECEF(pco, ARP);
+			for (int j = 0; j < 3; j++) {
+				PCO_ECEF[i][j] = APC[j] - ARP[j];
+			}
+
+		}
+		return Map.of("ARP", ARP, "PCO", PCO_ECEF);
 	}
 }

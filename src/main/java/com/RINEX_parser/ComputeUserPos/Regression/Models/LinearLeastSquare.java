@@ -21,7 +21,7 @@ import com.RINEX_parser.utility.ECEFtoLatLon;
 public class LinearLeastSquare {
 
 	private final static double SpeedofLight = 299792458;
-	private double[] estECEF = new double[] { 0, 0, 0 };
+	private double[] estECEF = null;
 	private SimpleMatrix HtWHinv = null;
 	private double approxRcvrClkOff = 0;
 	private IonoCoeff ionoCoeff;
@@ -33,22 +33,26 @@ public class LinearLeastSquare {
 	private double approxRcvrClkDrift = 0;
 	// Regional GPS time
 	private Calendar time = null;
+	private double[] PCO = null;
 
-	public LinearLeastSquare(ArrayList<Satellite> SV, IonoCoeff ionoCoeff, Calendar time) {
+	public LinearLeastSquare(ArrayList<Satellite> SV, double[] PCO, IonoCoeff ionoCoeff, Calendar time) {
 		this.SV = SV;
 		this.ionoCoeff = ionoCoeff;
 		this.time = time;
+		this.PCO = PCO;
 
 	}
 
-	public LinearLeastSquare(ArrayList<Satellite> SV, Calendar time) {
+	public LinearLeastSquare(ArrayList<Satellite> SV, double[] PCO, Calendar time) {
 		this.SV = SV;
+		this.PCO = PCO;
 		this.time = time;
 
 	}
 
-	public LinearLeastSquare(ArrayList<Satellite> SV) {
+	public LinearLeastSquare(ArrayList<Satellite> SV, double[] PCO) {
 		this.SV = SV;
+		this.PCO = PCO;
 
 	}
 
@@ -82,6 +86,7 @@ public class LinearLeastSquare {
 		if (SVcount >= 4) {
 
 			while (error >= threshold) {
+				double[] rxAPC = IntStream.range(0, 3).mapToDouble(x -> estECEF[x] + PCO[x]).toArray();
 				double[][] deltaPR = new double[SVcount][1];
 				// approx Geometric range or true range
 				double[] approxGR = new double[SVcount];
@@ -90,14 +95,14 @@ public class LinearLeastSquare {
 
 					double[] satECI = SV.get(j).getECI();
 
-					double ApproxGR = Math.sqrt(IntStream.range(0, 3).mapToDouble(x -> satECI[x] - estECEF[x])
+					double ApproxGR = Math.sqrt(IntStream.range(0, 3).mapToDouble(x -> satECI[x] - rxAPC[x])
 							.map(x -> Math.pow(x, 2)).reduce((x, y) -> x + y).getAsDouble());
 					approxGR[j] = ApproxGR;
 
 					double approxPR = approxGR[j] + (SpeedofLight * approxRcvrClkOff);
 					deltaPR[j][0] = approxPR - PR[j];
 					int index = j;
-					IntStream.range(0, 3).forEach(x -> coeffA[index][x] = (satECI[x] - estECEF[x]) / ApproxGR);
+					IntStream.range(0, 3).forEach(x -> coeffA[index][x] = (satECI[x] - rxAPC[x]) / ApproxGR);
 					coeffA[j][3] = 1;
 				}
 				SimpleMatrix H = new SimpleMatrix(coeffA);
@@ -121,6 +126,10 @@ public class LinearLeastSquare {
 
 	public double[] getEstECEF() {
 		return estECEF;
+	}
+
+	public double[] getPCO() {
+		return PCO;
 	}
 
 	public double getRcvrClkOff() {
@@ -216,15 +225,15 @@ public class LinearLeastSquare {
 
 	public ArrayList<double[]> getAzmEle() {
 
-		return getAzmEle(this.SV, null, false);
+		return getAzmEle(this.SV, this.PCO, null, false);
 	}
 
 	public ArrayList<double[]> getAzmEle(double[] userECEF, boolean reComp) {
 
-		return getAzmEle(this.SV, userECEF, reComp);
+		return getAzmEle(this.SV, this.PCO, userECEF, reComp);
 	}
 
-	public ArrayList<double[]> getAzmEle(ArrayList<Satellite> SV, double[] userECEF, boolean reComp) {
+	public ArrayList<double[]> getAzmEle(ArrayList<Satellite> SV, double[] PCO, double[] userECEF, boolean reComp) {
 		if (Optional.ofNullable(AzmEle).isPresent() && !reComp) {
 			return AzmEle;
 		}
@@ -233,7 +242,7 @@ public class LinearLeastSquare {
 			int SVcount = SV.size();
 			double[][] Weight = new double[SVcount][SVcount];
 			IntStream.range(0, SVcount).forEach(i -> Weight[i][i] = 1);
-			LinearLeastSquare lls = new LinearLeastSquare(SV);
+			LinearLeastSquare lls = new LinearLeastSquare(SV, PCO);
 			lls.estimate(getPR(), Weight);
 			refECEF = lls.getEstECEF();
 		} else {

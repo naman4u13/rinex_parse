@@ -14,8 +14,8 @@ public class DopplerLLS extends LinearLeastSquare {
 
 	private final static double SpeedofLight = 299792458;
 
-	public DopplerLLS(ArrayList<Satellite> SV, IonoCoeff ionoCoeff, Calendar time) {
-		super(SV, ionoCoeff, time);
+	public DopplerLLS(ArrayList<Satellite> SV, double[] PCO, IonoCoeff ionoCoeff, Calendar time) {
+		super(SV, PCO, ionoCoeff, time);
 		// TODO Auto-generated constructor stub
 	}
 
@@ -26,7 +26,8 @@ public class DopplerLLS extends LinearLeastSquare {
 	// reference - DopplerLLS-Aided GNSS Position Estimation With Weighted Least
 	// Squares
 	// https://ieeexplore.ieee.org/document/5976479/
-	// reference - A-GPS: Assisted GPS, GNSS, and SBASprint: Frank van Diggelen, chapter
+	// reference - A-GPS: Assisted GPS, GNSS, and SBASprint: Frank van Diggelen,
+	// chapter
 	// 8
 
 	public void estimate(double[] PR, double[][] Weight, boolean isStatic) {

@@ -75,19 +75,30 @@ public class Antenna {
 	}
 
 	public double[] getSatPC(int SVID, String obsvCode, long GPSTime, long weekNo, double[] satMC) {
-		char SSI = obsvCode.charAt(0);
-		int freq = Integer.parseInt(obsvCode.charAt(1) + "");
-		ArrayList<IGSAntenna> satAntList = satAntMap.get(SSI).get(SVID).get(freq);
-		int n = satAntList.size();
-		double[] eccXYZ = null;
-		for (int i = n - 1; i >= 0; i--) {
-			IGSAntenna satAnt = satAntList.get(i);
 
-			if (satAnt.checkValidity(new long[] { GPSTime, weekNo })) {
-				eccXYZ = satAnt.getEccXYZ();
-				break;
+		return getSatPC(SVID, new String[] { obsvCode }, GPSTime, weekNo, satMC)[0];
+
+	}
+
+	public double[][] getSatPC(int SVID, String[] obsvCode, long GPSTime, long weekNo, double[] satMC) {
+		int fN = obsvCode.length;
+		double[][] eccXYZ = new double[fN][];
+		for (int i = 0; i < fN; i++) {
+
+			char SSI = obsvCode[i].charAt(0);
+			int freq = Integer.parseInt(obsvCode[i].charAt(1) + "");
+			ArrayList<IGSAntenna> satAntList = satAntMap.get(SSI).get(SVID).get(freq);
+			int n = satAntList.size();
+
+			for (int j = n - 1; j >= 0; j--) {
+				IGSAntenna satAnt = satAntList.get(j);
+
+				if (satAnt.checkValidity(new long[] { GPSTime, weekNo })) {
+					eccXYZ[i] = satAnt.getEccXYZ();
+					break;
+				}
+
 			}
-
 		}
 
 		double R_sat = Math
@@ -100,9 +111,11 @@ public class Antenna {
 		double[] j = crossProd(k, e);
 		double[] i = crossProd(j, k);
 
-		double[] satPC = new double[3];
-		for (int x = 0; x < 3; x++) {
-			satPC[x] = satMC[x] + (eccXYZ[0] * i[x]) + (eccXYZ[1] * j[x]) + (eccXYZ[2] * k[x]);
+		double[][] satPC = new double[fN][3];
+		for (int x = 0; x < fN; x++) {
+			for (int y = 0; y < 3; y++) {
+				satPC[x][y] = satMC[y] + (eccXYZ[x][0] * i[y]) + (eccXYZ[x][1] * j[y]) + (eccXYZ[x][2] * k[y]);
+			}
 		}
 
 		return satPC;

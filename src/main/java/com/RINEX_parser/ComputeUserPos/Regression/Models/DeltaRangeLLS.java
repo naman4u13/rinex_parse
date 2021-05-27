@@ -13,9 +13,9 @@ public class DeltaRangeLLS extends LinearLeastSquare {
 	private ArrayList<Satellite> SV_t;
 	private ArrayList<Satellite> SV_tmin1;
 
-	public DeltaRangeLLS(ArrayList<Satellite> SV_t, Calendar time) {
+	public DeltaRangeLLS(ArrayList<Satellite> SV_t, double[] PCO, Calendar time) {
 
-		super(SV_t, time);
+		super(SV_t, PCO, time);
 
 		// TODO Auto-generated constructor stub
 	}

@@ -21,10 +21,10 @@ import com.RINEX_parser.utility.SatUtil;
 public class StaticEKF1 {
 	static double SpeedofLight = 299792458;
 
-	public static void compute(ArrayList<ArrayList<Satellite>> SVlist, ArrayList<Calendar> timeList,
+	public static void compute(ArrayList<ArrayList<Satellite>> SVlist, double[] PCO, ArrayList<Calendar> timeList,
 			double[] trueUserECEF, String path, IonoCoeff ionoCoeff) {
 
-		SatUtil satUtil = new SatUtil(SVlist.get(0), timeList.get(0));
+		SatUtil satUtil = new SatUtil(SVlist.get(0), PCO, timeList.get(0));
 		double[] approxECEF = satUtil.getUserECEF();
 		System.out.println("True User ECEF - "
 				+ Arrays.stream(trueUserECEF).mapToObj(i -> String.valueOf(i)).reduce("", (i, j) -> i + " " + j));
@@ -103,7 +103,7 @@ public class StaticEKF1 {
 
 			double[][] _measurement = new double[SVcount][1];
 			// Compute Iono corrections
-			double[] ionoCorrPR = satUtil.getIonoCorrPR(SV, ionoCoeff, timeList.get(i));
+			double[] ionoCorrPR = satUtil.getIonoCorrPR(SV, PCO, ionoCoeff, timeList.get(i));
 			// Removed satellite clock offset error and Iono errors from pseudorange
 			IntStream.range(0, SVcount).forEach(x -> _measurement[x][0] = ionoCorrPR[x]);
 

@@ -10,8 +10,8 @@ import com.RINEX_parser.models.Satellite;
 import com.RINEX_parser.utility.Weight;
 
 public class Doppler extends DopplerLLS {
-	public Doppler(ArrayList<Satellite> SV, IonoCoeff ionoCoeff, Calendar time) {
-		super(SV, ionoCoeff, time);
+	public Doppler(ArrayList<Satellite> SV, double[] PCO, IonoCoeff ionoCoeff, Calendar time) {
+		super(SV, PCO, ionoCoeff, time);
 
 		setWeight(SV);
 

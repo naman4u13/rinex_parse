@@ -14,15 +14,15 @@ import com.RINEX_parser.utility.Weight;
 
 public class WLS extends LinearLeastSquare {
 
-	public WLS(ArrayList<Satellite> SV, IonoCoeff ionoCoeff, Calendar time) {
-		super(SV, ionoCoeff, time);
+	public WLS(ArrayList<Satellite> SV, double[] PCO, IonoCoeff ionoCoeff, Calendar time) {
+		super(SV, PCO, ionoCoeff, time);
 
 		setWeight(SV);
 
 	}
 
-	public WLS(ArrayList<Satellite> SV, Calendar time) {
-		super(SV, time);
+	public WLS(ArrayList<Satellite> SV, double[] PCO, Calendar time) {
+		super(SV, PCO, time);
 
 		setWeight(SV);
 	}

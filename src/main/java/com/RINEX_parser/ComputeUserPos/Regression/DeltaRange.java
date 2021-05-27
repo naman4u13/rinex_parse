@@ -12,9 +12,9 @@ import com.RINEX_parser.utility.Weight;
 
 public class DeltaRange extends DeltaRangeLLS {
 
-	public DeltaRange(ArrayList<Satellite> SV_t, ArrayList<Satellite> SV_tmin1, Calendar time) {
+	public DeltaRange(ArrayList<Satellite> SV_t, ArrayList<Satellite> SV_tmin1, double[] PCO, Calendar time) {
 		// Reduntant as correct SV will be set below
-		super(SV_t, time);
+		super(SV_t, PCO, time);
 		// Correct SV will now be set
 		checkCompatibleSV(SV_t, SV_tmin1);
 
@@ -29,7 +29,7 @@ public class DeltaRange extends DeltaRangeLLS {
 	}
 
 	public double[] getEstECEF(IonoCoeff ionoCoeff) {
-		WLS wls = new WLS(getSV(), ionoCoeff, getTime());
+		WLS wls = new WLS(getSV(), getPCO(), ionoCoeff, getTime());
 		double[] userECEF = wls.getIonoCorrECEF();
 		estimate(userECEF);
 		System.out.println("\nPDOP - " + Math.sqrt(getCovdX().extractMatrix(0, 3, 0, 3).trace()));

@@ -7,9 +7,6 @@ import com.RINEX_parser.utility.Time;
 
 public class ObservationMsg {
 
-	private double x;
-	private double y;
-	private double z;
 	private int year;
 	private int month;
 	private int day;
@@ -24,12 +21,6 @@ public class ObservationMsg {
 	public void setObsvSat(HashMap<Character, HashMap<Integer, HashMap<Character, ArrayList<Observable>>>> obsvSat) {
 		this.obsvSat = obsvSat;
 		ObsvSatCount = obsvSat.size();
-	}
-
-	public void set_ECEF_XYZ(double[] ECEF_XYZ) {
-		x = ECEF_XYZ[0];
-		y = ECEF_XYZ[1];
-		z = ECEF_XYZ[2];
 	}
 
 	public void set_RxTime(String[] RxTime) {
@@ -76,15 +67,10 @@ public class ObservationMsg {
 		return second;
 	}
 
-	public double[] getECEF() {
-		return new double[] { x, y, z };
-	}
-
 	@Override
 	public String toString() {
-		return "ObservationMsg [x=" + x + ", y=" + y + ", z=" + z + ", year=" + year + ", month=" + month + ", day="
-				+ day + ", hour=" + hour + ", minute=" + minute + ", second=" + second + ", ObsvSatCount="
-				+ ObsvSatCount + ", obsvSat=" + obsvSat + "]";
+		return "ObservationMsg [ year=" + year + ", month=" + month + ", day=" + day + ", hour=" + hour + ", minute="
+				+ minute + ", second=" + second + ", ObsvSatCount=" + ObsvSatCount + ", obsvSat=" + obsvSat + "]";
 	}
 
 	public HashMap<Character, HashMap<Integer, HashMap<Character, ArrayList<Observable>>>> getObsvSat() {
