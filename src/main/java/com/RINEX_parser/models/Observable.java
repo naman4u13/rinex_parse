@@ -92,4 +92,8 @@ public class Observable {
 	public void setPseudoRangeRate(double pseudoRangeRate) {
 		this.pseudoRangeRate = pseudoRangeRate;
 	}
+
+	public double getCarrier_frequency() {
+		return carrier_frequency;
+	}
 }

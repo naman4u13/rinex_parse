@@ -3,6 +3,7 @@ package com.RINEX_parser;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.stream.Collectors;
 
@@ -34,6 +35,7 @@ public class SingleFreq {
 			HashMap<Integer, ArrayList<IonoValue>> ionoValueMap) {
 		ArrayList<Observable> observables = obsvMsg.getObsvSat(obsvCode);
 		ArrayList<Satellite> SV = new ArrayList<Satellite>();
+		observables.removeAll(Collections.singleton(null));
 		int satCount = observables.size();
 
 		if (useIGS) {

@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintStream;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -52,14 +54,12 @@ import com.RINEX_parser.utility.Time;
 
 public class MainApp {
 
-	final static double SpeedofLight = 299792458;
-
 	public static void main(String[] args) {
 
-//		Instant start = Instant.now();
-//		posEstimate(false, false, true, true, false, true, true, false, 2, new String[] { "G1C" });
-//		Instant end = Instant.now();
-//		System.out.println("EXECUTION TIME -  " + Duration.between(start, end));
+		Instant start = Instant.now();
+		posEstimate(false, false, true, true, false, true, false, false, 4, new String[] { "G1C" });// , "G2X" });
+		Instant end = Instant.now();
+		System.out.println("EXECUTION TIME -  " + Duration.between(start, end));
 
 	}
 
@@ -100,7 +100,7 @@ public class MainApp {
 
 			String clock_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\igs21004.clk_30s\\igs21004.clk_30s";
 
-			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\PPPres\\test3";
+			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\PPPres\\test2";
 			File output = new File(path + ".txt");
 			PrintStream stream;
 
@@ -162,6 +162,8 @@ public class MainApp {
 				timeList.add(time);
 				ArrayList<Satellite> SV = new ArrayList<Satellite>();
 				if (isDual) {
+					DualFreq.process(obsvMsg, NavMsgs, obsvCode, useIGS, useBias, bias, orbit, clock, antenna, tRX,
+							weekNo, time);
 				} else {
 					SV = SingleFreq.process(obsvMsg, NavMsgs, obsvCode[0], useIGS, useSBAS, doIonoPlot, useBias,
 							ionoCoeff, bias, orbit, clock, antenna, tRX, weekNo, time, sbas, userECEF, userLatLon,
@@ -179,7 +181,7 @@ public class MainApp {
 					}
 
 					ErrMap.computeIfAbsent("LS", k -> new ArrayList<double[]>())
-							.add(estimateError(ls.getEstECEF(), ls.getIonoCorrECEF(), userECEF, time));
+							.add(estimateError(ls.getIonoCorrECEF(), ls.getTropoCorrECEF(geoid), userECEF, time));
 					break;
 				case 2:
 					WLS wls = null;

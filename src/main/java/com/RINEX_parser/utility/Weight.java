@@ -40,6 +40,19 @@ public class Weight {
 		return normWeight;
 	}
 
+	public static double[][] computeWeight(ArrayList<Satellite>[] SV, ArrayList<double[]> AzmEle) {
+
+		int SVcount = AzmEle.size();
+		double[][] weight = new double[2 * SVcount][2 * SVcount];
+		IntStream.range(0, SVcount)
+				.forEach(i -> weight[i][i] = 1 / Weight.computeCoVariance(SV[0].get(i).getCNo(), AzmEle.get(i)[0]));
+		IntStream.range(SVcount, 2 * SVcount).forEach(i -> weight[i][i] = 1
+				/ Weight.computeCoVariance(SV[1].get(i - SVcount).getCNo(), AzmEle.get(i - SVcount)[0]));
+		double[][] normWeight = Weight.normalize(weight);
+		return normWeight;
+
+	}
+
 	public static double[][] computeIdentityMat(int SVcount) {
 		double[][] Weight = new double[SVcount][SVcount];
 		IntStream.range(0, SVcount).forEach(i -> Weight[i][i] = 1);

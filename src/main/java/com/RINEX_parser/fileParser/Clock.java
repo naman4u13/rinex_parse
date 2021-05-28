@@ -96,6 +96,12 @@ public class Clock {
 	}
 
 	public double getBias(double x, int SVID, String obsvCode) {
+
+		return getBias(x, SVID, new String[] { obsvCode })[0];
+
+	}
+
+	public double[] getBias(double x, int SVID, String[] obsvCode) {
 		double[] X = new double[2];
 		double[] Y = new double[2];
 
@@ -109,9 +115,14 @@ public class Clock {
 		double clkBias = Interpolator.linear(X, Y, x);
 
 		double TGD = bias.getISC("G2W", SVID) / (1 - GPS_FREQ_RATIO);
-		double ISC = bias.getISC(obsvCode, SVID);
-		clkBias = clkBias - TGD + ISC;
-		return clkBias;
+		int fN = obsvCode.length;
+		double[] clkBiases = new double[fN];
+		for (int i = 0; i < fN; i++) {
+			double ISC = bias.getISC(obsvCode[i], SVID);
+			clkBiases[i] = clkBias - TGD + ISC;
+		}
+
+		return clkBiases;
 
 	}
 
