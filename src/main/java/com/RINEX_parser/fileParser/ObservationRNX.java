@@ -117,14 +117,17 @@ public class ObservationRNX {
 
 						String pseudorange = type_index.containsKey('C' + str) ? obsvs[type_index.get('C' + str)]
 								: null;
-						if (pseudorange == null) {
+						String CNo = type_index.containsKey('S' + str) ? obsvs[type_index.get('S' + str)] : null;
+
+						if (pseudorange == null || CNo == null) {
 							SV.computeIfAbsent(SSI,
 									k -> new HashMap<Integer, HashMap<Character, ArrayList<Observable>>>())
 									.computeIfAbsent(freqID, k -> new HashMap<Character, ArrayList<Observable>>())
 									.computeIfAbsent(codeID, k -> new ArrayList<Observable>()).add(null);
 							continue;
+
 						}
-						String CNo = type_index.containsKey('S' + str) ? obsvs[type_index.get('S' + str)] : null;
+
 						String doppler = type_index.containsKey('D' + str) ? obsvs[type_index.get('D' + str)] : null;
 						String phase = type_index.containsKey('L' + str) ? obsvs[type_index.get('L' + str)] : null;
 

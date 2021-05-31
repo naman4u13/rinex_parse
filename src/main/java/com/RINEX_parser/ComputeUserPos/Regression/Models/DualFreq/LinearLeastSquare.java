@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.ejml.simple.SimpleMatrix;
+import org.ejml.simple.SimpleSVD;
 import org.orekit.models.earth.Geoid;
 
 import com.RINEX_parser.helper.ComputeAzmEle;
@@ -66,7 +67,7 @@ public class LinearLeastSquare {
 		if (SVcount >= 5) {
 
 			while (error >= threshold) {
-				double[][] rxAPC = new double[2][];
+				double[][] rxAPC = new double[2][3];
 				for (int i = 0; i < 2; i++) {
 					for (int j = 0; j < 3; j++) {
 						rxAPC[i][j] = estECEF[j] + PCO[i][j];
@@ -91,17 +92,46 @@ public class LinearLeastSquare {
 						deltaPR[index][0] = PR[i][j] - approxPR;
 
 						IntStream.range(0, 3).forEach(k -> coeffA[index][k] = -(satECI[k] - rxAPC[_i][k]) / ApproxGR);
-						coeffA[index][3] = SpeedofLight;
-						coeffA[index][4] = SpeedofLight;
+						coeffA[index][3 + i] = SpeedofLight;
+
 						coeffA[index][5 + j] = alpha[i];
 					}
 				}
 				SimpleMatrix H = new SimpleMatrix(coeffA);
-				SimpleMatrix Ht = H.transpose();
-				SimpleMatrix W = new SimpleMatrix(Weight);
-				SimpleMatrix HtWHinv = (Ht.mult(W).mult(H)).invert();
+
+				SimpleSVD<SimpleMatrix> svd = new SimpleSVD<SimpleMatrix>(H.getMatrix(), true);
+				int rank = svd.rank();
+				double[] singularVal = svd.getSingularValues();
+				int n = singularVal.length;
+				double eps = Math.ulp(1.0);
+				double[][] _Wplus = new double[n][n];
+				double maxW = Double.MIN_VALUE;
+				for (int i = 0; i < n; i++) {
+					maxW = Math.max(singularVal[i], maxW);
+				}
+				double tolerance = Math.max(H.numRows(), H.numCols()) * eps * maxW;
+				for (int i = 0; i < n; i++) {
+					double val = singularVal[i];
+					if (val < tolerance) {
+						continue;
+					}
+					_Wplus[i][i] = 1 / val;
+				}
+				SimpleMatrix Wplus = new SimpleMatrix(_Wplus);
+				Wplus = Wplus.transpose();
+				SimpleMatrix U = svd.getU();
+
+				SimpleMatrix V = svd.getV();
+
+//				SimpleMatrix Ht = H.transpose();
+//				SimpleMatrix W = new SimpleMatrix(Weight);
+//
+//				SimpleMatrix HtWHinv = (Ht.mult(W).mult(H)).invert();
 				SimpleMatrix DeltaPR = new SimpleMatrix(deltaPR);
-				SimpleMatrix DeltaX = HtWHinv.mult(Ht).mult(W).mult(DeltaPR);
+//				SimpleMatrix DeltaX = HtWHinv.mult(Ht).mult(W).mult(DeltaPR);
+
+				SimpleMatrix Ut = U.transpose();
+				SimpleMatrix DeltaX = V.mult(Wplus).mult(Ut).mult(DeltaPR);
 				IntStream.range(0, 3).forEach(x -> estECEF[x] = estECEF[x] + DeltaX.get(x, 0));
 				IntStream.range(3, 5)
 						.forEach(x -> approxRcvrClkOff[x - 3] = approxRcvrClkOff[x - 3] + DeltaX.get(x, 0));

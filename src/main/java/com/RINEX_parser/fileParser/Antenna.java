@@ -83,11 +83,20 @@ public class Antenna {
 	public double[][] getSatPC(int SVID, String[] obsvCode, long GPSTime, long weekNo, double[] satMC) {
 		int fN = obsvCode.length;
 		double[][] eccXYZ = new double[fN][];
+		double[][] satPC = new double[fN][3];
 		for (int i = 0; i < fN; i++) {
 
 			char SSI = obsvCode[i].charAt(0);
 			int freq = Integer.parseInt(obsvCode[i].charAt(1) + "");
 			ArrayList<IGSAntenna> satAntList = satAntMap.get(SSI).get(SVID).get(freq);
+			if (satAntList == null) {
+				for (int j = 0; j < fN; j++) {
+
+					satPC[j] = satMC;
+
+				}
+				return satPC;
+			}
 			int n = satAntList.size();
 
 			for (int j = n - 1; j >= 0; j--) {
@@ -111,7 +120,6 @@ public class Antenna {
 		double[] j = crossProd(k, e);
 		double[] i = crossProd(j, k);
 
-		double[][] satPC = new double[fN][3];
 		for (int x = 0; x < fN; x++) {
 			for (int y = 0; y < 3; y++) {
 				satPC[x][y] = satMC[y] + (eccXYZ[x][0] * i[y]) + (eccXYZ[x][1] * j[y]) + (eccXYZ[x][2] * k[y]);

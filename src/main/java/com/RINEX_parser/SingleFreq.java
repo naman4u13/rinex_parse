@@ -158,10 +158,11 @@ public class SingleFreq {
 						SatClkDrift, ECI, time));
 				if (doIonoPlot) {
 
+					double freq = SV.get(0).getCarrier_frequency();
 					double[] AzmEle = ComputeAzmEle.computeAzmEle(userECEF, Arrays.copyOfRange(ECEF_SatClkOff, 0, 3));
 
 					double ionoCorr = ComputeIonoCorr.computeIonoCorr(AzmEle[0], AzmEle[1], userLatLon[0],
-							userLatLon[1], tRX, ionoCoeff);
+							userLatLon[1], tRX, ionoCoeff, freq);
 
 					ionoValueMap.computeIfAbsent(SVID, k -> new ArrayList<IonoValue>())
 							.add(new IonoValue(time.getTime(), ionoCorr, SVID));

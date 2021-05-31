@@ -1,5 +1,6 @@
 package com.RINEX_parser.helper;
 
+import com.RINEX_parser.constants.Constellation;
 import com.RINEX_parser.models.IonoCoeff;
 
 public class ComputeIonoCorr {
@@ -8,7 +9,7 @@ public class ComputeIonoCorr {
 	final static double SpeedofLight = 299792458;
 
 	public static double computeIonoCorr(double ElevAng_rad, double AzmAng_rad, double userLat_deg, double userLong_deg,
-			long tRX, IonoCoeff ionoCoeff) {
+			long tRX, IonoCoeff ionoCoeff, double freq) {
 
 		/*
 		 * double Central_Angle = (0.0137/(ElevAng+0.11))-0.022; double IPP_Lat =
@@ -102,7 +103,9 @@ public class ComputeIonoCorr {
 
 		}
 		double temp_iono_corr = temp_iono_time * SpeedofLight;
-		return temp_iono_corr;
+
+		double freqRatio = Math.pow(Constellation.frequency.get('G').get(1), 2) / Math.pow(freq, 2);
+		return temp_iono_corr * freqRatio;
 
 		/*
 		 * temp_earth_central_angle = temp_earth_central_angle * 180; temp_IPP_lat =

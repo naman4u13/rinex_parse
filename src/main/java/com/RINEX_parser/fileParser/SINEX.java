@@ -131,7 +131,10 @@ public class SINEX {
 			char SSI = obsvCode[i].charAt(0);
 			int freq = Integer.parseInt(obsvCode[i].charAt(1) + "");
 			double[] pco = PCO.get(SSI).get(freq);
-
+			if (pco == null) {
+				PCO_ECEF[i] = new double[] { 0, 0, 0 };
+				continue;
+			}
 			double[] APC = LatLonUtil.ENUtoECEF(pco, ARP);
 			for (int j = 0; j < 3; j++) {
 				PCO_ECEF[i][j] = APC[j] - ARP[j];

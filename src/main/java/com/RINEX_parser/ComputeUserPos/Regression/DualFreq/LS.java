@@ -14,7 +14,7 @@ public class LS extends LinearLeastSquare {
 	public LS(ArrayList<Satellite>[] SV, double[][] PCO, double[] refECEF, Calendar time) {
 		super(SV, PCO, refECEF, time);
 		int SVcount = SV[0].size();
-		setWeight(Weight.computeIdentityMat(SVcount));
+		setWeight(Weight.computeIdentityMat(2 * SVcount));
 
 		// TODO Auto-generated constructor stub
 	}

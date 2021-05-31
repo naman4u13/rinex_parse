@@ -45,7 +45,9 @@ public class LS extends LinearLeastSquare {
 	public double[] getIonoCorrECEF() {
 
 		estimate(getIonoCorrPR());
-		System.out.println("Iono PDOP - " + Math.sqrt(getCovdX().extractMatrix(0, 3, 0, 3).trace()));
+
+		// System.out.println("Iono PDOP - " + Math.sqrt(getCovdX().extractMatrix(0, 3,
+		// 0, 3).trace()));
 		return super.getEstECEF();
 	}
 

@@ -61,7 +61,7 @@ public class LinearLeastSquare {
 	}
 
 	public void intialize() {
-		estECEF = new double[] { 0, 0, 0 };
+		estECEF = new double[] { 4849000, -360000, 4114000 };
 		approxRcvrClkOff = 0;
 		HtWHinv = null;
 	}
@@ -121,6 +121,7 @@ public class LinearLeastSquare {
 			return;
 		}
 		System.out.println("Satellite count is less than 4, can't compute user position");
+		estECEF = null;
 
 	}
 
@@ -167,12 +168,12 @@ public class LinearLeastSquare {
 			System.out.println("You have not provided IonoCoeff");
 			return null;
 		}
-
+		double freq = SV.get(0).getCarrier_frequency();
 		ArrayList<double[]> AzmEle = getAzmEle();
 		double[] PR = getPR();
-		double[] ionoCorr = IntStream.range(0, SV.size())
-				.mapToDouble(x -> ComputeIonoCorr.computeIonoCorr(AzmEle.get(x)[0], AzmEle.get(x)[1], refLatLon[0],
-						refLatLon[1], (long) SV.get(x).gettRX(), ionoCoeff))
+		double[] ionoCorr = IntStream
+				.range(0, SV.size()).mapToDouble(x -> ComputeIonoCorr.computeIonoCorr(AzmEle.get(x)[0],
+						AzmEle.get(x)[1], refLatLon[0], refLatLon[1], (long) SV.get(x).gettRX(), ionoCoeff, freq))
 				.toArray();
 
 		double[] ionoCorrKlob = new double[SV.size()];

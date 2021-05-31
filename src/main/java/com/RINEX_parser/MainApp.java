@@ -57,14 +57,16 @@ public class MainApp {
 	public static void main(String[] args) {
 
 		Instant start = Instant.now();
-		posEstimate(false, false, true, true, false, true, false, false, 4, new String[] { "G1C" });// , "G2X" });
+		posEstimate(false, false, true, true, false, true, false, true, 4, new String[] { "G1C", "G2L" }, 5);
+
 		Instant end = Instant.now();
 		System.out.println("EXECUTION TIME -  " + Duration.between(start, end));
 
 	}
 
 	public static void posEstimate(boolean doWeightPlot, boolean doIonoPlot, boolean doPosErrPlot, boolean useSNX,
-			boolean useSBAS, boolean useBias, boolean useIGS, boolean isDual, int estimatorType, String[] obsvCode) {
+			boolean useSBAS, boolean useBias, boolean useIGS, boolean isDual, int estimatorType, String[] obsvCode,
+			int minSat) {
 		try {
 			TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
 			HashMap<Integer, ArrayList<IonoValue>> ionoValueMap = new HashMap<Integer, ArrayList<IonoValue>>();
@@ -73,7 +75,7 @@ public class MainApp {
 			HashMap<String, ArrayList<Double>> WeightMap = new HashMap<String, ArrayList<Double>>();
 			ArrayList<Calendar> timeList = new ArrayList<Calendar>();
 			ArrayList<ArrayList<Satellite>> SVlist = new ArrayList<ArrayList<Satellite>>();
-
+			ArrayList<ArrayList<Satellite>[]> dualSVlist = new ArrayList<ArrayList<Satellite>[]>();
 			ArrayList<String[]> IPPdelay = new ArrayList<String[]>();
 			SBAS sbas = null;
 			Bias bias = null;
@@ -84,7 +86,7 @@ public class MainApp {
 
 			String nav_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
-			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\MADR00ESP_R_20201001000_01H_30S_MO.crx\\MADR00ESP_R_20201001000_01H_30S_MO.rnx";
+			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\TWTF00TWN_R_20201000000_01D_30S_MO.rnx\\TWTF00TWN_R_20201000000_01D_30S_MO.rnx";
 
 			String sbas_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\EGNOS_2020_100\\123\\D100.ems";
 
@@ -100,7 +102,7 @@ public class MainApp {
 
 			String clock_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\igs21004.clk_30s\\igs21004.clk_30s";
 
-			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\PPPres\\test2";
+			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\dualFreq\\test3";
 			File output = new File(path + ".txt");
 			PrintStream stream;
 
@@ -159,43 +161,56 @@ public class MainApp {
 				long weekNo = obsvMsg.getWeekNo();
 
 				Calendar time = Time.getDate(tRX, weekNo, userLatLon[1]);
-				timeList.add(time);
-				ArrayList<Satellite> SV = new ArrayList<Satellite>();
+
+				ArrayList<Satellite>[] dualSV = null;
+				ArrayList<Satellite> SV = null;
 				if (isDual) {
-					DualFreq.process(obsvMsg, NavMsgs, obsvCode, useIGS, useBias, bias, orbit, clock, antenna, tRX,
-							weekNo, time);
+					dualSV = DualFreq.process(obsvMsg, NavMsgs, obsvCode, useIGS, useBias, bias, orbit, clock, antenna,
+							tRX, weekNo, time);
+					if (dualSV[0].size() < minSat && dualSV[1].size() < minSat) {
+						continue;
+					}
+					dualSVlist.add(dualSV);
 				} else {
 					SV = SingleFreq.process(obsvMsg, NavMsgs, obsvCode[0], useIGS, useSBAS, doIonoPlot, useBias,
 							ionoCoeff, bias, orbit, clock, antenna, tRX, weekNo, time, sbas, userECEF, userLatLon,
 							ionoValueMap);
+					if (SV.size() < minSat) {
+						continue;
+					}
+					SVlist.add(SV);
 				}
 
-				SVlist.add(SV);
 				switch (estimatorType) {
 				case 1:
 					LS ls = null;
+					com.RINEX_parser.ComputeUserPos.Regression.DualFreq.LS dualLS = null;
 					if (isDual) {
+						dualLS = new com.RINEX_parser.ComputeUserPos.Regression.DualFreq.LS(dualSV, rxPCO, userECEF,
+								time);
+						ErrMap.computeIfAbsent("LS", k -> new ArrayList<double[]>()).add(
+								estimateError(dualLS.getEstECEF(), dualLS.getTropoCorrECEF(geoid), userECEF, time));
 
 					} else {
 						ls = new LS(SV, rxPCO[0], ionoCoeff, time);
+						ErrMap.computeIfAbsent("LS", k -> new ArrayList<double[]>())
+								.add(estimateError(ls.getIonoCorrECEF(), ls.getTropoCorrECEF(geoid), userECEF, time));
 					}
 
-					ErrMap.computeIfAbsent("LS", k -> new ArrayList<double[]>())
-							.add(estimateError(ls.getIonoCorrECEF(), ls.getTropoCorrECEF(geoid), userECEF, time));
 					break;
 				case 2:
 					WLS wls = null;
+					com.RINEX_parser.ComputeUserPos.Regression.DualFreq.WLS dualWLS = null;
 					if (isDual) {
+						dualWLS = new com.RINEX_parser.ComputeUserPos.Regression.DualFreq.WLS(dualSV, rxPCO, userECEF,
+								time);
+						ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>()).add(
+								estimateError(dualWLS.getEstECEF(), dualWLS.getTropoCorrECEF(geoid), userECEF, time));
 
 					} else {
 						wls = new WLS(SV, rxPCO[0], ionoCoeff, time);
-					}
-					try {
-
 						ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
 								.add(estimateError(wls.getIonoCorrECEF(), wls.getTropoCorrECEF(geoid), userECEF, time));
-					} catch (Exception e) {
-						System.out.println(e);
 					}
 
 					break;
@@ -209,23 +224,32 @@ public class MainApp {
 				case 4:
 					ls = null;
 					wls = null;
+					dualLS = null;
+					dualWLS = null;
+
 					if (isDual) {
+						dualLS = new com.RINEX_parser.ComputeUserPos.Regression.DualFreq.LS(dualSV, rxPCO, userECEF,
+								time);
+						dualWLS = new com.RINEX_parser.ComputeUserPos.Regression.DualFreq.WLS(dualSV, rxPCO, userECEF,
+								time);
+						ErrMap.computeIfAbsent("LS", k -> new ArrayList<double[]>()).add(
+								estimateError(dualLS.getEstECEF(), dualLS.getTropoCorrECEF(geoid), userECEF, time));
+
+						ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>()).add(
+								estimateError(dualWLS.getEstECEF(), dualWLS.getTropoCorrECEF(geoid), userECEF, time));
 
 					} else {
 						ls = new LS(SV, rxPCO[0], ionoCoeff, time);
 						wls = new WLS(SV, rxPCO[0], ionoCoeff, time);
-					}
-					ErrMap.computeIfAbsent("LS", k -> new ArrayList<double[]>())
-							.add(estimateError(ls.getEstECEF(), ls.getTropoCorrECEF(geoid), userECEF, time));
+						ErrMap.computeIfAbsent("LS", k -> new ArrayList<double[]>())
+								.add(estimateError(ls.getEstECEF(), ls.getTropoCorrECEF(geoid), userECEF, time));
 
-					ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
-							.add(estimateError(wls.getEstECEF(), wls.getTropoCorrECEF(geoid), userECEF, time));
-//				doppler = new Doppler(SV, ionoCoeff);
-//				ErrMap.computeIfAbsent("DopplerWLS", k -> new ArrayList<double[]>())
-//						.add(estimateError(doppler.getEstECEF(true), doppler.getIonoCorrECEF(true), userECEF, time));
+						ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
+								.add(estimateError(wls.getEstECEF(), wls.getTropoCorrECEF(geoid), userECEF, time));
+					}
 					break;
 				}
-
+				timeList.add(time);
 				System.out.println();
 			}
 //		IGPgrid.recordIPPdelay(IPPdelay);
