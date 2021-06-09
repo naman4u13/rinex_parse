@@ -53,6 +53,25 @@ public class Weight {
 
 	}
 
+	public static double[][] computeWeight2(ArrayList<Satellite>[] SV, ArrayList<double[]> AzmEle) {
+
+		int SVcount = AzmEle.size();
+		double[][] weight = new double[SVcount][SVcount];
+		double[] CNo = new double[SVcount];
+		double f1 = Math.pow(SV[0].get(0).getCarrier_frequency(), 2);
+		double f2 = Math.pow(SV[1].get(0).getCarrier_frequency(), 2);
+		double diff = f1 - f2;
+		for (int i = 0; i < SVcount; i++) {
+			CNo[i] = ((f1 * SV[0].get(i).getCNo()) - (f2 * SV[1].get(i).getCNo())) / diff;
+		}
+
+		IntStream.range(0, SVcount).forEach(i -> weight[i][i] = 1 / Weight.computeCoVariance(CNo[i], AzmEle.get(i)[0]));
+
+		double[][] normWeight = Weight.normalize(weight);
+		return normWeight;
+
+	}
+
 	public static double[][] computeIdentityMat(int SVcount) {
 		double[][] Weight = new double[SVcount][SVcount];
 		IntStream.range(0, SVcount).forEach(i -> Weight[i][i] = 1);

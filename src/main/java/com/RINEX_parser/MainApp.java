@@ -57,7 +57,7 @@ public class MainApp {
 	public static void main(String[] args) {
 
 		Instant start = Instant.now();
-		posEstimate(false, false, true, true, false, true, false, true, 4, new String[] { "G1C", "G2L" }, 5);
+		posEstimate(false, false, true, true, false, true, false, true, 1, new String[] { "G1C", "G2L" }, 4);
 
 		Instant end = Instant.now();
 		System.out.println("EXECUTION TIME -  " + Duration.between(start, end));
@@ -86,7 +86,7 @@ public class MainApp {
 
 			String nav_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
-			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\TWTF00TWN_R_20201000000_01D_30S_MO.rnx\\TWTF00TWN_R_20201000000_01D_30S_MO.rnx";
+			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\IISC00IND_R_20201001000_01H_30S_MO.crx\\IISC00IND_R_20201001000_01H_30S_MO.rnx";
 
 			String sbas_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\EGNOS_2020_100\\123\\D100.ems";
 
@@ -102,7 +102,7 @@ public class MainApp {
 
 			String clock_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\igs21004.clk_30s\\igs21004.clk_30s";
 
-			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\dualFreq\\test3";
+			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\dualFreq\\test2";
 			File output = new File(path + ".txt");
 			PrintStream stream;
 
@@ -242,10 +242,10 @@ public class MainApp {
 						ls = new LS(SV, rxPCO[0], ionoCoeff, time);
 						wls = new WLS(SV, rxPCO[0], ionoCoeff, time);
 						ErrMap.computeIfAbsent("LS", k -> new ArrayList<double[]>())
-								.add(estimateError(ls.getEstECEF(), ls.getTropoCorrECEF(geoid), userECEF, time));
+								.add(estimateError(ls.getIonoCorrECEF(), ls.getTropoCorrECEF(geoid), userECEF, time));
 
 						ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
-								.add(estimateError(wls.getEstECEF(), wls.getTropoCorrECEF(geoid), userECEF, time));
+								.add(estimateError(wls.getIonoCorrECEF(), wls.getTropoCorrECEF(geoid), userECEF, time));
 					}
 					break;
 				}

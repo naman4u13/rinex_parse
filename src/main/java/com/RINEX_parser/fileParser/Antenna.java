@@ -95,6 +95,7 @@ public class Antenna {
 					satPC[j] = satMC;
 
 				}
+				System.err.println("Sat " + SVID + " PCO info unavailable for frequency - " + freq + " !");
 				return satPC;
 			}
 			int n = satAntList.size();

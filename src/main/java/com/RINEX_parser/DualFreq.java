@@ -15,7 +15,6 @@ import com.RINEX_parser.models.NavigationMsg;
 import com.RINEX_parser.models.Observable;
 import com.RINEX_parser.models.ObservationMsg;
 import com.RINEX_parser.models.Satellite;
-import com.RINEX_parser.models.SBAS.Correction;
 import com.RINEX_parser.utility.Closest;
 
 public class DualFreq {
@@ -81,15 +80,19 @@ public class DualFreq {
 
 		} else {
 
-			ArrayList<Observable> refObservables;
-
 			// find out index of nav-msg inside the nav-msg list which is most suitable for
 			// each obs-msg based on time
-			int order[] = observables1.stream().map(i -> NavMsgs.get(i.getSVID()))
-					.map(i -> (ArrayList<Long>) i.stream().map(j -> j.getTOC()).collect(Collectors.toList()))
-					.mapToInt(i -> Closest.findClosest(tRX, i)).toArray();
-
-			HashMap<Integer, Correction> PRNmap = null;
+			int[] order = new int[satCount];
+			for (int i = 0; i < satCount; i++) {
+				Observable obs = observables1.get(i);
+				if (obs == null) {
+					continue;
+				}
+				ArrayList<NavigationMsg> navMsg = NavMsgs.get(obs.getSVID());
+				ArrayList<Long> TOCs = (ArrayList<Long>) navMsg.stream().map(j -> j.getTOC())
+						.collect(Collectors.toList());
+				order[i] = Closest.findClosest(tRX, TOCs);
+			}
 
 			for (int i = 0; i < order.length; i++) {
 
@@ -137,11 +140,19 @@ public class DualFreq {
 				double t2 = (double) SatParams2[3];
 				// ECI coordinates
 				double[] ECI2 = (double[]) SatParams2[4];
+
 				SV[1].add(new Satellite(sat2, Arrays.copyOfRange(ECEF_SatClkOff2, 0, 3), ECEF_SatClkOff2[3], t2, tRX,
 						SatVel2, SatClkDrift2, ECI2, time));
 
-				double err = SpeedofLight * Math.abs(t1 - t2);
-				System.out.println();
+//				double errT = SpeedofLight * Math.abs(t1 - t2);
+//				double errECI = Math.sqrt(IntStream.range(0, 3).mapToDouble(j -> ECI1[j] - ECI2[j]).map(j -> j * j)
+//						.reduce(0, (j, k) -> j + k));
+//				if (errECI > 1) {
+//					System.out.println();
+//				}
+//				if (errT > 1) {
+//					System.out.println();
+//				}
 
 			}
 		}

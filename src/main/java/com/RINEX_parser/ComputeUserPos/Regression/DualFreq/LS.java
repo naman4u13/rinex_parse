@@ -21,6 +21,7 @@ public class LS extends LinearLeastSquare {
 
 	@Override
 	public double[] getEstECEF() {
+
 		estimate(getPR());
 		return super.getEstECEF();
 

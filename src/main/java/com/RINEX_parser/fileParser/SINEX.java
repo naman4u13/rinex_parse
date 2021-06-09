@@ -132,6 +132,7 @@ public class SINEX {
 			int freq = Integer.parseInt(obsvCode[i].charAt(1) + "");
 			double[] pco = PCO.get(SSI).get(freq);
 			if (pco == null) {
+				System.err.println("Rx PCO info unavailable for frequency - " + freq + " !");
 				PCO_ECEF[i] = new double[] { 0, 0, 0 };
 				continue;
 			}
