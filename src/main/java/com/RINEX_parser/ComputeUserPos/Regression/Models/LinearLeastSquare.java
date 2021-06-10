@@ -11,6 +11,7 @@ import org.ejml.simple.SimpleMatrix;
 import org.ejml.simple.SimpleSVD;
 import org.orekit.models.earth.Geoid;
 
+import com.RINEX_parser.fileParser.IONEX;
 import com.RINEX_parser.helper.ComputeAzmEle;
 import com.RINEX_parser.helper.ComputeIonoCorr;
 import com.RINEX_parser.helper.ComputeTropoCorr;
@@ -35,25 +36,43 @@ public class LinearLeastSquare {
 	// Regional GPS time
 	private Calendar time = null;
 	private double[] PCO = null;
+	HashMap<Integer, HashMap<Integer, Double>> sbasIVD = null;
+	IONEX ionex = null;
 
-	public LinearLeastSquare(ArrayList<Satellite> SV, double[] PCO, IonoCoeff ionoCoeff, Calendar time) {
+	public LinearLeastSquare(ArrayList<Satellite> SV, double[] PCO, IonoCoeff ionoCoeff, Calendar time,
+			HashMap<Integer, HashMap<Integer, Double>> sbasIVD, IONEX ionex) {
 		this.SV = SV;
 		this.ionoCoeff = ionoCoeff;
 		this.time = time;
 		this.PCO = PCO;
+		this.sbasIVD = sbasIVD;
+		this.ionex = ionex;
 
 	}
 
-	public LinearLeastSquare(ArrayList<Satellite> SV, double[] PCO, Calendar time) {
-		this.SV = SV;
-		this.PCO = PCO;
-		this.time = time;
+	public LinearLeastSquare(ArrayList<Satellite> SV, double[] PCO, IonoCoeff ionoCoeff, Calendar time,
+			HashMap<Integer, HashMap<Integer, Double>> sbasIVD) {
+		this(SV, PCO, ionoCoeff, time, sbasIVD, null);
+
+	}
+
+	public LinearLeastSquare(ArrayList<Satellite> SV, double[] PCO, IonoCoeff ionoCoeff, Calendar time, IONEX ionex) {
+		this(SV, PCO, ionoCoeff, time, null, ionex);
+
+	}
+
+	public LinearLeastSquare(ArrayList<Satellite> SV, double[] PCO, IonoCoeff ionoCoeff, Calendar time) {
+		this(SV, PCO, ionoCoeff, time, null, null);
 
 	}
 
 	public LinearLeastSquare(ArrayList<Satellite> SV, double[] PCO) {
-		this.SV = SV;
-		this.PCO = PCO;
+		this(SV, PCO, null, null, null, null);
+
+	}
+
+	public LinearLeastSquare(ArrayList<Satellite> SV, double[] PCO, Calendar time) {
+		this(SV, PCO, null, time, null, null);
 
 	}
 
@@ -234,31 +253,27 @@ public class LinearLeastSquare {
 	}
 
 	public double[] getIonoCorrPR() {
-		return getIonoCorrPR(this.SV, null);
+		return getIonoCorrPR(this.SV, sbasIVD, ionex);
 	}
 
-	public double[] getIonoCorrPR(HashMap<Integer, HashMap<Integer, Double>> sbasIVD) {
-		return getIonoCorrPR(this.SV, sbasIVD);
-	}
-
-	public double[] getIonoCorrPR(ArrayList<Satellite> SV, HashMap<Integer, HashMap<Integer, Double>> sbasIVD) {
+	public double[] getIonoCorrPR(ArrayList<Satellite> SV, HashMap<Integer, HashMap<Integer, Double>> sbasIVD,
+			IONEX ionex) {
 		if (Optional.ofNullable(ionoCoeff).isEmpty()) {
 			System.out.println("You have not provided IonoCoeff");
 			return null;
 		}
+		int SVcount = SV.size();
 		double freq = SV.get(0).getCarrier_frequency();
 		ArrayList<double[]> AzmEle = getAzmEle();
 		double[] PR = getPR();
-		double[] ionoCorr = IntStream
-				.range(0, SV.size()).mapToDouble(x -> ComputeIonoCorr.computeIonoCorr(AzmEle.get(x)[0],
-						AzmEle.get(x)[1], refLatLon[0], refLatLon[1], (long) SV.get(x).gettRX(), ionoCoeff, freq))
-				.toArray();
+		double[] ionoCorr = new double[SVcount];
 
-		double[] ionoCorrKlob = new double[SV.size()];
-		double[] ionoCorrSBAS = new double[SV.size()];
+		double[] ionoCorrKlob = new double[SVcount];
+
 		if (sbasIVD != null) {
+			double[] ionoCorrSBAS = new double[SVcount];
 			com.RINEX_parser.helper.SBAS.ComputeIonoCorr sbasIC = new com.RINEX_parser.helper.SBAS.ComputeIonoCorr();
-			for (int i = 0; i < SV.size(); i++) {
+			for (int i = 0; i < SVcount; i++) {
 				double sbasIonoCorr = sbasIC.computeIonoCorr(AzmEle.get(i)[0], AzmEle.get(i)[1], refLatLon[0],
 						refLatLon[1], sbasIVD);
 				if (sbasIC.getIonoFlag() == Flag.VIABLE) {
@@ -269,12 +284,30 @@ public class LinearLeastSquare {
 			}
 			System.out.println();
 			System.out.println("SVID   KLOBUCHLAR   SBAS   RATIO");
-			IntStream.range(0, SV.size()).forEach(i -> System.out.println(SV.get(i).getSVID() + "," + ionoCorrKlob[i]
-					+ "," + ionoCorrSBAS[i] + "," + ionoCorrSBAS[i] / ionoCorrKlob[i]));
+//			IntStream.range(0, SV.size()).forEach(i -> System.out.println(SV.get(i).getSVID() + "," + ionoCorrKlob[i]
+//					+ "," + ionoCorrSBAS[i] + "," + ionoCorrSBAS[i] / ionoCorrKlob[i]));
 			System.out.println();
-		}
+		} else if (ionex != null) {
+			for (int i = 0; i < SVcount; i++) {
+				double gimIonoCorr = ionex.computeIonoCorr(AzmEle.get(i)[0], AzmEle.get(i)[1], refLatLon[0],
+						refLatLon[1], SV.get(i).gettRX(), freq);
+				ionoCorr[i] = gimIonoCorr;
+			}
+			ionoCorrKlob = IntStream
+					.range(0, SVcount).mapToDouble(x -> ComputeIonoCorr.computeIonoCorr(AzmEle.get(x)[0],
+							AzmEle.get(x)[1], refLatLon[0], refLatLon[1], SV.get(x).gettRX(), ionoCoeff, freq))
+					.toArray();
 
-		return IntStream.range(0, PR.length).mapToDouble(x -> PR[x] - ionoCorr[x]).toArray();
+		} else {
+			ionoCorr = IntStream
+					.range(0, SVcount).mapToDouble(x -> ComputeIonoCorr.computeIonoCorr(AzmEle.get(x)[0],
+							AzmEle.get(x)[1], refLatLon[0], refLatLon[1], SV.get(x).gettRX(), ionoCoeff, freq))
+					.toArray();
+		}
+		for (int i = 0; i < SVcount; i++) {
+			PR[i] -= ionoCorr[i];
+		}
+		return PR;
 	}
 
 	public double[] getTropoCorrPR(double[] refLatLon, Geoid geoid) {

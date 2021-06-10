@@ -7,6 +7,7 @@ import java.util.HashMap;
 import org.orekit.models.earth.Geoid;
 
 import com.RINEX_parser.ComputeUserPos.Regression.Models.LinearLeastSquare;
+import com.RINEX_parser.fileParser.IONEX;
 import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.Satellite;
 import com.RINEX_parser.utility.ECEFtoLatLon;
@@ -14,39 +15,39 @@ import com.RINEX_parser.utility.Weight;
 
 public class LS extends LinearLeastSquare {
 
-	public LS(ArrayList<Satellite> SV, double[] PCO, IonoCoeff ionoCoeff, Calendar time) {
-		super(SV, PCO, ionoCoeff, time);
+	public LS(ArrayList<Satellite> SV, double[] PCO, IonoCoeff ionoCoeff, Calendar time,
+			HashMap<Integer, HashMap<Integer, Double>> sbasIVD, IONEX ionex) {
+		super(SV, PCO, ionoCoeff, time, sbasIVD, ionex);
 		int SVcount = SV.size();
 		setWeight(Weight.computeIdentityMat(SVcount));
 
 	}
 
+	public LS(ArrayList<Satellite> SV, double[] PCO, IonoCoeff ionoCoeff, Calendar time) {
+		this(SV, PCO, ionoCoeff, time, null, null);
+
+	}
+
+	public LS(ArrayList<Satellite> SV, double[] PCO, IonoCoeff ionoCoeff, Calendar time, IONEX ionex) {
+		this(SV, PCO, ionoCoeff, time, null, ionex);
+
+	}
+
 	public LS(ArrayList<Satellite> SV, double[] PCO, Calendar time) {
-		super(SV, PCO, time);
-		int SVcount = SV.size();
-		setWeight(Weight.computeIdentityMat(SVcount));
+		this(SV, PCO, null, time);
 	}
 
 	@Override
 	public double[] getEstECEF() {
 		estimate(getPR());
-		// System.out.println("\nPDOP - " + Math.sqrt(getCovdX().extractMatrix(0, 3, 0,
-		// 3).trace()));
+		System.out.println("\nPDOP - " + Math.sqrt(getCovdX().extractMatrix(0, 3, 0, 3).trace()));
 		return super.getEstECEF();
 
-	}
-
-	public double[] getIonoCorrECEF(HashMap<Integer, HashMap<Integer, Double>> sbasIVD) {
-
-		estimate(getIonoCorrPR(sbasIVD));
-		System.out.println("Iono PDOP - " + Math.sqrt(getCovdX().extractMatrix(0, 3, 0, 3).trace()));
-		return super.getEstECEF();
 	}
 
 	public double[] getIonoCorrECEF() {
 
 		estimate(getIonoCorrPR());
-
 		System.out.println("Iono PDOP - " + Math.sqrt(getCovdX().extractMatrix(0, 3, 0, 3).trace()));
 		return super.getEstECEF();
 	}

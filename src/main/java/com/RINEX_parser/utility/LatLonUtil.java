@@ -136,6 +136,16 @@ public class LatLonUtil {
 		return lon;
 	}
 
+	public static double lonAddDD(double lon, double diff) {
+		lon = lon + diff;
+		if (lon >= 180) {
+			lon -= 360;
+		} else if (lon < -180) {
+			lon += 360;
+		}
+		return lon;
+	}
+
 	// Only for IGP grid selection
 	// accounting for continuous longitude
 	public static double lonDiff(double x1, double x2) {

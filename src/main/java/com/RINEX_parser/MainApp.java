@@ -36,6 +36,7 @@ import com.RINEX_parser.ComputeUserPos.Regression.WLS;
 import com.RINEX_parser.fileParser.Antenna;
 import com.RINEX_parser.fileParser.Bias;
 import com.RINEX_parser.fileParser.Clock;
+import com.RINEX_parser.fileParser.IONEX;
 import com.RINEX_parser.fileParser.NavigationRNX;
 import com.RINEX_parser.fileParser.ObservationRNX;
 import com.RINEX_parser.fileParser.Orbit;
@@ -57,7 +58,7 @@ public class MainApp {
 	public static void main(String[] args) {
 
 		Instant start = Instant.now();
-		posEstimate(false, false, true, true, false, true, false, true, 1, new String[] { "G1C", "G2L" }, 4);
+		posEstimate(false, false, true, true, false, true, false, false, true, 2, new String[] { "G1C" }, 4);
 
 		Instant end = Instant.now();
 		System.out.println("EXECUTION TIME -  " + Duration.between(start, end));
@@ -65,8 +66,8 @@ public class MainApp {
 	}
 
 	public static void posEstimate(boolean doWeightPlot, boolean doIonoPlot, boolean doPosErrPlot, boolean useSNX,
-			boolean useSBAS, boolean useBias, boolean useIGS, boolean isDual, int estimatorType, String[] obsvCode,
-			int minSat) {
+			boolean useSBAS, boolean useBias, boolean useIGS, boolean isDual, boolean useGIM, int estimatorType,
+			String[] obsvCode, int minSat) {
 		try {
 			TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
 			HashMap<Integer, ArrayList<IonoValue>> ionoValueMap = new HashMap<Integer, ArrayList<IonoValue>>();
@@ -83,10 +84,11 @@ public class MainApp {
 			Orbit orbit = null;
 			Clock clock = null;
 			Antenna antenna = null;
+			IONEX ionex = null;
 
 			String nav_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
-			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\IISC00IND_R_20201001000_01H_30S_MO.crx\\IISC00IND_R_20201001000_01H_30S_MO.rnx";
+			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\AGGO00ARG_R_20201000000_01D_30S_MO.crx\\AGGO00ARG_R_20201000000_01D_30S_MO.rnx";
 
 			String sbas_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\EGNOS_2020_100\\123\\D100.ems";
 
@@ -102,7 +104,9 @@ public class MainApp {
 
 			String clock_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\igs21004.clk_30s\\igs21004.clk_30s";
 
-			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\dualFreq\\test2";
+			String ionex_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\igsg1000.20i\\igsg1000.20i";
+
+			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\GIM\\AGGO_GIM";
 			File output = new File(path + ".txt");
 			PrintStream stream;
 
@@ -150,6 +154,10 @@ public class MainApp {
 				antenna = new Antenna(antenna_csv_path);
 
 			}
+			if (useGIM) {
+				ionex = new IONEX(ionex_path);
+
+			}
 
 			for (ObservationMsg obsvMsg : ObsvMsgs) {
 
@@ -192,7 +200,7 @@ public class MainApp {
 								estimateError(dualLS.getEstECEF(), dualLS.getTropoCorrECEF(geoid), userECEF, time));
 
 					} else {
-						ls = new LS(SV, rxPCO[0], ionoCoeff, time);
+						ls = new LS(SV, rxPCO[0], ionoCoeff, time, ionex);
 						ErrMap.computeIfAbsent("LS", k -> new ArrayList<double[]>())
 								.add(estimateError(ls.getIonoCorrECEF(), ls.getTropoCorrECEF(geoid), userECEF, time));
 					}
@@ -208,7 +216,7 @@ public class MainApp {
 								estimateError(dualWLS.getEstECEF(), dualWLS.getTropoCorrECEF(geoid), userECEF, time));
 
 					} else {
-						wls = new WLS(SV, rxPCO[0], ionoCoeff, time);
+						wls = new WLS(SV, rxPCO[0], ionoCoeff, time, ionex);
 						ErrMap.computeIfAbsent("WLS", k -> new ArrayList<double[]>())
 								.add(estimateError(wls.getIonoCorrECEF(), wls.getTropoCorrECEF(geoid), userECEF, time));
 					}
@@ -239,8 +247,8 @@ public class MainApp {
 								estimateError(dualWLS.getEstECEF(), dualWLS.getTropoCorrECEF(geoid), userECEF, time));
 
 					} else {
-						ls = new LS(SV, rxPCO[0], ionoCoeff, time);
-						wls = new WLS(SV, rxPCO[0], ionoCoeff, time);
+						ls = new LS(SV, rxPCO[0], ionoCoeff, time, ionex);
+						wls = new WLS(SV, rxPCO[0], ionoCoeff, time, ionex);
 						ErrMap.computeIfAbsent("LS", k -> new ArrayList<double[]>())
 								.add(estimateError(ls.getIonoCorrECEF(), ls.getTropoCorrECEF(geoid), userECEF, time));
 

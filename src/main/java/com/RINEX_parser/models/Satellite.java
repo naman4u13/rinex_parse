@@ -14,7 +14,7 @@ public class Satellite extends Observable {
 	private double satClkDrift;
 	private double[] ECI;
 	// Note this is GPS System time at time of Reception + Receiver clock offset
-	private double tRX;
+	private long tRX;
 	// time
 	private Calendar time;
 
@@ -56,7 +56,7 @@ public class Satellite extends Observable {
 	}
 
 	public Satellite(int SVID, double pseudorange, double CNo, double doppler, double phase, double carrier_frequency,
-			double[] eCEF, double satClkOff, double t, double tRX, double[] satVel, double satClkDrift, double[] ECI,
+			double[] eCEF, double satClkOff, double t, long tRX, double[] satVel, double satClkDrift, double[] ECI,
 			Calendar time) {
 		super(SVID, pseudorange, CNo, doppler, phase, carrier_frequency);
 		ECEF = eCEF;
@@ -69,7 +69,7 @@ public class Satellite extends Observable {
 		this.time = time;
 	}
 
-	public Satellite(Observable satModel, double[] eCEF, double satClkOff, double t, double tRX, double[] satVel,
+	public Satellite(Observable satModel, double[] eCEF, double satClkOff, double t, long tRX, double[] satVel,
 			double satClkDrift, double[] ECI, Calendar time) {
 		super(satModel);
 		ECEF = eCEF;
@@ -121,11 +121,11 @@ public class Satellite extends Observable {
 		this.satClkDrift = satClkDrift;
 	}
 
-	public double gettRX() {
+	public long gettRX() {
 		return tRX;
 	}
 
-	public void settRX(double tRX) {
+	public void settRX(long tRX) {
 		this.tRX = tRX;
 	}
 
