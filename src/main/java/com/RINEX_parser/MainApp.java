@@ -58,16 +58,16 @@ public class MainApp {
 	public static void main(String[] args) {
 
 		Instant start = Instant.now();
-		posEstimate(false, false, true, true, false, true, false, false, true, 2, new String[] { "G1C" }, 4);
+		posEstimate(false, false, true, true, true, false, true, false, false, true, 2, new String[] { "G1C" }, 4);
 
 		Instant end = Instant.now();
 		System.out.println("EXECUTION TIME -  " + Duration.between(start, end));
 
 	}
 
-	public static void posEstimate(boolean doWeightPlot, boolean doIonoPlot, boolean doPosErrPlot, boolean useSNX,
-			boolean useSBAS, boolean useBias, boolean useIGS, boolean isDual, boolean useGIM, int estimatorType,
-			String[] obsvCode, int minSat) {
+	public static void posEstimate(boolean doWeightPlot, boolean doIonoPlot, boolean doPosErrPlot, boolean useCutOffAng,
+			boolean useSNX, boolean useSBAS, boolean useBias, boolean useIGS, boolean isDual, boolean useGIM,
+			int estimatorType, String[] obsvCode, int minSat) {
 		try {
 			TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
 			HashMap<Integer, ArrayList<IonoValue>> ionoValueMap = new HashMap<Integer, ArrayList<IonoValue>>();
@@ -88,7 +88,7 @@ public class MainApp {
 
 			String nav_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
-			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\AGGO00ARG_R_20201000000_01D_30S_MO.crx\\AGGO00ARG_R_20201000000_01D_30S_MO.rnx";
+			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\HARB00ZAF_R_20201000000_01D_30S_MO.crx\\HARB00ZAF_R_20201000000_01D_30S_MO.rnx";
 
 			String sbas_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\EGNOS_2020_100\\123\\D100.ems";
 
@@ -106,7 +106,7 @@ public class MainApp {
 
 			String ionex_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\igsg1000.20i\\igsg1000.20i";
 
-			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\GIM\\AGGO_GIM";
+			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\GIM\\test5";
 			File output = new File(path + ".txt");
 			PrintStream stream;
 
@@ -166,6 +166,7 @@ public class MainApp {
 				if (dayTime < 7200 || dayTime > 79200) {
 					continue;
 				}
+				System.out.print(dayTime + " - ");
 				long weekNo = obsvMsg.getWeekNo();
 
 				Calendar time = Time.getDate(tRX, weekNo, userLatLon[1]);
@@ -174,7 +175,7 @@ public class MainApp {
 				ArrayList<Satellite> SV = null;
 				if (isDual) {
 					dualSV = DualFreq.process(obsvMsg, NavMsgs, obsvCode, useIGS, useBias, bias, orbit, clock, antenna,
-							tRX, weekNo, time);
+							tRX, weekNo, userECEF, time);
 					if (dualSV[0].size() < minSat && dualSV[1].size() < minSat) {
 						continue;
 					}
@@ -182,7 +183,7 @@ public class MainApp {
 				} else {
 					SV = SingleFreq.process(obsvMsg, NavMsgs, obsvCode[0], useIGS, useSBAS, doIonoPlot, useBias,
 							ionoCoeff, bias, orbit, clock, antenna, tRX, weekNo, time, sbas, userECEF, userLatLon,
-							ionoValueMap);
+							ionoValueMap, useCutOffAng);
 					if (SV.size() < minSat) {
 						continue;
 					}
@@ -202,7 +203,7 @@ public class MainApp {
 					} else {
 						ls = new LS(SV, rxPCO[0], ionoCoeff, time, ionex);
 						ErrMap.computeIfAbsent("LS", k -> new ArrayList<double[]>())
-								.add(estimateError(ls.getIonoCorrECEF(), ls.getTropoCorrECEF(geoid), userECEF, time));
+								.add(estimateError(ls.getEstECEF(), ls.getEstECEF(), userECEF, time));
 					}
 
 					break;
@@ -379,32 +380,6 @@ public class MainApp {
 				+ ionoError + " non Iono LL Diff - " + nonIonoDiff + " Iono LL Diff - " + ionoDiff);
 
 		return new double[] { nonIonoError, ionoError, nonIonoDiff, ionoDiff };
-	}
-
-	public static double[] estimateError(double[] ECEF1, double[] ECEF2, double[] ECEF3, double[] userECEF,
-			Calendar time) {
-
-		double[] userLatLon = ECEFtoLatLon.ecef2lla(userECEF);
-
-		double ErrXYZ1 = Math.sqrt(IntStream.range(0, 3).mapToDouble(x -> userECEF[x] - ECEF1[x])
-				.map(x -> Math.pow(x, 2)).reduce(0, (a, b) -> a + b));
-		double ErrXYZ2 = Math.sqrt(IntStream.range(0, 3).mapToDouble(x -> userECEF[x] - ECEF2[x])
-				.map(x -> Math.pow(x, 2)).reduce(0, (a, b) -> a + b));
-		double ErrXYZ3 = Math.sqrt(IntStream.range(0, 3).mapToDouble(x -> userECEF[x] - ECEF3[x])
-				.map(x -> Math.pow(x, 2)).reduce(0, (a, b) -> a + b));
-
-		double[] LL1 = ECEFtoLatLon.ecef2lla(ECEF1);
-		double[] LL2 = ECEFtoLatLon.ecef2lla(ECEF2);
-		double[] LL3 = ECEFtoLatLon.ecef2lla(ECEF3);
-
-		double ErrLL1 = LatLonUtil.getHaversineDistance(LL1, userLatLon);
-		double ErrLL2 = LatLonUtil.getHaversineDistance(LL2, userLatLon);
-		double ErrLL3 = LatLonUtil.getHaversineDistance(LL3, userLatLon);
-		SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/YYYY hh:mm:ss");
-		sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-		System.out.println(sdf.format(time.getTime()) + " ECEF1 diff " + ErrXYZ1 + " ECEF2 diff " + ErrXYZ2
-				+ " ECEF3 diff " + ErrXYZ3 + " LL1 diff " + ErrLL1 + " LL2 diff " + ErrLL2 + " LL3 diff " + ErrLL3);
-		return new double[] { ErrXYZ1, ErrXYZ2, ErrXYZ3, ErrLL1, ErrLL2, ErrLL3 };
 	}
 
 	public static double RMS(ArrayList<Double> list) {

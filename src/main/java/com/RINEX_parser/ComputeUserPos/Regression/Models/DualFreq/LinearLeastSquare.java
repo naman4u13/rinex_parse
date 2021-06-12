@@ -11,7 +11,7 @@ import org.ejml.simple.SimpleSVD;
 import org.orekit.models.earth.Geoid;
 
 import com.RINEX_parser.constants.Constellation;
-import com.RINEX_parser.helper.ComputeAzmEle;
+import com.RINEX_parser.helper.ComputeEleAzm;
 import com.RINEX_parser.helper.ComputeTropoCorr;
 import com.RINEX_parser.models.Satellite;
 import com.RINEX_parser.utility.ECEFtoLatLon;
@@ -27,7 +27,7 @@ public class LinearLeastSquare {
 	private ArrayList<Satellite>[] SV;
 	private double[][] Weight;
 	private double[] refECEF;
-	private ArrayList<double[]> AzmEle;
+	private ArrayList<double[]> EleAzm;
 	// Regional GPS time
 	private Calendar time = null;
 	private double[][] PCO = null;
@@ -353,10 +353,10 @@ public class LinearLeastSquare {
 			return PR;
 		}
 		double[] refLatLon = ECEFtoLatLon.ecef2lla(refECEF);
-		ArrayList<double[]> AzmEle = getAzmEle();
+		ArrayList<double[]> EleAzm = getEleAzm();
 		int SVcount = PR.length;
 		ComputeTropoCorr tropo = new ComputeTropoCorr(refLatLon, time, geoid);
-		double[] tropoCorr = IntStream.range(0, SVcount).mapToDouble(x -> tropo.getSlantDelay(AzmEle.get(x)[0]))
+		double[] tropoCorr = IntStream.range(0, SVcount).mapToDouble(x -> tropo.getSlantDelay(EleAzm.get(x)[0]))
 				.toArray();
 
 		for (int i = 0; i < 2; i++) {
@@ -368,16 +368,16 @@ public class LinearLeastSquare {
 
 	}
 
-	public ArrayList<double[]> getAzmEle() {
-		if (Optional.ofNullable(AzmEle).isPresent()) {
-			return AzmEle;
+	public ArrayList<double[]> getEleAzm() {
+		if (Optional.ofNullable(EleAzm).isPresent()) {
+			return EleAzm;
 		}
-		setAzmEle();
-		return AzmEle;
+		setEleAzm();
+		return EleAzm;
 	}
 
-	public void setAzmEle() {
-		AzmEle = (ArrayList<double[]>) SV[0].stream().map(i -> ComputeAzmEle.computeAzmEle(refECEF, i.getECEF()))
+	public void setEleAzm() {
+		EleAzm = (ArrayList<double[]>) SV[0].stream().map(i -> ComputeEleAzm.computeEleAzm(refECEF, i.getECEF()))
 				.collect(Collectors.toList());
 	}
 

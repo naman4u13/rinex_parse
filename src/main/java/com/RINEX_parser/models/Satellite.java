@@ -17,6 +17,8 @@ public class Satellite extends Observable {
 	private long tRX;
 	// time
 	private Calendar time;
+	// Elevation and Azimuth Angle
+	private double[] ElevAzm;
 
 	public double[] getECEF() {
 		return ECEF;
@@ -57,7 +59,7 @@ public class Satellite extends Observable {
 
 	public Satellite(int SVID, double pseudorange, double CNo, double doppler, double phase, double carrier_frequency,
 			double[] eCEF, double satClkOff, double t, long tRX, double[] satVel, double satClkDrift, double[] ECI,
-			Calendar time) {
+			double[] ElevAzm, Calendar time) {
 		super(SVID, pseudorange, CNo, doppler, phase, carrier_frequency);
 		ECEF = eCEF;
 		this.satClkOff = satClkOff;
@@ -67,10 +69,11 @@ public class Satellite extends Observable {
 		this.satClkDrift = satClkDrift;
 		this.ECI = ECI;
 		this.time = time;
+		this.ElevAzm = ElevAzm;
 	}
 
 	public Satellite(Observable satModel, double[] eCEF, double satClkOff, double t, long tRX, double[] satVel,
-			double satClkDrift, double[] ECI, Calendar time) {
+			double satClkDrift, double[] ECI, double[] ElevAzm, Calendar time) {
 		super(satModel);
 		ECEF = eCEF;
 		this.satClkOff = satClkOff;
@@ -80,6 +83,7 @@ public class Satellite extends Observable {
 		this.satClkDrift = satClkDrift;
 		this.ECI = ECI;
 		this.time = time;
+		this.ElevAzm = ElevAzm;
 	}
 
 	public double getSatClkOff() {
@@ -135,6 +139,14 @@ public class Satellite extends Observable {
 
 	public void setTime(Calendar time) {
 		this.time = time;
+	}
+
+	public double[] getElevAzm() {
+		return ElevAzm;
+	}
+
+	public void setElevAzm(double[] elevAzm) {
+		ElevAzm = elevAzm;
 	}
 
 }

@@ -32,10 +32,10 @@ public class Doppler extends DopplerLLS {
 
 	public void setWeight(ArrayList<Satellite> SV) {
 		int SVcount = SV.size();
-		ArrayList<double[]> AzmEle = getAzmEle();
+		ArrayList<double[]> EleAzm = getEleAzm();
 		double[][] weight = new double[2 * SVcount][2 * SVcount];
 		IntStream.range(0, SVcount).forEach(i -> {
-			weight[i][i] = 1 / Weight.computeCoVariance(SV.get(i).getCNo(), AzmEle.get(i)[0]);
+			weight[i][i] = 1 / Weight.computeCoVariance(SV.get(i).getCNo(), EleAzm.get(i)[0]);
 			weight[SVcount + i][SVcount + i] = weight[i][i];
 		});
 		double[][] normWeight = Weight.normalize(weight);
@@ -51,14 +51,14 @@ public class Doppler extends DopplerLLS {
 	@Override
 	public void computeRcvrInfo(boolean isStatic) {
 		// TODO Auto-generated method stub
-		super.setWeight(Weight.computeWeight(this));
+		super.setWeight(Weight.computeWeight(getSV()));
 		super.computeRcvrInfo(isStatic);
 	}
 
 	@Override
 	public void computeRcvrInfo(double[] userECEF, boolean isStatic) {
 		// TODO Auto-generated method stub
-		super.setWeight(Weight.computeWeight(this));
+		super.setWeight(Weight.computeWeight(getSV()));
 		super.computeRcvrInfo(userECEF, isStatic);
 	}
 

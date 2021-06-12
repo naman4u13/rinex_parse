@@ -12,7 +12,7 @@ import com.RINEX_parser.fileParser.Bias;
 import com.RINEX_parser.fileParser.Clock;
 import com.RINEX_parser.fileParser.Orbit;
 import com.RINEX_parser.fileParser.SBAS;
-import com.RINEX_parser.helper.ComputeAzmEle;
+import com.RINEX_parser.helper.ComputeEleAzm;
 import com.RINEX_parser.helper.ComputeIonoCorr;
 import com.RINEX_parser.helper.ComputeSatPos;
 import com.RINEX_parser.models.IonoCoeff;
@@ -32,7 +32,7 @@ public class SingleFreq {
 			HashMap<Integer, ArrayList<NavigationMsg>> NavMsgs, String obsvCode, boolean useIGS, boolean useSBAS,
 			boolean doIonoPlot, boolean useBias, IonoCoeff ionoCoeff, Bias bias, Orbit orbit, Clock clock,
 			Antenna antenna, long tRX, long weekNo, Calendar time, SBAS sbas, double[] userECEF, double[] userLatLon,
-			HashMap<Integer, ArrayList<IonoValue>> ionoValueMap) {
+			HashMap<Integer, ArrayList<IonoValue>> ionoValueMap, boolean useCutOffAng) {
 		ArrayList<Observable> observables = obsvMsg.getObsvSat(obsvCode);
 		ArrayList<Satellite> SV = new ArrayList<Satellite>();
 		observables.removeAll(Collections.singleton(null));
@@ -65,7 +65,8 @@ public class SingleFreq {
 				t = tSV - satClkOff;
 
 				satECEF = antenna.getSatPC(SVID, obsvCode, tRX, weekNo, satECEF);
-				Satellite _sat = new Satellite(sat, satECEF, satClkOff, t, tRX, satVel, 0.0, null, time);
+				double[] EleAzm = ComputeEleAzm.computeEleAzm(userECEF, satECEF);
+				Satellite _sat = new Satellite(sat, satECEF, satClkOff, t, tRX, satVel, 0.0, null, EleAzm, time);
 				_sat.compECI();
 
 				// double ISC = bias.getISC(obsvCode, SVID);
@@ -154,14 +155,14 @@ public class SingleFreq {
 				double t = (double) SatParams[3];
 				// ECI coordinates
 				double[] ECI = (double[]) SatParams[4];
+				double[] EleAzm = ComputeEleAzm.computeEleAzm(userECEF, Arrays.copyOfRange(ECEF_SatClkOff, 0, 3));
 				SV.add(new Satellite(sat, Arrays.copyOfRange(ECEF_SatClkOff, 0, 3), ECEF_SatClkOff[3], t, tRX, SatVel,
-						SatClkDrift, ECI, time));
+						SatClkDrift, ECI, EleAzm, time));
 				if (doIonoPlot) {
 
 					double freq = SV.get(0).getCarrier_frequency();
-					double[] AzmEle = ComputeAzmEle.computeAzmEle(userECEF, Arrays.copyOfRange(ECEF_SatClkOff, 0, 3));
 
-					double ionoCorr = ComputeIonoCorr.computeIonoCorr(AzmEle[0], AzmEle[1], userLatLon[0],
+					double ionoCorr = ComputeIonoCorr.computeIonoCorr(EleAzm[0], EleAzm[1], userLatLon[0],
 							userLatLon[1], tRX, ionoCoeff, freq);
 
 					ionoValueMap.computeIfAbsent(SVID, k -> new ArrayList<IonoValue>())
@@ -171,6 +172,11 @@ public class SingleFreq {
 
 			}
 		}
+
+		if (useCutOffAng) {
+			SV.removeIf(i -> i.getElevAzm()[0] < Math.toRadians(5));
+		}
+
 		return SV;
 	}
 

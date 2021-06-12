@@ -55,7 +55,7 @@ public class WLS extends LinearLeastSquare {
 
 	public void setWeight(ArrayList<Satellite> SV) {
 
-		super.setWeight(Weight.computeWeight(this));
+		super.setWeight(Weight.computeWeight(SV));
 	}
 
 }

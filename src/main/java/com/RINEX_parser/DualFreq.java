@@ -10,6 +10,7 @@ import com.RINEX_parser.fileParser.Antenna;
 import com.RINEX_parser.fileParser.Bias;
 import com.RINEX_parser.fileParser.Clock;
 import com.RINEX_parser.fileParser.Orbit;
+import com.RINEX_parser.helper.ComputeEleAzm;
 import com.RINEX_parser.helper.ComputeSatPos;
 import com.RINEX_parser.models.NavigationMsg;
 import com.RINEX_parser.models.Observable;
@@ -23,7 +24,8 @@ public class DualFreq {
 
 	public static ArrayList<Satellite>[] process(ObservationMsg obsvMsg,
 			HashMap<Integer, ArrayList<NavigationMsg>> NavMsgs, String[] obsvCode, boolean useIGS, boolean useBias,
-			Bias bias, Orbit orbit, Clock clock, Antenna antenna, long tRX, long weekNo, Calendar time) {
+			Bias bias, Orbit orbit, Clock clock, Antenna antenna, long tRX, long weekNo, double[] userECEF,
+			Calendar time) {
 
 		ArrayList<Observable> observables1 = obsvMsg.getObsvSat(obsvCode[0]);
 		ArrayList<Observable> observables2 = obsvMsg.getObsvSat(obsvCode[1]);
@@ -68,9 +70,13 @@ public class DualFreq {
 
 				double[] satECEF_PC1 = antenna.getSatPC(SVID, obsvCode[0], tRX, weekNo, satECEF_MC);
 				double[] satECEF_PC2 = antenna.getSatPC(SVID, obsvCode[1], tRX, weekNo, satECEF_MC);
-				Satellite _sat1 = new Satellite(sat1, satECEF_PC1, satClkOff[0], t, tRX, satVel, 0.0, null, time);
+				double[] EleAzm = ComputeEleAzm.computeEleAzm(userECEF, satECEF_PC1);
+
+				Satellite _sat1 = new Satellite(sat1, satECEF_PC1, satClkOff[0], t, tRX, satVel, 0.0, null, EleAzm,
+						time);
 				_sat1.compECI();
-				Satellite _sat2 = new Satellite(sat2, satECEF_PC2, satClkOff[1], t, tRX, satVel, 0.0, null, time);
+				Satellite _sat2 = new Satellite(sat2, satECEF_PC2, satClkOff[1], t, tRX, satVel, 0.0, null, EleAzm,
+						time);
 				_sat2.compECI();
 
 				SV[0].add(_sat1);
@@ -126,8 +132,9 @@ public class DualFreq {
 				double t1 = (double) SatParams1[3];
 				// ECI coordinates
 				double[] ECI1 = (double[]) SatParams1[4];
+				double[] EleAzm = ComputeEleAzm.computeEleAzm(userECEF, Arrays.copyOfRange(ECEF_SatClkOff1, 0, 3));
 				SV[0].add(new Satellite(sat1, Arrays.copyOfRange(ECEF_SatClkOff1, 0, 3), ECEF_SatClkOff1[3], t1, tRX,
-						SatVel1, SatClkDrift1, ECI1, time));
+						SatVel1, SatClkDrift1, ECI1, EleAzm, time));
 
 				double tSV2 = tRX - (sat2.getPseudorange() / SpeedofLight);
 
@@ -142,7 +149,7 @@ public class DualFreq {
 				double[] ECI2 = (double[]) SatParams2[4];
 
 				SV[1].add(new Satellite(sat2, Arrays.copyOfRange(ECEF_SatClkOff2, 0, 3), ECEF_SatClkOff2[3], t2, tRX,
-						SatVel2, SatClkDrift2, ECI2, time));
+						SatVel2, SatClkDrift2, ECI2, EleAzm, time));
 
 //				double errT = SpeedofLight * Math.abs(t1 - t2);
 //				double errECI = Math.sqrt(IntStream.range(0, 3).mapToDouble(j -> ECI1[j] - ECI2[j]).map(j -> j * j)

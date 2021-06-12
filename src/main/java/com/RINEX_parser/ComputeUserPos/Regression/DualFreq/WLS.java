@@ -33,7 +33,7 @@ public class WLS extends LinearLeastSquare {
 
 	public void setWeight() {
 
-		super.setWeight(Weight.computeWeight(getSV(), getAzmEle()));
+		super.setWeight(Weight.computeWeight(getSV()));
 	}
 
 }

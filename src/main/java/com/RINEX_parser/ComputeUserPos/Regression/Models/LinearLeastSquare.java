@@ -12,7 +12,6 @@ import org.ejml.simple.SimpleSVD;
 import org.orekit.models.earth.Geoid;
 
 import com.RINEX_parser.fileParser.IONEX;
-import com.RINEX_parser.helper.ComputeAzmEle;
 import com.RINEX_parser.helper.ComputeIonoCorr;
 import com.RINEX_parser.helper.ComputeTropoCorr;
 import com.RINEX_parser.helper.SBAS.Flag;
@@ -29,8 +28,11 @@ public class LinearLeastSquare {
 	private IonoCoeff ionoCoeff;
 	private ArrayList<Satellite> SV;
 	private double[][] Weight;
-	private double[] refLatLon;
-	private ArrayList<double[]> AzmEle;
+	private double[] PR;
+	private double[] ionoCorrPR;
+	// Tropo corrected PR will already have iono corrections
+	private double[] tropoCorrPR;
+	private ArrayList<double[]> EleAzm;
 	private double estVel = 0;
 	private double approxRcvrClkDrift = 0;
 	// Regional GPS time
@@ -139,10 +141,15 @@ public class LinearLeastSquare {
 						(i, j) -> i + j));
 
 			}
-
+//			double[] temp = new double[] { 5084655.1841, 2670323.9736, -2768479.6949 };
+//			double err = Math.sqrt(IntStream.range(0, 3).mapToDouble(i -> Math.pow(temp[i] - estECEF[i], 2)).reduce(0,
+//					(i, j) -> i + j));
+//			if (this.getClass() == WLS.class && err > 14) {
+//				System.out.println();
+//			}
 			return;
 		}
-		System.out.println("Satellite count is less than 4, can't compute user position");
+		System.err.println("Satellite count is less than 4, can't compute user position");
 		estECEF = null;
 
 	}
@@ -247,8 +254,12 @@ public class LinearLeastSquare {
 	}
 
 	public double[] getPR(ArrayList<Satellite> SV) {
+		if (Optional.ofNullable(PR).isPresent()) {
+			return PR;
+		}
+
 		// Removed satellite clock offset error from pseudorange
-		double[] PR = SV.stream().mapToDouble(x -> x.getPseudorange() + (SpeedofLight * x.getSatClkOff())).toArray();
+		PR = SV.stream().mapToDouble(x -> x.getPseudorange() + (SpeedofLight * x.getSatClkOff())).toArray();
 		return PR;
 	}
 
@@ -258,23 +269,28 @@ public class LinearLeastSquare {
 
 	public double[] getIonoCorrPR(ArrayList<Satellite> SV, HashMap<Integer, HashMap<Integer, Double>> sbasIVD,
 			IONEX ionex) {
-		if (Optional.ofNullable(ionoCoeff).isEmpty()) {
-			System.out.println("You have not provided IonoCoeff");
-			return null;
+		if (Optional.ofNullable(this.ionoCorrPR).isPresent()) {
+			return this.ionoCorrPR;
 		}
+
 		int SVcount = SV.size();
 		double freq = SV.get(0).getCarrier_frequency();
-		ArrayList<double[]> AzmEle = getAzmEle();
+		ArrayList<double[]> EleAzm = getEleAzm();
 		double[] PR = getPR();
 		double[] ionoCorr = new double[SVcount];
-
 		double[] ionoCorrKlob = new double[SVcount];
+		double[][] Weight = new double[SVcount][SVcount];
+		IntStream.range(0, SVcount).forEach(i -> Weight[i][i] = 1);
+		LinearLeastSquare lls = new LinearLeastSquare(SV, PCO);
+		lls.estimate(getPR(), Weight);
+		double[] refECEF = lls.getEstECEF();
+		double[] refLatLon = ECEFtoLatLon.ecef2lla(refECEF);
 
 		if (sbasIVD != null) {
 			double[] ionoCorrSBAS = new double[SVcount];
 			com.RINEX_parser.helper.SBAS.ComputeIonoCorr sbasIC = new com.RINEX_parser.helper.SBAS.ComputeIonoCorr();
 			for (int i = 0; i < SVcount; i++) {
-				double sbasIonoCorr = sbasIC.computeIonoCorr(AzmEle.get(i)[0], AzmEle.get(i)[1], refLatLon[0],
+				double sbasIonoCorr = sbasIC.computeIonoCorr(EleAzm.get(i)[0], EleAzm.get(i)[1], refLatLon[0],
 						refLatLon[1], sbasIVD);
 				if (sbasIC.getIonoFlag() == Flag.VIABLE) {
 					ionoCorrKlob[i] = ionoCorr[i];
@@ -289,24 +305,29 @@ public class LinearLeastSquare {
 			System.out.println();
 		} else if (ionex != null) {
 			for (int i = 0; i < SVcount; i++) {
-				double gimIonoCorr = ionex.computeIonoCorr(AzmEle.get(i)[0], AzmEle.get(i)[1], refLatLon[0],
+				double gimIonoCorr = ionex.computeIonoCorr(EleAzm.get(i)[0], EleAzm.get(i)[1], refLatLon[0],
 						refLatLon[1], SV.get(i).gettRX(), freq);
 				ionoCorr[i] = gimIonoCorr;
 			}
-			ionoCorrKlob = IntStream
-					.range(0, SVcount).mapToDouble(x -> ComputeIonoCorr.computeIonoCorr(AzmEle.get(x)[0],
-							AzmEle.get(x)[1], refLatLon[0], refLatLon[1], SV.get(x).gettRX(), ionoCoeff, freq))
-					.toArray();
+//			ionoCorrKlob = IntStream
+//					.range(0, SVcount).mapToDouble(x -> ComputeIonoCorr.computeIonoCorr(EleAzm.get(x)[0],
+//							EleAzm.get(x)[1], refLatLon[0], refLatLon[1], SV.get(x).gettRX(), ionoCoeff, freq))
+//					.toArray();
 
 		} else {
+			if (Optional.ofNullable(ionoCoeff).isEmpty()) {
+				System.out.println("You have not provided IonoCoeff");
+				return null;
+			}
 			ionoCorr = IntStream
-					.range(0, SVcount).mapToDouble(x -> ComputeIonoCorr.computeIonoCorr(AzmEle.get(x)[0],
-							AzmEle.get(x)[1], refLatLon[0], refLatLon[1], SV.get(x).gettRX(), ionoCoeff, freq))
+					.range(0, SVcount).mapToDouble(x -> ComputeIonoCorr.computeIonoCorr(EleAzm.get(x)[0],
+							EleAzm.get(x)[1], refLatLon[0], refLatLon[1], SV.get(x).gettRX(), ionoCoeff, freq))
 					.toArray();
 		}
 		for (int i = 0; i < SVcount; i++) {
 			PR[i] -= ionoCorr[i];
 		}
+		this.ionoCorrPR = PR;
 		return PR;
 	}
 
@@ -315,60 +336,42 @@ public class LinearLeastSquare {
 	}
 
 	public double[] getTropoCorrPR(ArrayList<Satellite> SV, double[] refLatLon, Geoid geoid) {
+		if (Optional.ofNullable(this.tropoCorrPR).isPresent()) {
+			return this.tropoCorrPR;
+		}
 		double[] PR = getIonoCorrPR();
 		if (time == null) {
 			System.out.println("ERROR: Time info is unavailable to compute tropo corrections");
 
 			return PR;
 		}
-		ArrayList<double[]> AzmEle = getAzmEle();
+		ArrayList<double[]> EleAzm = getEleAzm();
 
 		ComputeTropoCorr tropo = new ComputeTropoCorr(refLatLon, time, geoid);
-		double[] tropoCorr = IntStream.range(0, SV.size()).mapToDouble(x -> tropo.getSlantDelay(AzmEle.get(x)[0]))
+		double[] tropoCorr = IntStream.range(0, SV.size()).mapToDouble(x -> tropo.getSlantDelay(EleAzm.get(x)[0]))
 				.toArray();
 //		System.out.println("TROPO corrections");
 //		IntStream.range(0, tropoCorr.length)
 //				.forEach(i -> System.out.print("GPS" + SV.get(i).getSVID() + " - " + tropoCorr[i] + " "));
 //
 //		System.out.println("");
-		return IntStream.range(0, PR.length).mapToDouble(x -> PR[x] - tropoCorr[x]).toArray();
+		this.tropoCorrPR = IntStream.range(0, PR.length).mapToDouble(x -> PR[x] - tropoCorr[x]).toArray();
+		return this.tropoCorrPR;
 
 	}
 
-	public ArrayList<double[]> getAzmEle() {
+	public ArrayList<double[]> getEleAzm() {
 
-		return getAzmEle(this.SV, this.PCO, null, false);
+		return getEleAzm(this.SV);
 	}
 
-	public ArrayList<double[]> getAzmEle(double[] userECEF, boolean reComp) {
-
-		return getAzmEle(this.SV, this.PCO, userECEF, reComp);
-	}
-
-	public ArrayList<double[]> getAzmEle(ArrayList<Satellite> SV, double[] PCO, double[] userECEF, boolean reComp) {
-		if (Optional.ofNullable(AzmEle).isPresent() && !reComp) {
-			return AzmEle;
+	public ArrayList<double[]> getEleAzm(ArrayList<Satellite> SV) {
+		if (Optional.ofNullable(EleAzm).isPresent()) {
+			return EleAzm;
 		}
-		double[] refECEF = null;
-		if (userECEF == null) {
-			int SVcount = SV.size();
-			double[][] Weight = new double[SVcount][SVcount];
-			IntStream.range(0, SVcount).forEach(i -> Weight[i][i] = 1);
-			LinearLeastSquare lls = new LinearLeastSquare(SV, PCO);
-			lls.estimate(getPR(), Weight);
-			refECEF = lls.getEstECEF();
-		} else {
-			refECEF = userECEF;
+		EleAzm = (ArrayList<double[]>) SV.stream().map(i -> i.getElevAzm()).collect(Collectors.toList());
 
-		}
-		refLatLon = ECEFtoLatLon.ecef2lla(refECEF);
-		final double[] _refECEF = refECEF;
-		// After we get the user ECEF, we will be able to calculate Azm&Ele angle which
-		// will in
-		// turn help us to calculate and remove iono error
-		AzmEle = (ArrayList<double[]>) SV.stream().map(i -> ComputeAzmEle.computeAzmEle(_refECEF, i.getECEF()))
-				.collect(Collectors.toList());
-		return AzmEle;
+		return EleAzm;
 	}
 
 	public double[][] getWeight() {

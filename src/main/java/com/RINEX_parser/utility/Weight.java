@@ -3,7 +3,6 @@ package com.RINEX_parser.utility;
 import java.util.ArrayList;
 import java.util.stream.IntStream;
 
-import com.RINEX_parser.ComputeUserPos.Regression.Models.LinearLeastSquare;
 import com.RINEX_parser.models.Satellite;
 
 public class Weight {
@@ -28,34 +27,32 @@ public class Weight {
 		return W;
 	}
 
-	public static double[][] computeWeight(LinearLeastSquare lls) {
+	public static double[][] computeWeight(ArrayList<Satellite> SV) {
 
-		ArrayList<double[]> AzmEle = lls.getAzmEle();
-		int SVcount = AzmEle.size();
-		ArrayList<Satellite> SV = lls.getSV();
+		int SVcount = SV.size();
 		double[][] weight = new double[SVcount][SVcount];
-		IntStream.range(0, SVcount)
-				.forEach(i -> weight[i][i] = 1 / Weight.computeCoVariance(SV.get(i).getCNo(), AzmEle.get(i)[0]));
+		IntStream.range(0, SVcount).forEach(
+				i -> weight[i][i] = 1 / Weight.computeCoVariance(SV.get(i).getCNo(), SV.get(i).getElevAzm()[0]));
 		double[][] normWeight = Weight.normalize(weight);
 		return normWeight;
 	}
 
-	public static double[][] computeWeight(ArrayList<Satellite>[] SV, ArrayList<double[]> AzmEle) {
+	public static double[][] computeWeight(ArrayList<Satellite>[] SV) {
 
-		int SVcount = AzmEle.size();
+		int SVcount = SV[0].size();
 		double[][] weight = new double[2 * SVcount][2 * SVcount];
-		IntStream.range(0, SVcount)
-				.forEach(i -> weight[i][i] = 1 / Weight.computeCoVariance(SV[0].get(i).getCNo(), AzmEle.get(i)[0]));
+		IntStream.range(0, SVcount).forEach(
+				i -> weight[i][i] = 1 / Weight.computeCoVariance(SV[0].get(i).getCNo(), SV[0].get(i).getElevAzm()[0]));
 		IntStream.range(SVcount, 2 * SVcount).forEach(i -> weight[i][i] = 1
-				/ Weight.computeCoVariance(SV[1].get(i - SVcount).getCNo(), AzmEle.get(i - SVcount)[0]));
+				/ Weight.computeCoVariance(SV[1].get(i - SVcount).getCNo(), SV[1].get(i - SVcount).getElevAzm()[0]));
 		double[][] normWeight = Weight.normalize(weight);
 		return normWeight;
 
 	}
 
-	public static double[][] computeWeight2(ArrayList<Satellite>[] SV, ArrayList<double[]> AzmEle) {
+	public static double[][] computeWeight2(ArrayList<Satellite>[] SV) {
 
-		int SVcount = AzmEle.size();
+		int SVcount = SV[0].size();
 		double[][] weight = new double[SVcount][SVcount];
 		double[] CNo = new double[SVcount];
 		double f1 = Math.pow(SV[0].get(0).getCarrier_frequency(), 2);
@@ -65,7 +62,8 @@ public class Weight {
 			CNo[i] = ((f1 * SV[0].get(i).getCNo()) - (f2 * SV[1].get(i).getCNo())) / diff;
 		}
 
-		IntStream.range(0, SVcount).forEach(i -> weight[i][i] = 1 / Weight.computeCoVariance(CNo[i], AzmEle.get(i)[0]));
+		IntStream.range(0, SVcount)
+				.forEach(i -> weight[i][i] = 1 / Weight.computeCoVariance(CNo[i], SV[0].get(i).getElevAzm()[0]));
 
 		double[][] normWeight = Weight.normalize(weight);
 		return normWeight;

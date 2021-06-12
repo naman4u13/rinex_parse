@@ -9,8 +9,8 @@ import org.ejml.simple.SimpleMatrix;
 
 import com.RINEX_parser.utility.ECEFtoLatLon;
 
-public class ComputeAzmEle {
-	public static double[] computeAzmEle(double[] _userECEF, double[] _satECEF) {
+public class ComputeEleAzm {
+	public static double[] computeEleAzm(double[] _userECEF, double[] _satECEF) {
 
 		SimpleMatrix userECEF = new SimpleMatrix(new double[][] { Arrays.copyOfRange(_userECEF, 0, 3) }).transpose();
 		SimpleMatrix satECEF = new SimpleMatrix(new double[][] { _satECEF }).transpose();
@@ -32,8 +32,14 @@ public class ComputeAzmEle {
 			ElevAngle *= -1;
 		}
 		double AzmAngle = Math.abs(Math.atan(E / N));
-		AzmAngle += E > 0 ? (N < 0 ? Math.PI - (2 * AzmAngle) : 0) : (N < 0 ? Math.PI : (2 * Math.PI) - (2 * AzmAngle));
-
+		AzmAngle += E > 0 ? (N < 0 ? Math.PI - (2 * AzmAngle) : 0) : (N < 0 ? -Math.PI : -(2 * AzmAngle));
+//		if (ElevAngle > (Math.PI / 2)) {
+//			System.out.println();
+//		} else if (AzmAngle > (Math.PI) || AzmAngle < (-Math.PI)) {
+//			System.out.println();
+//		} else if (ElevAngle < 0) {
+//			System.out.println();
+//		}
 		return new double[] { ElevAngle, AzmAngle };
 
 	}
