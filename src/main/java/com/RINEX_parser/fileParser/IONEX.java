@@ -2,8 +2,15 @@ package com.RINEX_parser.fileParser;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Scanner;
 import java.util.stream.IntStream;
+
+import org.hipparchus.util.FastMath;
+import org.orekit.bodies.GeodeticPoint;
+import org.orekit.models.earth.ionosphere.GlobalIonosphereMapModel;
+import org.orekit.time.AbsoluteDate;
+import org.orekit.time.TimeScalesFactory;
 
 import com.RINEX_parser.helper.ComputeIPP;
 import com.RINEX_parser.utility.LatLonUtil;
@@ -17,8 +24,10 @@ public class IONEX {
 	private double latDel;
 	private double lonDel;
 	private double exp;
+	private GlobalIonosphereMapModel gim;
 
 	public IONEX(String path) throws Exception {
+		gim = new GlobalIonosphereMapModel("igsg1000.20i");
 		process(path);
 	}
 
@@ -115,7 +124,7 @@ public class IONEX {
 	}
 
 	public double computeIonoCorr(double ElevAng_rad, double AzmAng_rad, double userLat_deg, double userLong_deg,
-			long GPSTime, double freq) {
+			long GPSTime, double freq, Calendar time) {
 
 		double[] IPP = ComputeIPP.computeIPP(ElevAng_rad, AzmAng_rad, userLat_deg, userLong_deg, Re, h);
 
@@ -124,13 +133,19 @@ public class IONEX {
 		}
 		double vtec = interpolate(IPP, GPSTime);
 		vtec = vtec * Math.pow(10, exp);
+
+		AbsoluteDate date = new AbsoluteDate(time.getTime(), TimeScalesFactory.getGPS());
+		GeodeticPoint pt = new GeodeticPoint(Math.toRadians(IPP[0]), Math.toRadians(IPP[1]), 0);
+
 		// Obliquity Factor
 		double Fpp = 1 / Math.sqrt(1 - Math.pow((Re * Math.cos(ElevAng_rad)) / (Re + h), 2));
 
 		// Slant TEC
 		double stec = Fpp * vtec;
 
-		double ionoErr = (40 * 3 * (1E16) / Math.pow(freq, 2)) * stec;
+		double ionoErr = (40.3 * (1E16) / Math.pow(freq, 2)) * stec;
+
+		// double _ionoErr = gim.pathDelay(date, pt, ElevAng_rad, freq);
 
 		return ionoErr;
 
@@ -220,6 +235,17 @@ public class IONEX {
 			System.out.println("END OF TEC MAP");
 			System.out.println();
 		}
+	}
+
+	private double mappingFunction(final double elevation) {
+		// Calculate the zenith angle from the elevation
+		final double z = FastMath.abs(0.5 * FastMath.PI - elevation);
+		// Distance ratio
+		final double ratio = Re / (Re + h);
+		// Mapping function
+		final double coef = FastMath.sin(z) * ratio;
+		final double fz = 1.0 / FastMath.sqrt(1.0 - coef * coef);
+		return fz;
 	}
 
 }

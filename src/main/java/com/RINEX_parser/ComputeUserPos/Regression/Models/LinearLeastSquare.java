@@ -306,7 +306,7 @@ public class LinearLeastSquare {
 		} else if (ionex != null) {
 			for (int i = 0; i < SVcount; i++) {
 				double gimIonoCorr = ionex.computeIonoCorr(EleAzm.get(i)[0], EleAzm.get(i)[1], refLatLon[0],
-						refLatLon[1], SV.get(i).gettRX(), freq);
+						refLatLon[1], SV.get(i).gettRX(), freq, time);
 				ionoCorr[i] = gimIonoCorr;
 			}
 //			ionoCorrKlob = IntStream

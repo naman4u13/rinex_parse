@@ -50,6 +50,9 @@ public class ComputeIPP {
 		double lat = temp_IPP_lat * 180;
 		double lon = temp_IPP_long * 180;
 
+		if (IPP_lat_deg <= -70) {
+			System.err.println("Went below -70");
+		}
 		if (Math.abs(lat - IPP_lat_deg) > 3.5 || Math.abs(lon - IPP_lon_deg) > 3.5) {
 			System.out.println();
 		}

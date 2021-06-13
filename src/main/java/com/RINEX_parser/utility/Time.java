@@ -6,6 +6,7 @@ import java.util.stream.IntStream;
 
 public class Time {
 	private static final long NumberMilliSecondsWeek = 604800000;
+	private static final long NumberSecondsWeek = 604800;
 
 	// Convert GPS timestamp to GPS TOW and Week No.
 	// Note this func does not handle conversion of UTC timestamp to GPS time
@@ -30,12 +31,13 @@ public class Time {
 
 		Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
 
-		long unixTime = time.getTimeInMillis();
+		long unixTime = time.getTimeInMillis() / 1000;
+
 		cal.set(1980, 0, 6, 0, 0, 0);
-		long GPSEpoch = cal.getTimeInMillis();
-		long GPSTime = ((unixTime - GPSEpoch)) % NumberMilliSecondsWeek;
-		long weekNo = ((unixTime - GPSEpoch)) / NumberMilliSecondsWeek;
-		GPSTime = Math.round((double) GPSTime / 1000);
+		long GPSEpoch = cal.getTimeInMillis() / 1000;
+		long GPSTime = ((unixTime - GPSEpoch)) % NumberSecondsWeek;
+		long weekNo = ((unixTime - GPSEpoch)) / NumberSecondsWeek;
+
 		return new long[] { GPSTime, weekNo };
 	}
 
