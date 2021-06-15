@@ -25,7 +25,7 @@ public class DualFreq {
 	public static ArrayList<Satellite>[] process(ObservationMsg obsvMsg,
 			HashMap<Integer, ArrayList<NavigationMsg>> NavMsgs, String[] obsvCode, boolean useIGS, boolean useBias,
 			Bias bias, Orbit orbit, Clock clock, Antenna antenna, long tRX, long weekNo, double[] userECEF,
-			Calendar time) {
+			Calendar time, boolean useCutOffAng) {
 
 		ArrayList<Observable> observables1 = obsvMsg.getObsvSat(obsvCode[0]);
 		ArrayList<Observable> observables2 = obsvMsg.getObsvSat(obsvCode[1]);
@@ -109,7 +109,9 @@ public class DualFreq {
 					continue;
 				}
 				int SVID = sat1.getSVID();
-
+				if (SVID != sat2.getSVID()) {
+					System.err.println("SVID didn't match FATAL ERROR");
+				}
 				// IGS .BSX file DCB
 				double ISC1 = 0;
 				double ISC2 = 0;
@@ -162,6 +164,11 @@ public class DualFreq {
 //				}
 
 			}
+		}
+		if (useCutOffAng) {
+			SV[0].removeIf(i -> i.getElevAzm()[0] < Math.toRadians(5));
+			SV[1].removeIf(i -> i.getElevAzm()[0] < Math.toRadians(5));
+
 		}
 		return SV;
 	}

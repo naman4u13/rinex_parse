@@ -4,6 +4,7 @@ import java.util.Calendar;
 import java.util.stream.IntStream;
 
 import org.orekit.models.earth.Geoid;
+import org.orekit.models.earth.troposphere.NiellMappingFunctionModel;
 import org.orekit.time.AbsoluteDate;
 import org.orekit.time.TimeScalesFactory;
 
@@ -38,6 +39,9 @@ public class ComputeTropoCorr {
 	private double[] coeffDry;
 	private double[] coeffWet;
 
+	private NiellMappingFunctionModel nmf;
+	AbsoluteDate date;
+
 	public ComputeTropoCorr(double[] llh, Calendar time, Geoid geoid) {
 		// TODO Auto-generated constructor stub
 		Y0 = new double[][] { { 1013.25, 299.65, 75.0, 6.30e-3, 2.77 }, { 1017.25, 294.15, 80.0, 6.05e-3, 3.15 },
@@ -66,7 +70,7 @@ public class ComputeTropoCorr {
 		// time = Time.convertToUTC(time, lon);
 		this.D = time.get(Calendar.DAY_OF_YEAR);
 
-		AbsoluteDate date = new AbsoluteDate(time.getTime(), TimeScalesFactory.getGPS());
+		date = new AbsoluteDate(time.getTime(), TimeScalesFactory.getGPS());
 
 		// Geoid Height
 		double geoidH = geoid.getUndulation(lat * Math.PI / 180, lon * Math.PI / 180, date);
@@ -77,6 +81,8 @@ public class ComputeTropoCorr {
 		y = new double[5];
 		coeffDry = new double[3];
 		coeffWet = new double[3];
+		nmf = new NiellMappingFunctionModel(lat, TimeScalesFactory.getGPS());
+
 		initiate();
 
 	}
@@ -135,6 +141,18 @@ public class ComputeTropoCorr {
 		// Map
 		double[] map = computeMappingFun(coeffDry, coeffWet, H, E);
 		double SD = (ZD[0] * map[0]) + (ZD[1] * map[1]);
+		double[] _map = nmf.mappingFactors(E, H, null, date);
+		if (Math.abs(_map[0] - map[0]) > 0.1) {
+			System.err.println("Tropo Dry Coeff is different");
+		}
+		if (Math.abs(_map[1] - map[1]) > 0.1) {
+			System.err.println("Tropo Wet Coeff is different");
+		}
+
+		double _SD = (ZD[0] * _map[0]) + (ZD[1] * _map[1]);
+		if (Math.abs(_SD - SD) > 0.1) {
+			System.err.println("TROPO est is wrong ->  " + (_SD - SD) + " Elevation - " + Math.toDegrees(E));
+		}
 
 		return SD;
 	}
@@ -176,7 +194,14 @@ public class ComputeTropoCorr {
 		double zd_wet = (((1E-6) * ((Tm * _k2) + k3) * R * e) / (T * ((gm * _l) - (b * R))))
 				* Math.pow(1 - (b * H / T), (_l * g / (R * b)) - 1);
 		ZD = new double[] { zd_dry, zd_wet };
+
 	}
+
+	/*
+	 * Compared the mapping function with Orekit, The 'c' coefficient for
+	 * Dry(coeffDry) is turning out to be different, Apart from it all coefficients
+	 * are same
+	 */
 
 	// Based on Niell mapping function
 	private double[] computeMappingFun(double[] coeffDry, double[] coeffWet, double H, double E) {
@@ -185,6 +210,7 @@ public class ComputeTropoCorr {
 		double delta_m = ((1 / Math.sin(E)) - normMariniMap(E, heightCorr)) * (H / 1000);
 		double M_dry = m_dry + delta_m;
 		double M_wet = normMariniMap(E, coeffWet);
+
 		return new double[] { M_dry, M_wet };
 
 	}
@@ -195,13 +221,13 @@ public class ComputeTropoCorr {
 		double b = coeff[1];
 		double c = coeff[2];
 		double S = Math.sin(E);
-		double m = 1 + (a / (1 + (b / (1 + c)))) / (S + (a / (S + (b / (S + c)))));
+		double m = (1 + (a / (1 + (b / (1 + c))))) / (S + (a / (S + (b / (S + c)))));
 		return m;
 	}
 
 	private double[] interpolate(double[] y1, double[] y2, double x1, double x2, double x) {
 		int n = y1.length;
-		double[] interY = IntStream.range(0, n).mapToDouble(i -> y1[i] + (y2[i] - y1[i]) * ((x - x1) / (x2 - x1)))
+		double[] interY = IntStream.range(0, n).mapToDouble(i -> y1[i] + ((y2[i] - y1[i]) * ((x - x1) / (x2 - x1))))
 				.toArray();
 		return interY;
 	}

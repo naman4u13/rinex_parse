@@ -7,10 +7,7 @@ import java.util.Scanner;
 import java.util.stream.IntStream;
 
 import org.hipparchus.util.FastMath;
-import org.orekit.bodies.GeodeticPoint;
 import org.orekit.models.earth.ionosphere.GlobalIonosphereMapModel;
-import org.orekit.time.AbsoluteDate;
-import org.orekit.time.TimeScalesFactory;
 
 import com.RINEX_parser.helper.ComputeIPP;
 import com.RINEX_parser.utility.LatLonUtil;
@@ -28,6 +25,7 @@ public class IONEX {
 
 	public IONEX(String path) throws Exception {
 		gim = new GlobalIonosphereMapModel("igsg1000.20i");
+
 		process(path);
 	}
 
@@ -134,9 +132,6 @@ public class IONEX {
 		double vtec = interpolate(IPP, GPSTime);
 		vtec = vtec * Math.pow(10, exp);
 
-		AbsoluteDate date = new AbsoluteDate(time.getTime(), TimeScalesFactory.getGPS());
-		GeodeticPoint pt = new GeodeticPoint(Math.toRadians(IPP[0]), Math.toRadians(IPP[1]), 0);
-
 		// Obliquity Factor
 		double Fpp = 1 / Math.sqrt(1 - Math.pow((Re * Math.cos(ElevAng_rad)) / (Re + h), 2));
 
@@ -145,8 +140,15 @@ public class IONEX {
 
 		double ionoErr = (40.3 * (1E16) / Math.pow(freq, 2)) * stec;
 
-		// double _ionoErr = gim.pathDelay(date, pt, ElevAng_rad, freq);
-
+//		AbsoluteDate date = new AbsoluteDate(time.getTime(), TimeScalesFactory.getGPS());
+//		GeodeticPoint pt = new GeodeticPoint(Math.toRadians(IPP[0]), Math.toRadians(IPP[1]), 0);
+//		double _vtec = gim.getTEC(date, pt);
+//		// double _ionoErr = gim.pathDelay(date, pt, ElevAng_rad, freq);
+//		double _ionoErr = (40.3 * (1E16) / Math.pow(freq, 2)) * _vtec * Fpp;
+//		if (Math.abs(ionoErr - _ionoErr) > 0.1) {
+//			System.err.println("GIM Iono err is wrong - " + Math.abs(ionoErr - _ionoErr) + " Elevation - "
+//					+ Math.toDegrees(ElevAng_rad));
+//		}
 		return ionoErr;
 
 	}

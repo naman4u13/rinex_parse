@@ -16,6 +16,7 @@ import java.util.TimeZone;
 import java.util.stream.IntStream;
 
 import org.jfree.ui.RefineryUtilities;
+import org.orekit.bodies.GeodeticPoint;
 import org.orekit.data.DataProvidersManager;
 import org.orekit.data.DirectoryCrawler;
 import org.orekit.forces.gravity.potential.GravityFieldFactory;
@@ -23,6 +24,7 @@ import org.orekit.forces.gravity.potential.NormalizedSphericalHarmonicsProvider;
 import org.orekit.frames.Frame;
 import org.orekit.frames.FramesFactory;
 import org.orekit.frames.ITRFVersion;
+import org.orekit.frames.TopocentricFrame;
 import org.orekit.models.earth.Geoid;
 import org.orekit.models.earth.ReferenceEllipsoid;
 import org.orekit.utils.IERSConventions;
@@ -55,7 +57,7 @@ public class MainApp {
 	public static void main(String[] args) {
 
 		Instant start = Instant.now();
-		posEstimate(false, false, true, true, true, false, true, false, false, true, false, 3, new String[] { "G1C" },
+		posEstimate(false, false, true, true, true, false, true, false, false, false, false, 3, new String[] { "G1C" },
 				4);
 
 		Instant end = Instant.now();
@@ -90,7 +92,7 @@ public class MainApp {
 
 			String nav_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
-			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\CEDU00AUS_R_20201000000_01D_30S_MO.crx\\CEDU00AUS_R_20201000000_01D_30S_MO.rnx";
+			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\SUTH00ZAF_R_20201000000_01D_30S_MO.crx\\SUTH00ZAF_R_20201000000_01D_30S_MO.rnx";
 
 			String sbas_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\EGNOS_2020_100\\123\\D100.ems";
 
@@ -110,7 +112,7 @@ public class MainApp {
 
 			String RTKlib_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\RTKlib\\MADR_1H_PPP.pos";
 
-			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\GIM\\test";
+			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\OUTPUT\\SUTH";
 			File output = new File(path + ".txt");
 			PrintStream stream;
 
@@ -141,6 +143,11 @@ public class MainApp {
 			// of frequency
 			double[] userECEF = rxARP;
 			double[] userLatLon = ECEFtoLatLon.ecef2lla(userECEF);
+
+			TopocentricFrame tpf = new TopocentricFrame(geoid,
+					new GeodeticPoint(Math.toRadians(userLatLon[0]), Math.toRadians(userLatLon[1]), userLatLon[2]),
+					"TPF");
+			Frame frame = FramesFactory.getITRF(ITRFVersion.ITRF_2014, IERSConventions.IERS_2010, true);
 
 			if (useSBAS) {
 				int[][][] IGP = IGPgrid.readCSV();
@@ -193,7 +200,7 @@ public class MainApp {
 				ArrayList<Satellite> SV = null;
 				if (isDual) {
 					dualSV = DualFreq.process(obsvMsg, NavMsgs, obsvCode, useIGS, useBias, bias, orbit, clock, antenna,
-							tRX, weekNo, userECEF, time);
+							tRX, weekNo, userECEF, time, useCutOffAng);
 					if (dualSV[0].size() < minSat && dualSV[1].size() < minSat) {
 						continue;
 					}
@@ -201,7 +208,7 @@ public class MainApp {
 				} else {
 					SV = SingleFreq.process(obsvMsg, NavMsgs, obsvCode[0], useIGS, useSBAS, doIonoPlot, useBias,
 							ionoCoeff, bias, orbit, clock, antenna, tRX, weekNo, time, sbas, userECEF, userLatLon,
-							ionoValueMap, useCutOffAng);
+							ionoValueMap, useCutOffAng, tpf, frame);
 					if (SV.size() < minSat) {
 						continue;
 					}
@@ -336,7 +343,7 @@ public class MainApp {
 					GraphErrMap.put(key + " " + subKey + " LL off", llErrList);
 
 				}
-				System.out.println(key);
+				System.out.println("\n" + key);
 				System.out.println(header);
 				System.out.println("MIN - ");
 				System.out.println(minECEF);

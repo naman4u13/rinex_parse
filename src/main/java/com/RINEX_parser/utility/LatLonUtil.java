@@ -1,6 +1,16 @@
 package com.RINEX_parser.utility;
 
 public class LatLonUtil {
+
+	// All are WGS-84 params
+	// Semi-major axis or Equatorial radius
+	public static final double a = 6378137;
+	// flattening
+	public static final double f = 1 / 298.257223563;
+	// Semi-minor axis or Polar radius
+	public static final double b = 6356752.314245;
+	public static final double e2 = Math.sqrt((Math.pow(a, 2) - Math.pow(b, 2)) / Math.pow(b, 2));
+
 	public static double getHaversineDistance(double[] LatLon1, double[] LatLon2) {
 
 		double lat1 = LatLon1[0];
@@ -33,8 +43,6 @@ public class LatLonUtil {
 		double lon1 = LatLon1[1];
 		double lat2 = LatLon2[0];
 		double lon2 = LatLon2[1];
-
-		double a = 6378137, b = 6356752.314245, f = 1 / 298.257223563;
 
 		double L = Math.toRadians(lon2 - lon1);
 
@@ -177,5 +185,17 @@ public class LatLonUtil {
 				+ (Math.cos(lat) * Math.sin(lon) * enu[2]) + ECEFr[1];
 		ECEF[2] = (0 * enu[0]) + (Math.cos(lat) * enu[1]) + (Math.sin(lat) * enu[2]) + ECEFr[2];
 		return ECEF;
+	}
+
+	// Geodetic Latitude to Geocentric Latitude
+	public static double gd2gc(double gdLat, double gdAlt) {
+
+		gdLat = Math.toRadians(gdLat);
+
+		double N = a / Math.sqrt(1 - (e2 * Math.pow(Math.sin(gdLat), 2)));
+		double gcLat = Math.atan((1 - (e2 * (N / (N + gdAlt)))) * Math.tan(gdLat));
+		gcLat = Math.toDegrees(gcLat);
+		return gcLat;
+
 	}
 }

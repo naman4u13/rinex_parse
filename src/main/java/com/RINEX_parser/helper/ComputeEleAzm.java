@@ -37,10 +37,11 @@ public class ComputeEleAzm {
 //			System.out.println();
 //		} else if (AzmAngle > (Math.PI) || AzmAngle < (-Math.PI)) {
 //			System.out.println();
-//		} else if (ElevAngle < 0) {
+//		} else if (ElevAngle < 0) {i->
 //			System.out.println();
 //		}
 		return new double[] { ElevAngle, AzmAngle };
 
 	}
+
 }

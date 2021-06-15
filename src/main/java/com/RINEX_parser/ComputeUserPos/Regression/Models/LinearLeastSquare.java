@@ -18,6 +18,7 @@ import com.RINEX_parser.helper.SBAS.Flag;
 import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.Satellite;
 import com.RINEX_parser.utility.ECEFtoLatLon;
+import com.RINEX_parser.utility.LatLonUtil;
 
 public class LinearLeastSquare {
 
@@ -304,9 +305,11 @@ public class LinearLeastSquare {
 //					+ "," + ionoCorrSBAS[i] + "," + ionoCorrSBAS[i] / ionoCorrKlob[i]));
 			System.out.println();
 		} else if (ionex != null) {
+			// Geocentric Latitude
+			double gcLat = LatLonUtil.gd2gc(refLatLon[0], refLatLon[2]);
 			for (int i = 0; i < SVcount; i++) {
-				double gimIonoCorr = ionex.computeIonoCorr(EleAzm.get(i)[0], EleAzm.get(i)[1], refLatLon[0],
-						refLatLon[1], SV.get(i).gettRX(), freq, time);
+				double gimIonoCorr = ionex.computeIonoCorr(EleAzm.get(i)[0], EleAzm.get(i)[1], gcLat, refLatLon[1],
+						SV.get(i).gettRX(), freq, time);
 				ionoCorr[i] = gimIonoCorr;
 			}
 //			ionoCorrKlob = IntStream
@@ -321,7 +324,7 @@ public class LinearLeastSquare {
 			}
 			ionoCorr = IntStream
 					.range(0, SVcount).mapToDouble(x -> ComputeIonoCorr.computeIonoCorr(EleAzm.get(x)[0],
-							EleAzm.get(x)[1], refLatLon[0], refLatLon[1], SV.get(x).gettRX(), ionoCoeff, freq))
+							EleAzm.get(x)[1], refLatLon[0], refLatLon[1], SV.get(x).gettRX(), ionoCoeff, freq, time))
 					.toArray();
 		}
 		for (int i = 0; i < SVcount; i++) {

@@ -13,9 +13,9 @@ public class ComputeIPP {
 				+ (Math.cos(userLat_rad) * Math.sin(earth_central_angle) * Math.cos(AzmAng_rad)));
 
 		boolean cond1 = (userLat_deg > 70)
-				&& ((Math.tan(earth_central_angle) * Math.cos(AzmAng_rad)) > (Math.tan(((Math.PI) / 2) - userLat_rad)));
+				&& ((Math.tan(earth_central_angle) * Math.cos(AzmAng_rad)) > (Math.tan((Math.PI / 2) - userLat_rad)));
 		boolean cond2 = (userLat_deg < -70) && ((Math.tan(earth_central_angle) * Math.cos(AzmAng_rad + Math.PI)) > (Math
-				.tan(((Math.PI) / 2) + userLat_rad)));
+				.tan((Math.PI / 2) + userLat_rad)));
 
 		double IPP_lon_rad = 0;
 
@@ -50,14 +50,11 @@ public class ComputeIPP {
 		double lat = temp_IPP_lat * 180;
 		double lon = temp_IPP_long * 180;
 
-		if (IPP_lat_deg <= -70) {
-			System.err.println("Went below -70");
+		if (Math.abs(IPP_lat_deg) > 70) {
+			System.err.println("user Lat went above |70|");
 		}
 		if (Math.abs(lat - IPP_lat_deg) > 3.5 || Math.abs(lon - IPP_lon_deg) > 3.5) {
-			System.out.println();
-		}
-		if (Math.abs(IPP_lat_deg) > 90 || Math.abs(IPP_lon_deg) > 180) {
-			System.out.println();
+			System.err.println("lat Diff is big");
 		}
 
 		return new double[] { IPP_lat_deg, IPP_lon_deg };
