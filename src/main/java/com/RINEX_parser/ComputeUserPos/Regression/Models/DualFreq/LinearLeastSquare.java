@@ -33,8 +33,9 @@ public class LinearLeastSquare {
 	private Calendar time = null;
 	private double[][] PCO = null;
 	private double[] fSq;
+	private Geoid geoid;
 
-	public LinearLeastSquare(ArrayList<Satellite>[] SV, double[][] PCO, double[] refECEF, Calendar time) {
+	public LinearLeastSquare(ArrayList<Satellite>[] SV, double[][] PCO, double[] refECEF, Calendar time, Geoid geoid) {
 		this.SV = SV;
 		this.PCO = PCO;
 		this.time = time;
@@ -45,6 +46,7 @@ public class LinearLeastSquare {
 		alpha[0] = 40.3 * 1E16 / fSq[0];
 		alpha[1] = 40.3 * 1E16 / fSq[1];
 		this.refECEF = refECEF;
+		this.geoid = geoid;
 		check();
 
 	}
@@ -361,7 +363,7 @@ public class LinearLeastSquare {
 		this.Weight = Weight;
 	}
 
-	public double[][] getTropoCorrPR(Geoid geoid) {
+	public double[][] getTropoCorrPR() {
 		if (Optional.ofNullable(this.tropoCorrPR).isPresent()) {
 			return this.tropoCorrPR;
 		}

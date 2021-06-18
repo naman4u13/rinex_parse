@@ -58,8 +58,8 @@ public class MainApp {
 	public static void main(String[] args) {
 
 		Instant start = Instant.now();
-		posEstimate(false, false, true, true, true, false, true, false, false, true, false, 4, new String[] { "G1C" },
-				4);
+		posEstimate(false, false, true, true, true, false, true, true, true, false, false, 4,
+				new String[] { "G1C", "G2L" }, 4);
 
 		Instant end = Instant.now();
 		System.out.println("EXECUTION TIME -  " + Duration.between(start, end));
@@ -93,7 +93,7 @@ public class MainApp {
 
 			String nav_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
-			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\GODN00USA_R_20201000000_01D_30S_MO.crx\\GODN00USA_R_20201000000_01D_30S_MO.rnx";
+			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\HERS00GBR_R_20201000000_01D_30S_MO.crx\\HERS00GBR_R_20201000000_01D_30S_MO.rnx";
 
 			String sbas_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\EGNOS_2020_100\\123\\D100.ems";
 
@@ -113,7 +113,7 @@ public class MainApp {
 
 			String RTKlib_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\RTKlib\\HARB.pos";
 
-			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\kalman\\GODN_kalman_GIM";
+			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\kalman\\HERS_DF_PPP";
 			File output = new File(path + ".txt");
 			PrintStream stream;
 
@@ -221,11 +221,12 @@ public class MainApp {
 					com.RINEX_parser.ComputeUserPos.Regression.DualFreq.LS dualLS = null;
 					if (isDual) {
 						dualLS = new com.RINEX_parser.ComputeUserPos.Regression.DualFreq.LS(dualSV, rxPCO, userECEF,
-								time);
+								time, geoid);
 
 						ErrMap.computeIfAbsent("dual-LS", k -> new ArrayList<HashMap<String, double[]>>())
-								.add(estimateError(Map.of("IonoCorr", dualLS.getEstECEF(), "TropoCorr",
-										dualLS.getTropoCorrECEF(geoid)), userECEF, time));
+								.add(estimateError(
+										Map.of("IonoCorr", dualLS.getEstECEF(), "TropoCorr", dualLS.getTropoCorrECEF()),
+										userECEF, time));
 
 					} else {
 						ls = new LS(SV, rxPCO[0], ionoCoeff, time, ionex, geoid);
@@ -242,10 +243,10 @@ public class MainApp {
 					com.RINEX_parser.ComputeUserPos.Regression.DualFreq.WLS dualWLS = null;
 					if (isDual) {
 						dualWLS = new com.RINEX_parser.ComputeUserPos.Regression.DualFreq.WLS(dualSV, rxPCO, userECEF,
-								time);
+								time, geoid);
 						ErrMap.computeIfAbsent("dual-WLS", k -> new ArrayList<HashMap<String, double[]>>())
 								.add(estimateError(Map.of("IonoCorr", dualWLS.getEstECEF(), "TropoCorr",
-										dualWLS.getTropoCorrECEF(geoid)), userECEF, time));
+										dualWLS.getTropoCorrECEF()), userECEF, time));
 
 					} else {
 						wls = new WLS(SV, rxPCO[0], ionoCoeff, time, ionex, geoid);
@@ -264,15 +265,16 @@ public class MainApp {
 
 					if (isDual) {
 						dualLS = new com.RINEX_parser.ComputeUserPos.Regression.DualFreq.LS(dualSV, rxPCO, userECEF,
-								time);
+								time, geoid);
 						dualWLS = new com.RINEX_parser.ComputeUserPos.Regression.DualFreq.WLS(dualSV, rxPCO, userECEF,
-								time);
+								time, geoid);
 						ErrMap.computeIfAbsent("dual-LS", k -> new ArrayList<HashMap<String, double[]>>())
-								.add(estimateError(Map.of("IonoCorr", dualLS.getEstECEF(), "TropoCorr",
-										dualLS.getTropoCorrECEF(geoid)), userECEF, time));
+								.add(estimateError(
+										Map.of("IonoCorr", dualLS.getEstECEF(), "TropoCorr", dualLS.getTropoCorrECEF()),
+										userECEF, time));
 						ErrMap.computeIfAbsent("dual-WLS", k -> new ArrayList<HashMap<String, double[]>>())
 								.add(estimateError(Map.of("IonoCorr", dualWLS.getEstECEF(), "TropoCorr",
-										dualWLS.getTropoCorrECEF(geoid)), userECEF, time));
+										dualWLS.getTropoCorrECEF()), userECEF, time));
 
 					} else {
 						ls = new LS(SV, rxPCO[0], ionoCoeff, time, ionex, geoid);
@@ -294,13 +296,29 @@ public class MainApp {
 			}
 
 			if (estimatorType == 4) {
-				ErrMap.put("EKF", new ArrayList<HashMap<String, double[]>>());
-				StaticEKF staticEkf = new StaticEKF(SVlist, rxPCO[0], userECEF, ionoCoeff, ionex, geoid, timeList);
-				ArrayList<double[]> estECEFList = staticEkf.compute();
-				for (int i = 0; i < SVlist.size() - 1; i++) {
-					double[] estECEF = estECEFList.get(i);
-					ErrMap.get("EKF").add(estimateError(Map.of("TropoCorr", estECEF), userECEF, timeList.get(i)));
+
+				if (isDual) {
+					ErrMap.put("dual-EKF", new ArrayList<HashMap<String, double[]>>());
+					WLS wls = new WLS(dualSVlist.get(0)[0], rxPCO[0], ionoCoeff, timeList.get(0), ionex, geoid);
+					com.RINEX_parser.ComputeUserPos.KalmanFilter.DualFreq.StaticEKF dualStaticEkf = new com.RINEX_parser.ComputeUserPos.KalmanFilter.DualFreq.StaticEKF(
+							dualSVlist, rxPCO, wls.getTropoCorrECEF(), userECEF, geoid, timeList);
+					ArrayList<double[]> estECEFList = dualStaticEkf.compute();
+					for (int i = 0; i < dualSVlist.size() - 1; i++) {
+						double[] estECEF = estECEFList.get(i);
+						ErrMap.get("dual-EKF")
+								.add(estimateError(Map.of("TropoCorr", estECEF), userECEF, timeList.get(i)));
+
+					}
+				} else {
+					ErrMap.put("EKF", new ArrayList<HashMap<String, double[]>>());
+					StaticEKF staticEkf = new StaticEKF(SVlist, rxPCO[0], userECEF, ionoCoeff, ionex, geoid, timeList);
+					ArrayList<double[]> estECEFList = staticEkf.compute();
+					for (int i = 0; i < SVlist.size() - 1; i++) {
+						double[] estECEF = estECEFList.get(i);
+						ErrMap.get("EKF").add(estimateError(Map.of("TropoCorr", estECEF), userECEF, timeList.get(i)));
+					}
 				}
+
 			}
 			if (useRTKlib) {
 				int len = GPSTimeList.size();

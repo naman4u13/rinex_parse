@@ -11,8 +11,8 @@ import com.RINEX_parser.utility.Weight;
 
 public class LS extends LinearLeastSquare {
 
-	public LS(ArrayList<Satellite>[] SV, double[][] PCO, double[] refECEF, Calendar time) {
-		super(SV, PCO, refECEF, time);
+	public LS(ArrayList<Satellite>[] SV, double[][] PCO, double[] refECEF, Calendar time, Geoid geoid) {
+		super(SV, PCO, refECEF, time, geoid);
 		int SVcount = SV[0].size();
 		setWeight(Weight.computeIdentityMat(2 * SVcount));
 
@@ -27,9 +27,9 @@ public class LS extends LinearLeastSquare {
 
 	}
 
-	public double[] getTropoCorrECEF(Geoid geoid) {
+	public double[] getTropoCorrECEF() {
 
-		estimate(getTropoCorrPR(geoid));
+		estimate(getTropoCorrPR());
 		return super.getEstECEF();
 	}
 }

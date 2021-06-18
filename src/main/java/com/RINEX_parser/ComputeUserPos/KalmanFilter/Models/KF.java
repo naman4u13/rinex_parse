@@ -1,11 +1,9 @@
 package com.RINEX_parser.ComputeUserPos.KalmanFilter.Models;
 
-import java.util.ArrayList;
 import java.util.stream.IntStream;
 
 import org.ejml.simple.SimpleMatrix;
 
-import com.RINEX_parser.models.Satellite;
 import com.RINEX_parser.utility.SatUtil;
 
 public class KF {
@@ -65,7 +63,7 @@ public class KF {
 	}
 
 	// Iterated Kalman Filter
-	public void update(double[][] _z, double[][] _R, double[][] _ze, ArrayList<Satellite> SV, double[] PCO) {
+	public void update(double[][] _z, double[][] _R, double[][] _ze, double[][] satECI, double[] PCO) {
 		SimpleMatrix z = new SimpleMatrix(_z);
 		SimpleMatrix R = new SimpleMatrix(_R);
 		SimpleMatrix ze = new SimpleMatrix(_ze);
@@ -74,11 +72,11 @@ public class KF {
 		SimpleMatrix H = null;
 		SimpleMatrix K = null;
 
-		int SVcount = SV.size();
+		int SVcount = satECI.length;
 		for (int i = 0; i < 5; i++) {
 
 			double[] estECEF = new double[] { x.get(0) + PCO[0], x.get(1) + PCO[1], x.get(2) + PCO[2], x.get(3) };
-			double[][] unitLOS = SatUtil.getUnitLOS(SV, estECEF);
+			double[][] unitLOS = SatUtil.getUnitLOS(satECI, estECEF);
 			// H is the Jacobian matrix of partial derivatives Observation Model(h) of with
 			// respect to x
 			double[][] _H = new double[SVcount][5];

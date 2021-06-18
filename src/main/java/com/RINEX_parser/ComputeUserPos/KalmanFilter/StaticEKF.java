@@ -195,7 +195,9 @@ public class StaticEKF {
 						.map(j -> j * j).reduce(0, (j, k) -> j + k)) + (estECEF[3]));
 		double[][] R = new double[SVcount][SVcount];// Weight.computeCovMat(SV);
 		IntStream.range(0, SVcount).forEach(i -> R[i][i] = obsNoiseVar);
-		kfObj.update(z, R, ze, SV, PCO);
+		double[][] satECI = new double[SVcount][];
+		IntStream.range(0, SVcount).forEach(i -> satECI[i] = SV.get(i).getECI());
+		kfObj.update(z, R, ze, satECI, PCO);
 
 	}
 

@@ -11,8 +11,8 @@ import com.RINEX_parser.utility.Weight;
 
 public class WLS extends LinearLeastSquare {
 
-	public WLS(ArrayList<Satellite>[] SV, double[][] PCO, double[] refECEF, Calendar time) {
-		super(SV, PCO, refECEF, time);
+	public WLS(ArrayList<Satellite>[] SV, double[][] PCO, double[] refECEF, Calendar time, Geoid geoid) {
+		super(SV, PCO, refECEF, time, geoid);
 		// TODO Auto-generated constructor stub
 		setWeight();
 	}
@@ -25,9 +25,9 @@ public class WLS extends LinearLeastSquare {
 
 	}
 
-	public double[] getTropoCorrECEF(Geoid geoid) {
+	public double[] getTropoCorrECEF() {
 
-		estimate(getTropoCorrPR(geoid));
+		estimate(getTropoCorrPR());
 		return super.getEstECEF();
 	}
 
