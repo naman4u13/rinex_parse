@@ -29,7 +29,7 @@ public class DeltaRange extends DeltaRangeLLS {
 	}
 
 	public double[] getEstECEF(IonoCoeff ionoCoeff) {
-		WLS wls = new WLS(getSV(), getPCO(), ionoCoeff, getTime());
+		WLS wls = new WLS(getSV(), getPCO(), ionoCoeff, getTime(), null, null, null);
 		double[] userECEF = wls.getIonoCorrECEF();
 		estimate(userECEF);
 		System.out.println("\nPDOP - " + Math.sqrt(getCovdX().extractMatrix(0, 3, 0, 3).trace()));

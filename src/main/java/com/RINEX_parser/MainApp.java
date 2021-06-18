@@ -29,6 +29,7 @@ import org.orekit.models.earth.Geoid;
 import org.orekit.models.earth.ReferenceEllipsoid;
 import org.orekit.utils.IERSConventions;
 
+import com.RINEX_parser.ComputeUserPos.KalmanFilter.StaticEKF;
 import com.RINEX_parser.ComputeUserPos.Regression.LS;
 import com.RINEX_parser.ComputeUserPos.Regression.WLS;
 import com.RINEX_parser.fileParser.Antenna;
@@ -57,7 +58,7 @@ public class MainApp {
 	public static void main(String[] args) {
 
 		Instant start = Instant.now();
-		posEstimate(false, false, true, true, true, false, true, false, false, false, false, 3, new String[] { "G1C" },
+		posEstimate(false, false, true, true, true, false, true, false, false, true, false, 4, new String[] { "G1C" },
 				4);
 
 		Instant end = Instant.now();
@@ -92,7 +93,7 @@ public class MainApp {
 
 			String nav_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
-			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\SUTH00ZAF_R_20201000000_01D_30S_MO.crx\\SUTH00ZAF_R_20201000000_01D_30S_MO.rnx";
+			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\GODN00USA_R_20201000000_01D_30S_MO.crx\\GODN00USA_R_20201000000_01D_30S_MO.rnx";
 
 			String sbas_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\EGNOS_2020_100\\123\\D100.ems";
 
@@ -110,9 +111,9 @@ public class MainApp {
 
 			String ionex_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\igsg1000.20i\\igsg1000.20i";
 
-			String RTKlib_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\RTKlib\\MADR_1H_PPP.pos";
+			String RTKlib_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\RTKlib\\HARB.pos";
 
-			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\OUTPUT\\SUTH";
+			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\kalman\\GODN_kalman_GIM";
 			File output = new File(path + ".txt");
 			PrintStream stream;
 
@@ -191,7 +192,6 @@ public class MainApp {
 					break;
 				}
 
-				System.out.print(dayTime + " - ");
 				long weekNo = obsvMsg.getWeekNo();
 
 				Calendar time = Time.getDate(tRX, weekNo, 0);
@@ -228,11 +228,11 @@ public class MainApp {
 										dualLS.getTropoCorrECEF(geoid)), userECEF, time));
 
 					} else {
-						ls = new LS(SV, rxPCO[0], ionoCoeff, time, ionex);
+						ls = new LS(SV, rxPCO[0], ionoCoeff, time, ionex, geoid);
 
 						ErrMap.computeIfAbsent("LS", k -> new ArrayList<HashMap<String, double[]>>())
 								.add(estimateError(Map.of("Simple", ls.getEstECEF(), "IonoCorr ", ls.getIonoCorrECEF(),
-										"TropoCorr", ls.getTropoCorrECEF(geoid)), userECEF, time));
+										"TropoCorr", ls.getTropoCorrECEF()), userECEF, time));
 
 					}
 
@@ -248,11 +248,10 @@ public class MainApp {
 										dualWLS.getTropoCorrECEF(geoid)), userECEF, time));
 
 					} else {
-						wls = new WLS(SV, rxPCO[0], ionoCoeff, time, ionex);
+						wls = new WLS(SV, rxPCO[0], ionoCoeff, time, ionex, geoid);
 						ErrMap.computeIfAbsent("WLS", k -> new ArrayList<HashMap<String, double[]>>())
 								.add(estimateError(Map.of("Simple", wls.getEstECEF(), "IonoCorr ",
-										wls.getIonoCorrECEF(), "TropoCorr", wls.getTropoCorrECEF(geoid)), userECEF,
-										time));
+										wls.getIonoCorrECEF(), "TropoCorr", wls.getTropoCorrECEF()), userECEF, time));
 					}
 
 					break;
@@ -276,22 +275,32 @@ public class MainApp {
 										dualWLS.getTropoCorrECEF(geoid)), userECEF, time));
 
 					} else {
-						ls = new LS(SV, rxPCO[0], ionoCoeff, time, ionex);
-						wls = new WLS(SV, rxPCO[0], ionoCoeff, time, ionex);
+						ls = new LS(SV, rxPCO[0], ionoCoeff, time, ionex, geoid);
+						wls = new WLS(SV, rxPCO[0], ionoCoeff, time, ionex, geoid);
 						ErrMap.computeIfAbsent("LS", k -> new ArrayList<HashMap<String, double[]>>())
 								.add(estimateError(Map.of("Simple", ls.getEstECEF(), "IonoCorr ", ls.getIonoCorrECEF(),
-										"TropoCorr", ls.getTropoCorrECEF(geoid)), userECEF, time));
+										"TropoCorr", ls.getTropoCorrECEF()), userECEF, time));
 
 						ErrMap.computeIfAbsent("WLS", k -> new ArrayList<HashMap<String, double[]>>())
 								.add(estimateError(Map.of("Simple", wls.getEstECEF(), "IonoCorr ",
-										wls.getIonoCorrECEF(), "TropoCorr", wls.getTropoCorrECEF(geoid)), userECEF,
-										time));
+										wls.getIonoCorrECEF(), "TropoCorr", wls.getTropoCorrECEF()), userECEF, time));
 					}
 					break;
+
 				}
 				GPSTimeList.add(tRX);
 				timeList.add(time);
-				System.out.println();
+
+			}
+
+			if (estimatorType == 4) {
+				ErrMap.put("EKF", new ArrayList<HashMap<String, double[]>>());
+				StaticEKF staticEkf = new StaticEKF(SVlist, rxPCO[0], userECEF, ionoCoeff, ionex, geoid, timeList);
+				ArrayList<double[]> estECEFList = staticEkf.compute();
+				for (int i = 0; i < SVlist.size() - 1; i++) {
+					double[] estECEF = estECEFList.get(i);
+					ErrMap.get("EKF").add(estimateError(Map.of("TropoCorr", estECEF), userECEF, timeList.get(i)));
+				}
 			}
 			if (useRTKlib) {
 				int len = GPSTimeList.size();
@@ -304,8 +313,6 @@ public class MainApp {
 							.add(estimateError(Map.of(posMode, rtkLib.getECEF(i)), userECEF, timeList.get(i - start)));
 				}
 			}
-
-//		IGPgrid.recordIPPdelay(IPPdelay);
 
 			HashMap<String, ArrayList<Double>> GraphErrMap = new HashMap<String, ArrayList<Double>>();
 
@@ -375,13 +382,7 @@ public class MainApp {
 				chart.setVisible(true);
 
 			}
-//		if (estimatorType == 2) {
-//			GraphPlotter chart = new GraphPlotter("GPS Receiver Clock - ", "GPS Receiver Clock", timeList, RcvrClkMap);
-//
-//			chart.pack();
-//			RefineryUtilities.positionFrameRandomly(chart);
-//			chart.setVisible(true);
-//		}
+
 			if (doWeightPlot) {
 				GraphPlotter chart = new GraphPlotter("Weight Matrix - ", "Weights", timeList, WeightMap);
 
@@ -389,16 +390,7 @@ public class MainApp {
 				RefineryUtilities.positionFrameRandomly(chart);
 				chart.setVisible(true);
 			}
-//		System.out.println("IODE MAP");
-//		IODEmap.forEach((k, v) -> System.out
-//				.println("PRN - " + k + " -  " + v.parallelStream().map(x -> x + " ").reduce("", (x, y) -> x + y)));
-//		HashMap<Integer, Correction> _map = sbas.getPRNmap();
-//		System.out.println("SBAS MAP");
-//		for (int prn : _map.keySet()) {
-//			System.out.println("PRN - " + prn + " - "
-//					+ _map.get(prn).getLTC().keySet().parallelStream().map(x -> x + " ").reduce("", (x, y) -> x + y));
-//		}
-//		System.out.print("");
+
 		} catch (
 
 		Exception e) {
@@ -429,6 +421,7 @@ public class MainApp {
 
 		}
 		System.out.println(errStr);
+		System.out.println();
 		return errMap;
 	}
 

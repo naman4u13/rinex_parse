@@ -39,43 +39,35 @@ public class LinearLeastSquare {
 	// Regional GPS time
 	private Calendar time = null;
 	private double[] PCO = null;
-	HashMap<Integer, HashMap<Integer, Double>> sbasIVD = null;
-	IONEX ionex = null;
+	private HashMap<Integer, HashMap<Integer, Double>> sbasIVD = null;
+	private IONEX ionex = null;
+	private Geoid geoid;
 
 	public LinearLeastSquare(ArrayList<Satellite> SV, double[] PCO, IonoCoeff ionoCoeff, Calendar time,
-			HashMap<Integer, HashMap<Integer, Double>> sbasIVD, IONEX ionex) {
+			HashMap<Integer, HashMap<Integer, Double>> sbasIVD, IONEX ionex, Geoid geoid) {
 		this.SV = SV;
 		this.ionoCoeff = ionoCoeff;
 		this.time = time;
 		this.PCO = PCO;
 		this.sbasIVD = sbasIVD;
 		this.ionex = ionex;
+		this.geoid = geoid;
 
 	}
 
-	public LinearLeastSquare(ArrayList<Satellite> SV, double[] PCO, IonoCoeff ionoCoeff, Calendar time,
-			HashMap<Integer, HashMap<Integer, Double>> sbasIVD) {
-		this(SV, PCO, ionoCoeff, time, sbasIVD, null);
-
-	}
-
-	public LinearLeastSquare(ArrayList<Satellite> SV, double[] PCO, IonoCoeff ionoCoeff, Calendar time, IONEX ionex) {
-		this(SV, PCO, ionoCoeff, time, null, ionex);
-
-	}
-
-	public LinearLeastSquare(ArrayList<Satellite> SV, double[] PCO, IonoCoeff ionoCoeff, Calendar time) {
-		this(SV, PCO, ionoCoeff, time, null, null);
+	public LinearLeastSquare(ArrayList<Satellite> SV, double[] PCO, IonoCoeff ionoCoeff, Calendar time, IONEX ionex,
+			Geoid geoid) {
+		this(SV, PCO, ionoCoeff, time, null, ionex, geoid);
 
 	}
 
 	public LinearLeastSquare(ArrayList<Satellite> SV, double[] PCO) {
-		this(SV, PCO, null, null, null, null);
+		this(SV, PCO, null, null, null, null, null);
 
 	}
 
 	public LinearLeastSquare(ArrayList<Satellite> SV, double[] PCO, Calendar time) {
-		this(SV, PCO, null, time, null, null);
+		this(SV, PCO, null, time, null, null, null);
 
 	}
 
@@ -265,11 +257,10 @@ public class LinearLeastSquare {
 	}
 
 	public double[] getIonoCorrPR() {
-		return getIonoCorrPR(this.SV, sbasIVD, ionex);
+		return getIonoCorrPR(this.SV);
 	}
 
-	public double[] getIonoCorrPR(ArrayList<Satellite> SV, HashMap<Integer, HashMap<Integer, Double>> sbasIVD,
-			IONEX ionex) {
+	public double[] getIonoCorrPR(ArrayList<Satellite> SV) {
 		if (Optional.ofNullable(this.ionoCorrPR).isPresent()) {
 			return this.ionoCorrPR;
 		}
@@ -334,11 +325,19 @@ public class LinearLeastSquare {
 		return PR;
 	}
 
-	public double[] getTropoCorrPR(double[] refLatLon, Geoid geoid) {
-		return getTropoCorrPR(this.SV, refLatLon, geoid);
+	public double[] getTropoCorrPR() {
+		if (Optional.ofNullable(this.tropoCorrPR).isPresent()) {
+			return this.tropoCorrPR;
+		}
+		System.err.println("Tropo Corr PR is null, provide userECEF");
+		return null;
 	}
 
-	public double[] getTropoCorrPR(ArrayList<Satellite> SV, double[] refLatLon, Geoid geoid) {
+	public double[] getTropoCorrPR(double[] refLatLon) {
+		return getTropoCorrPR(this.SV, refLatLon);
+	}
+
+	public double[] getTropoCorrPR(ArrayList<Satellite> SV, double[] refLatLon) {
 		if (Optional.ofNullable(this.tropoCorrPR).isPresent()) {
 			return this.tropoCorrPR;
 		}
@@ -473,4 +472,5 @@ public class LinearLeastSquare {
 	public void setTime(Calendar time) {
 		this.time = time;
 	}
+
 }

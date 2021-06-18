@@ -16,25 +16,19 @@ import com.RINEX_parser.utility.Weight;
 public class LS extends LinearLeastSquare {
 
 	public LS(ArrayList<Satellite> SV, double[] PCO, IonoCoeff ionoCoeff, Calendar time,
-			HashMap<Integer, HashMap<Integer, Double>> sbasIVD, IONEX ionex) {
-		super(SV, PCO, ionoCoeff, time, sbasIVD, ionex);
+			HashMap<Integer, HashMap<Integer, Double>> sbasIVD, IONEX ionex, Geoid geoid) {
+		super(SV, PCO, ionoCoeff, time, sbasIVD, ionex, geoid);
 		int SVcount = SV.size();
 		setWeight(Weight.computeIdentityMat(SVcount));
 
 	}
 
-	public LS(ArrayList<Satellite> SV, double[] PCO, IonoCoeff ionoCoeff, Calendar time) {
-		this(SV, PCO, ionoCoeff, time, null, null);
-
-	}
-
-	public LS(ArrayList<Satellite> SV, double[] PCO, IonoCoeff ionoCoeff, Calendar time, IONEX ionex) {
-		this(SV, PCO, ionoCoeff, time, null, ionex);
-
+	public LS(ArrayList<Satellite> SV, double[] PCO, IonoCoeff ionoCoeff, Calendar time, IONEX ionex, Geoid geoid) {
+		this(SV, PCO, ionoCoeff, time, null, ionex, geoid);
 	}
 
 	public LS(ArrayList<Satellite> SV, double[] PCO, Calendar time) {
-		this(SV, PCO, null, time);
+		this(SV, PCO, null, time, null, null, null);
 	}
 
 	@Override
@@ -52,10 +46,10 @@ public class LS extends LinearLeastSquare {
 		return super.getEstECEF();
 	}
 
-	public double[] getTropoCorrECEF(Geoid geoid) {
+	public double[] getTropoCorrECEF() {
 		double[] ionoCorrECEF = getIonoCorrECEF();
 		double[] ionoCorrLLH = ECEFtoLatLon.ecef2lla(ionoCorrECEF);
-		estimate(getTropoCorrPR(ionoCorrLLH, geoid));
+		estimate(getTropoCorrPR(ionoCorrLLH));
 		return super.getEstECEF();
 	}
 

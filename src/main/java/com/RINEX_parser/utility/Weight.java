@@ -76,4 +76,14 @@ public class Weight {
 		return Weight;
 	}
 
+	public static double[][] computeCovMat(ArrayList<Satellite> SV) {
+
+		int SVcount = SV.size();
+		double[][] covMat = new double[SVcount][SVcount];
+		IntStream.range(0, SVcount)
+				.forEach(i -> covMat[i][i] = Weight.computeCoVariance(SV.get(i).getCNo(), SV.get(i).getElevAzm()[0]));
+		double[][] normWeight = Weight.normalize(covMat);
+		return normWeight;
+	}
+
 }

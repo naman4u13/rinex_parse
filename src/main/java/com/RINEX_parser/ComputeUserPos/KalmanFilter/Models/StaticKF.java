@@ -12,7 +12,7 @@ public class StaticKF extends KF {
 	private final double sf = h0 / 2;
 	private final double sg = 2 * Math.PI * Math.PI * h_2;
 
-	public void configure(double deltaT, double[][] H) {
+	public void configure(double deltaT) {
 
 		double[][] F = new double[5][5];
 		double[][] Q = new double[5][5];
@@ -23,6 +23,6 @@ public class StaticKF extends KF {
 
 		IntStream.range(0, 5).forEach(x -> F[x][x] = 1);
 		F[3][4] = deltaT;
-		super.configure(F, Q, H);
+		super.configure(F, Q);
 	}
 }

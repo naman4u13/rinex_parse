@@ -15,7 +15,7 @@ public class DopplerLLS extends LinearLeastSquare {
 	private final static double SpeedofLight = 299792458;
 
 	public DopplerLLS(ArrayList<Satellite> SV, double[] PCO, IonoCoeff ionoCoeff, Calendar time) {
-		super(SV, PCO, ionoCoeff, time);
+		super(SV, PCO, ionoCoeff, time, null, null, null);
 		// TODO Auto-generated constructor stub
 	}
 
