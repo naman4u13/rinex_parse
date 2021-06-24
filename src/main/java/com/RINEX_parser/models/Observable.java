@@ -10,7 +10,8 @@ public class Observable {
 	private double CNo;
 	private double doppler;
 	private double pseudoRangeRate;
-	private double phase;
+	private double cycle;
+	private boolean isLocked;
 
 	public int getSVID() {
 		return SVID;
@@ -26,10 +27,11 @@ public class Observable {
 		this.pseudorange = pseudorange != null ? Double.parseDouble(pseudorange) : 0;
 		this.CNo = CNo != null ? Double.parseDouble(CNo) : 0;
 		this.doppler = doppler != null ? Double.parseDouble(doppler) : 0;
-		this.phase = phase != null ? Double.parseDouble(phase) : 0;
+		this.cycle = phase != null ? Double.parseDouble(phase) : 0;
 		this.carrier_frequency = Double.parseDouble(carrier_frequency);
 		this.carrier_wavelength = SPEED_OF_LIGHT / this.carrier_frequency;
 		this.pseudoRangeRate = -this.doppler * this.carrier_wavelength;
+		this.isLocked = false;
 	}
 
 	public Observable(int SVID, double pseudorange, double CNo, double doppler, double phase,
@@ -38,10 +40,11 @@ public class Observable {
 		this.pseudorange = pseudorange;
 		this.CNo = CNo;
 		this.doppler = doppler;
-		this.phase = phase;
+		this.cycle = phase;
 		this.carrier_frequency = carrier_frequency;
 		this.carrier_wavelength = SPEED_OF_LIGHT / this.carrier_frequency;
 		this.pseudoRangeRate = -this.doppler * this.carrier_wavelength;
+		this.isLocked = false;
 	}
 
 	public Observable(Observable satModel) {
@@ -49,10 +52,11 @@ public class Observable {
 		this.pseudorange = satModel.getPseudorange();
 		this.CNo = satModel.getCNo();
 		this.doppler = satModel.getDoppler();
-		this.phase = satModel.phase;
+		this.cycle = satModel.cycle;
 		this.carrier_frequency = satModel.carrier_frequency;
 		this.carrier_wavelength = satModel.carrier_wavelength;
 		this.pseudoRangeRate = satModel.pseudoRangeRate;
+		this.isLocked = satModel.isLocked;
 	}
 
 	@Override
@@ -95,5 +99,21 @@ public class Observable {
 
 	public double getCarrier_frequency() {
 		return carrier_frequency;
+	}
+
+	public double getCycle() {
+		return cycle;
+	}
+
+	public double getCarrier_wavelength() {
+		return carrier_wavelength;
+	}
+
+	public boolean isLocked() {
+		return isLocked;
+	}
+
+	public void setLocked(boolean isLocked) {
+		this.isLocked = isLocked;
 	}
 }

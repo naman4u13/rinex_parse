@@ -3,10 +3,12 @@ package com.RINEX_parser.utility;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.TimeZone;
+import java.util.stream.Collectors;
 
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
@@ -29,6 +31,38 @@ public class GraphPlotter extends ApplicationFrame {
 
 		final JFreeChart chart = ChartFactory.createTimeSeriesChart(chartTitle, "Time of the Day", "Iono Corr Value",
 				createDatasetIono(data), true, true, false);
+
+		final ChartPanel chartPanel = new ChartPanel(chart);
+		chartPanel.setPreferredSize(new java.awt.Dimension(560, 370));
+		chartPanel.setMouseZoomable(true, false);
+
+		setContentPane(chartPanel);
+
+	}
+
+	public GraphPlotter(String applicationTitle, String chartTitle, HashMap<Integer, int[]> data,
+			ArrayList<Calendar> timeList) {
+		super(applicationTitle);
+		// TODO Auto-generated constructor stub
+
+		final JFreeChart chart = ChartFactory.createTimeSeriesChart(chartTitle, "Time of the Day", "Cycle Slips",
+				createDatasetCS(timeList, data), true, true, false);
+
+		final ChartPanel chartPanel = new ChartPanel(chart);
+		chartPanel.setPreferredSize(new java.awt.Dimension(560, 370));
+		chartPanel.setMouseZoomable(true, false);
+
+		setContentPane(chartPanel);
+
+	}
+
+	public GraphPlotter(String applicationTitle, String chartTitle, int[] data, ArrayList<Calendar> timeList,
+			int SVID) {
+		super(applicationTitle);
+		// TODO Auto-generated constructor stub
+
+		final JFreeChart chart = ChartFactory.createTimeSeriesChart(chartTitle, "Time of the Day", "Cycle Slips",
+				createDatasetCS(timeList, data, SVID), true, true, false);
 
 		final ChartPanel chartPanel = new ChartPanel(chart);
 		chartPanel.setPreferredSize(new java.awt.Dimension(560, 370));
@@ -93,6 +127,39 @@ public class GraphPlotter extends ApplicationFrame {
 			System.out.println("");
 			coll.addSeries(series);
 		}
+		return coll;
+
+	}
+
+	private TimePeriodValuesCollection createDatasetCS(ArrayList<Calendar> timeList, HashMap<Integer, int[]> data) {
+		TimePeriodValuesCollection coll = new TimePeriodValuesCollection();
+		for (int SVID : data.keySet()) {
+			TimePeriodValues series = new TimePeriodValues(String.valueOf(SVID));
+			ArrayList<Integer> list = (ArrayList<Integer>) Arrays.stream(data.get(SVID)).boxed()
+					.collect(Collectors.toList());
+			for (int i = 0; i < list.size(); i++) {
+
+				series.add(new Second(timeList.get(i).getTime()), list.get(i));
+			}
+
+			coll.addSeries(series);
+		}
+		return coll;
+
+	}
+
+	private TimePeriodValuesCollection createDatasetCS(ArrayList<Calendar> timeList, int[] data, int SVID) {
+		TimePeriodValuesCollection coll = new TimePeriodValuesCollection();
+
+		TimePeriodValues series = new TimePeriodValues(String.valueOf(SVID));
+		ArrayList<Integer> list = (ArrayList<Integer>) Arrays.stream(data).boxed().collect(Collectors.toList());
+		for (int i = 0; i < list.size(); i++) {
+
+			series.add(new Second(timeList.get(i).getTime()), list.get(i));
+		}
+
+		coll.addSeries(series);
+
 		return coll;
 
 	}

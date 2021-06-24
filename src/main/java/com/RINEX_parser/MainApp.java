@@ -41,6 +41,7 @@ import com.RINEX_parser.fileParser.ObservationRNX;
 import com.RINEX_parser.fileParser.Orbit;
 import com.RINEX_parser.fileParser.RTKlib;
 import com.RINEX_parser.fileParser.SBAS;
+import com.RINEX_parser.helper.CycleSlip;
 import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.IonoValue;
 import com.RINEX_parser.models.NavigationMsg;
@@ -58,7 +59,7 @@ public class MainApp {
 	public static void main(String[] args) {
 
 		Instant start = Instant.now();
-		posEstimate(false, false, true, true, true, false, true, true, true, false, false, 4,
+		posEstimate(false, false, true, true, true, false, true, false, true, false, false, true, 6,
 				new String[] { "G1C", "G2L" }, 4);
 
 		Instant end = Instant.now();
@@ -68,7 +69,7 @@ public class MainApp {
 
 	public static void posEstimate(boolean doWeightPlot, boolean doIonoPlot, boolean doPosErrPlot, boolean useCutOffAng,
 			boolean useSNX, boolean useSBAS, boolean useBias, boolean useIGS, boolean isDual, boolean useGIM,
-			boolean useRTKlib, int estimatorType, String[] obsvCode, int minSat) {
+			boolean useRTKlib, boolean useCP, int estimatorType, String[] obsvCode, int minSat) {
 		try {
 			TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
 			HashMap<Integer, ArrayList<IonoValue>> ionoValueMap = new HashMap<Integer, ArrayList<IonoValue>>();
@@ -113,7 +114,7 @@ public class MainApp {
 
 			String RTKlib_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\RTKlib\\HARB.pos";
 
-			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\kalman\\HERS_DF_PPP";
+			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\kalman\\HERS_DF";
 			File output = new File(path + ".txt");
 			PrintStream stream;
 
@@ -134,7 +135,7 @@ public class MainApp {
 			IonoCoeff ionoCoeff = (IonoCoeff) NavMsgComp.get("ionoCoeff");
 			TimeCorrection timeCorr = (TimeCorrection) NavMsgComp.getOrDefault("timeCorr", null);
 			HashMap<String, Object> ObsvMsgComp = ObservationRNX.rinex_obsv_process(obs_path, useSNX, sinex_path,
-					obsvCode);
+					obsvCode, useCP);
 			@SuppressWarnings("unchecked")
 			ArrayList<ObservationMsg> ObsvMsgs = (ArrayList<ObservationMsg>) ObsvMsgComp.get("ObsvMsgs");
 			double[] rxARP = (double[]) ObsvMsgComp.get("ARP");
@@ -179,6 +180,7 @@ public class MainApp {
 				ErrMap.put("RTKlib", new ArrayList<HashMap<String, double[]>>());
 
 			}
+
 			long epochStart = 7200;
 			long epochEnd = 79200;
 
@@ -317,6 +319,21 @@ public class MainApp {
 						double[] estECEF = estECEFList.get(i);
 						ErrMap.get("EKF").add(estimateError(Map.of("TropoCorr", estECEF), userECEF, timeList.get(i)));
 					}
+				}
+
+			}
+			if (estimatorType == 5) {
+
+				HashMap<Integer, int[]> cs = CycleSlip.process(dualSVlist);
+
+				for (int SVID : cs.keySet()) {
+					int[] data = cs.get(SVID);
+					GraphPlotter chart = new GraphPlotter("Cycle Slip - " + SVID, "Cycle Slip - " + SVID, data,
+							timeList, SVID);
+
+					chart.pack();
+					RefineryUtilities.positionFrameRandomly(chart);
+					chart.setVisible(true);
 				}
 
 			}
