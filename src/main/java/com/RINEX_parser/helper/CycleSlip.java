@@ -8,91 +8,285 @@ import org.ejml.simple.SimpleMatrix;
 import org.ejml.simple.SimpleSVD;
 
 import com.RINEX_parser.models.Satellite;
+import com.RINEX_parser.models.CycleSlip.LinearCombo;
+import com.RINEX_parser.models.CycleSlip.Outlier;
+import com.RINEX_parser.utility.Combination;
 
 public class CycleSlip {
+	// factor
+	private int nL;
+	private double threshold;
+	private int samplingRate;
 
-	private static double threshold;
+	public CycleSlip(int samplingRate) {
+		this.samplingRate = samplingRate;
+	}
 
-	public static HashMap<Integer, int[]> process(ArrayList<ArrayList<Satellite>[]> dualSVlist) {
+	public HashMap<Integer, int[]> process_1s(ArrayList<ArrayList<Satellite>[]> dualSVlist) {
 
-		double wl1 = dualSVlist.get(0)[0].get(0).getCarrier_wavelength();
+		// Maximum Threshold for GF
+		double a0 = 0.08;
+		// Max arc length
+		int maxAL = 10;
+		// Max arc length
+		int minAL = 10;
+		// iono time correlation
+		double T0 = 60;
+		// factor
+		nL = 2;
+		// maximum period of time allowed without declaring cycle slip
+		double maxDGper = 40;
 
-		double wl2 = dualSVlist.get(0)[1].get(0).getCarrier_wavelength();
-		threshold = wl2 - wl1;
-		int winSize = 10;
-		HashMap<Integer, List<Double>> map = new HashMap<Integer, List<Double>>();
+		threshold = a0 / (1 + Math.pow(Math.E, -maxDGper / T0));
+
+		HashMap<Integer, List<LinearCombo>> map = new HashMap<Integer, List<LinearCombo>>();
 		HashMap<Integer, int[]> res = new HashMap<Integer, int[]>();
+		HashMap<Integer, Outlier> outlier = new HashMap<Integer, Outlier>();
 		int n = dualSVlist.size();
-		for (int i = 0; i < n; i++) {
 
+		for (int i = 0; i < n; i++) {
+			HashMap<Integer, Outlier> cOutlier = new HashMap<Integer, Outlier>();
 			ArrayList<Satellite>[] SV = dualSVlist.get(i);
-			HashMap<Integer, List<Double>> cMap = new HashMap<Integer, List<Double>>();
+			long t = SV[0].get(0).gettRX();
+			if (i == 508) {
+				System.out.print("");
+			}
 			for (int j = 0; j < SV[0].size(); j++) {
 				Satellite sat1 = SV[0].get(j);
 				Satellite sat2 = SV[1].get(j);
-				double cp1 = sat1.getCycle() * wl1;
-				double cp2 = sat2.getCycle() * wl2;
+				double cp1 = sat1.getCycle() * sat1.getCarrier_wavelength();
+				double cp2 = sat2.getCycle() * sat2.getCarrier_wavelength();
 				int SVID = sat1.getSVID();
 
 				double gf = cp1 - cp2;
-				List<Double> gfList = map.getOrDefault(SVID, null);
+				List<LinearCombo> gfList = map.getOrDefault(SVID, null);
 				boolean isSlip = true;
-
+				if (SVID == 4) {
+					System.out.print("");
+				}
 				if (gfList == null) {
-					gfList = new ArrayList<Double>();
+					gfList = new ArrayList<LinearCombo>();
 				} else {
-					if (gfList.size() >= 3) {
-						if (gfList.size() >= winSize) {
-							isSlip = detect(gfList.subList(gfList.size() - winSize, gfList.size()), gf, SVID);
-							if (isSlip) {
-								gfList = new ArrayList<Double>();
-							}
-						} else if (gfList.size() > 3) {
-							isSlip = detect(gfList.subList(0, gfList.size()), gf, SVID);
-							if (isSlip) {
-								gfList = new ArrayList<Double>();
+					if (t - gfList.get(gfList.size() - 1).t() > maxDGper) {
+						gfList = new ArrayList<LinearCombo>();
+						if (outlier.containsKey(SVID)) {
+							Outlier info = outlier.get(SVID);
+							if (t - info.t() < maxDGper) {
+								gfList.add(new LinearCombo(info.gf(), info.t()));
 							}
 						}
+					} else {
+						if (gfList.size() >= 3) {
+							if (gfList.size() >= maxAL) {
+								isSlip = detect(gfList.subList(gfList.size() - maxAL, gfList.size()), gf, t, SVID);
 
-						else {
-							isSlip = detect(gfList.subList(0, 3), gf, SVID);
+							} else if (gfList.size() > 3) {
+								isSlip = detect(gfList.subList(0, gfList.size()), gf, t, SVID);
+
+							}
+
+							else {
+								isSlip = detect(gfList.subList(0, 3), gf, t, SVID);
+
+							}
 							if (isSlip) {
-								gfList = gfList.subList(1, 3);
+								if (outlier.containsKey(SVID)) {
+									if (gfList.size() > 3) {
+										gfList = new ArrayList<LinearCombo>();
+
+									} else {
+										gfList = gfList.subList(1, 3);
+									}
+									gfList.add(new LinearCombo(outlier.get(SVID).gf(), outlier.get(SVID).t()));
+
+								}
+								cOutlier.put(SVID, new Outlier(i, j, gf, t));
+							} else {
+								if (outlier.containsKey(SVID)) {
+									Outlier info = outlier.get(SVID);
+									dualSVlist.get(info.i())[0].remove(info.j());
+									dualSVlist.get(info.i())[1].remove(info.j());
+								}
+							}
+
+						}
+					}
+				}
+				if (!cOutlier.containsKey(SVID)) {
+					gfList.add(new LinearCombo(gf, t));
+				} else {
+					System.out.print("");
+
+				}
+
+				map.put(SVID, gfList);
+				SV[0].get(j).setLocked(!isSlip);
+				SV[1].get(j).setLocked(!isSlip);
+
+				res.computeIfAbsent(SVID, k -> new int[n])[i] = isSlip ? 1 : 2;
+
+				if (SVID == 4) {
+					System.out.print("");
+				}
+			}
+			outlier.clear();
+			outlier.putAll(cOutlier);
+		}
+		return res;
+	}
+
+	// Optimal for 30s sample rate
+	public HashMap<Integer, int[]> process(ArrayList<ArrayList<Satellite>[]> dualSVlist) {
+
+		// GF CSD based variables
+		// Maximum Threshold for GF
+		double a0 = 0.08;
+		// Max arc length for GF CSD
+		int maxAL_GF = 10;
+		// iono time correlation
+		double T0 = 60;
+		// factor
+		nL = 2;
+		// maximum period of time allowed without declaring cycle slip
+		double maxDGper = 40;
+
+		threshold = a0 / (1 + Math.pow(Math.E, -maxDGper / T0));
+
+		HashMap<Integer, List<LinearCombo>> gfMap = new HashMap<Integer, List<LinearCombo>>();
+		HashMap<Integer, List<LinearCombo>> mwMap = new HashMap<Integer, List<LinearCombo>>();
+		HashMap<Integer, int[]> res = new HashMap<Integer, int[]>();
+
+		int n = dualSVlist.size();
+
+		for (int i = 0; i < n; i++) {
+
+			ArrayList<Satellite>[] SV = dualSVlist.get(i);
+			long t = SV[0].get(0).gettRX();
+			if (i == 508) {
+				System.out.print("");
+			}
+			for (int j = 0; j < SV[0].size(); j++) {
+				Satellite sat1 = SV[0].get(j);
+				Satellite sat2 = SV[1].get(j);
+				double cp1 = sat1.getCycle() * sat1.getCarrier_wavelength();
+				double cp2 = sat2.getCycle() * sat2.getCarrier_wavelength();
+				int SVID = sat1.getSVID();
+
+				double gf = Combination.GeometryFree(cp1, cp2);
+				List<LinearCombo> gfList = gfMap.getOrDefault(SVID, null);
+				boolean isGFCS = true;
+				if (SVID == 4) {
+					System.out.print("");
+				}
+				if (gfList == null) {
+					gfList = new ArrayList<LinearCombo>();
+				} else {
+					if (t - gfList.get(gfList.size() - 1).t() > maxDGper) {
+						gfList = new ArrayList<LinearCombo>();
+
+					} else {
+						if (gfList.size() >= 3) {
+							if (gfList.size() >= maxAL_GF) {
+								isGFCS = detect(gfList.subList(gfList.size() - maxAL_GF, gfList.size()), gf, t, SVID);
+
+							} else if (gfList.size() > 3) {
+								isGFCS = detect(gfList.subList(0, gfList.size()), gf, t, SVID);
+
+							}
+
+							else {
+								isGFCS = detect(gfList.subList(0, 3), gf, t, SVID);
+
+							}
+							if (isGFCS) {
+
+								if (gfList.size() > 3) {
+									gfList = new ArrayList<LinearCombo>();
+
+								} else {
+									gfList = gfList.subList(1, 3);
+								}
+
 							}
 						}
 
 					}
 				}
 
-				gfList.add(gf);
-				cMap.put(SVID, gfList);
-				SV[0].get(j).setLocked(!isSlip);
-				SV[1].get(j).setLocked(!isSlip);
+				gfList.add(new LinearCombo(gf, t));
+				gfMap.put(SVID, gfList);
 
-				res.computeIfAbsent(SVID, k -> new int[n])[i] = isSlip ? 1 : 2;
+				// Melbourne-Wubenna based CS detector
+
+				// Min arc length for MW CSD
+				int minAL_MW = 5;
+				double mean = 0;
+				double sigmaSq = 0;
+				double mean300 = 0;
+				int n300 = 300 / samplingRate;
+				int kFact = 5;
+				double pr1 = sat1.getPseudorange();
+				double pr2 = sat2.getPseudorange();
+				double f1 = sat1.getCarrier_frequency();
+				double f2 = sat2.getCarrier_frequency();
+				double mw = Combination.MelbourneWubenna(pr1, pr2, cp1, cp2, f1, f2);
+
+				List<LinearCombo> mwList = mwMap.getOrDefault(SVID, null);
+				boolean isMWCS = true;
+
+				if (mwList == null) {
+					mwList = new ArrayList<LinearCombo>();
+				} else {
+					if (t - mwList.get(mwList.size() - 1).t() > maxDGper) {
+						mwList = new ArrayList<LinearCombo>();
+
+					} else {
+						if (mwList.size() >= minAL_MW) {
+							double d = mw - mean;
+							double d300 = mw - mean300;
+							double th = kFact * Math.sqrt(sigmaSq);
+
+						}
+					}
+
+				}
+
+				SV[0].get(j).setLocked(!isGFCS);
+				SV[1].get(j).setLocked(!isGFCS);
+
+				res.computeIfAbsent(SVID, k -> new int[n])[i] = isGFCS ? 1 : 2;
+
+				if (SVID == 4) {
+					System.out.print("");
+				}
 			}
-			map.clear();
-			map.putAll(cMap);
+
 		}
 		return res;
+
 	}
 
-	private static boolean detect(List<Double> list, double meas, int SVID) {
+	private void MW() {
+
+	}
+
+	private boolean detect(List<LinearCombo> list, double meas, double t, int SVID) {
 		int len = list.size();
 		double[][] _H = new double[len][3];
 		double[][] _Y = new double[len][1];
 		for (int i = 0; i < len; i++) {
-			int x = i + 1;
+			LinearCombo ele = list.get(i);
+			int x = (int) (((ele.t() - list.get(0).t()) / samplingRate) + 1);
 			_H[i][0] = x * x;
 			_H[i][1] = x;
 			_H[i][2] = 1;
-			_Y[i][0] = list.get(i);
+			_Y[i][0] = ele.lc();
 		}
 		SimpleMatrix H = new SimpleMatrix(_H);
 		SimpleMatrix Y = new SimpleMatrix(_Y);
 
 		SimpleSVD<SimpleMatrix> svd = new SimpleSVD<SimpleMatrix>(H.getMatrix(), true);
-		int rank = svd.rank();
+
 		double[] singularVal = svd.getSingularValues();
 		int n = singularVal.length;
 		double eps = Math.ulp(1.0);
@@ -119,10 +313,22 @@ public class CycleSlip {
 		double b = X.get(1);
 		double c = X.get(2);
 
-		double pred = (a * Math.pow(len + 1, 2)) + (b * (len + 1)) + c;
-		boolean isSlip = Math.abs(meas - pred) > threshold;
+		SimpleMatrix Ye = H.mult(X);
+		SimpleMatrix res = Ye.minus(Y);
+		res = res.elementMult(res);
+		double rms = 0;
+		for (int i = 0; i < len; i++) {
+			rms += res.get(i);
+		}
+		rms = Math.sqrt(rms);
 
+		int x = (int) ((t - list.get(0).t()) / samplingRate) + 1;
+		double pred = (a * Math.pow(x, 2)) + (b * (x)) + c;
+		double abs = Math.abs(meas - pred);
+		boolean isSlip = (abs > threshold) && (abs > (nL * rms));
+		if ((abs > (nL * rms) == false) && ((abs > threshold) == true)) {
+			System.out.print("");
+		}
 		return isSlip;
 	}
-
 }

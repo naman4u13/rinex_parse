@@ -112,7 +112,7 @@ public class StaticEKF {
 
 		int SVcount = SV.size();
 
-		kfObj.configure(deltaT);
+		kfObj.configureSPP(deltaT);
 		kfObj.predict();
 
 		SimpleMatrix x = kfObj.getState();
@@ -146,7 +146,7 @@ public class StaticEKF {
 		double[][] H = new double[4][5];
 		IntStream.range(0, 4).forEach(i -> H[i][i] = 1);
 		H[3][4] = deltaT;
-		kfObj.configure(deltaT);
+		kfObj.configureSPP(deltaT);
 		kfObj.predict();
 
 		double[] mECEF = wls.getIonoCorrECEF();
@@ -177,7 +177,7 @@ public class StaticEKF {
 
 		int SVcount = SV.size();
 
-		kfObj.configure(deltaT);
+		kfObj.configureSPP(deltaT);
 		kfObj.predict();
 
 		SimpleMatrix x = kfObj.getState();

@@ -59,7 +59,7 @@ public class MainApp {
 	public static void main(String[] args) {
 
 		Instant start = Instant.now();
-		posEstimate(false, false, true, true, true, false, true, false, true, false, false, true, 6,
+		posEstimate(false, false, true, true, true, false, true, true, true, false, false, true, 5,
 				new String[] { "G1C", "G2L" }, 4);
 
 		Instant end = Instant.now();
@@ -69,7 +69,7 @@ public class MainApp {
 
 	public static void posEstimate(boolean doWeightPlot, boolean doIonoPlot, boolean doPosErrPlot, boolean useCutOffAng,
 			boolean useSNX, boolean useSBAS, boolean useBias, boolean useIGS, boolean isDual, boolean useGIM,
-			boolean useRTKlib, boolean useCP, int estimatorType, String[] obsvCode, int minSat) {
+			boolean useRTKlib, boolean usePhase, int estimatorType, String[] obsvCode, int minSat) {
 		try {
 			TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
 			HashMap<Integer, ArrayList<IonoValue>> ionoValueMap = new HashMap<Integer, ArrayList<IonoValue>>();
@@ -94,7 +94,7 @@ public class MainApp {
 
 			String nav_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
-			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\HERS00GBR_R_20201000000_01D_30S_MO.crx\\HERS00GBR_R_20201000000_01D_30S_MO.rnx";
+			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\IISC00IND_R_20201000000_01D_30S_MO.crx\\IISC00IND_R_20201000000_01D_30S_MO.rnx";
 
 			String sbas_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\EGNOS_2020_100\\123\\D100.ems";
 
@@ -114,7 +114,7 @@ public class MainApp {
 
 			String RTKlib_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\RTKlib\\HARB.pos";
 
-			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\kalman\\HERS_DF";
+			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\DUAL_PPP\\test3";
 			File output = new File(path + ".txt");
 			PrintStream stream;
 
@@ -135,12 +135,12 @@ public class MainApp {
 			IonoCoeff ionoCoeff = (IonoCoeff) NavMsgComp.get("ionoCoeff");
 			TimeCorrection timeCorr = (TimeCorrection) NavMsgComp.getOrDefault("timeCorr", null);
 			HashMap<String, Object> ObsvMsgComp = ObservationRNX.rinex_obsv_process(obs_path, useSNX, sinex_path,
-					obsvCode, useCP);
+					obsvCode, usePhase);
 			@SuppressWarnings("unchecked")
 			ArrayList<ObservationMsg> ObsvMsgs = (ArrayList<ObservationMsg>) ObsvMsgComp.get("ObsvMsgs");
 			double[] rxARP = (double[]) ObsvMsgComp.get("ARP");
 			double[][] rxPCO = (double[][]) ObsvMsgComp.get("PCO");
-
+			int interval = (int) ObsvMsgComp.get("interval");
 			// Note PVT algos will compute for Antenna Reference Point as it is independent
 			// of frequency
 			double[] userECEF = rxARP;
@@ -300,10 +300,14 @@ public class MainApp {
 			if (estimatorType == 4) {
 
 				if (isDual) {
+					if (usePhase) {
+						CycleSlip cs = new CycleSlip(interval);
+						cs.process(dualSVlist);
+					}
 					ErrMap.put("dual-EKF", new ArrayList<HashMap<String, double[]>>());
 					WLS wls = new WLS(dualSVlist.get(0)[0], rxPCO[0], ionoCoeff, timeList.get(0), ionex, geoid);
 					com.RINEX_parser.ComputeUserPos.KalmanFilter.DualFreq.StaticEKF dualStaticEkf = new com.RINEX_parser.ComputeUserPos.KalmanFilter.DualFreq.StaticEKF(
-							dualSVlist, rxPCO, wls.getTropoCorrECEF(), userECEF, geoid, timeList);
+							dualSVlist, rxPCO, wls.getTropoCorrECEF(), userECEF, geoid, timeList, usePhase);
 					ArrayList<double[]> estECEFList = dualStaticEkf.compute();
 					for (int i = 0; i < dualSVlist.size() - 1; i++) {
 						double[] estECEF = estECEFList.get(i);
@@ -323,11 +327,12 @@ public class MainApp {
 
 			}
 			if (estimatorType == 5) {
+				CycleSlip cs = new CycleSlip(interval);
 
-				HashMap<Integer, int[]> cs = CycleSlip.process(dualSVlist);
+				HashMap<Integer, int[]> csMap = cs.process(dualSVlist);
 
-				for (int SVID : cs.keySet()) {
-					int[] data = cs.get(SVID);
+				for (int SVID : csMap.keySet()) {
+					int[] data = csMap.get(SVID);
 					GraphPlotter chart = new GraphPlotter("Cycle Slip - " + SVID, "Cycle Slip - " + SVID, data,
 							timeList, SVID);
 

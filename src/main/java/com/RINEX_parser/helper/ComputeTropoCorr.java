@@ -239,4 +239,9 @@ public class ComputeTropoCorr {
 		return y;
 	}
 
+	public double getM_wet(double E) {
+		double M_wet = normMariniMap(E, coeffWet);
+		return M_wet;
+	}
+
 }
