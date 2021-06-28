@@ -9,6 +9,7 @@ import org.ejml.simple.SimpleSVD;
 
 import com.RINEX_parser.models.Satellite;
 import com.RINEX_parser.models.CycleSlip.LinearCombo;
+import com.RINEX_parser.models.CycleSlip.MWfilter;
 import com.RINEX_parser.models.CycleSlip.Outlier;
 import com.RINEX_parser.utility.Combination;
 
@@ -17,9 +18,10 @@ public class CycleSlip {
 	private int nL;
 	private double threshold;
 	private int samplingRate;
+	private static final double SpeedofLight = 299792458;
 
 	public CycleSlip(int samplingRate) {
-		this.samplingRate = samplingRate;
+		this.samplingRate = 30;
 	}
 
 	public HashMap<Integer, int[]> process_1s(ArrayList<ArrayList<Satellite>[]> dualSVlist) {
@@ -150,10 +152,15 @@ public class CycleSlip {
 		// maximum period of time allowed without declaring cycle slip
 		double maxDGper = 40;
 
+		// MW CSD based variables
+		// Min arc length for MW CSD
+		int minAL_MW = 5;
+		int kFact = 5;
+
 		threshold = a0 / (1 + Math.pow(Math.E, -maxDGper / T0));
 
 		HashMap<Integer, List<LinearCombo>> gfMap = new HashMap<Integer, List<LinearCombo>>();
-		HashMap<Integer, List<LinearCombo>> mwMap = new HashMap<Integer, List<LinearCombo>>();
+		HashMap<Integer, MWfilter> mwMap = new HashMap<Integer, MWfilter>();
 		HashMap<Integer, int[]> res = new HashMap<Integer, int[]>();
 
 		int n = dualSVlist.size();
@@ -162,9 +169,7 @@ public class CycleSlip {
 
 			ArrayList<Satellite>[] SV = dualSVlist.get(i);
 			long t = SV[0].get(0).gettRX();
-			if (i == 508) {
-				System.out.print("");
-			}
+
 			for (int j = 0; j < SV[0].size(); j++) {
 				Satellite sat1 = SV[0].get(j);
 				Satellite sat2 = SV[1].get(j);
@@ -174,10 +179,8 @@ public class CycleSlip {
 
 				double gf = Combination.GeometryFree(cp1, cp2);
 				List<LinearCombo> gfList = gfMap.getOrDefault(SVID, null);
-				boolean isGFCS = true;
-				if (SVID == 4) {
-					System.out.print("");
-				}
+				boolean isGFslip = true;
+
 				if (gfList == null) {
 					gfList = new ArrayList<LinearCombo>();
 				} else {
@@ -187,18 +190,18 @@ public class CycleSlip {
 					} else {
 						if (gfList.size() >= 3) {
 							if (gfList.size() >= maxAL_GF) {
-								isGFCS = detect(gfList.subList(gfList.size() - maxAL_GF, gfList.size()), gf, t, SVID);
+								isGFslip = detect(gfList.subList(gfList.size() - maxAL_GF, gfList.size()), gf, t, SVID);
 
 							} else if (gfList.size() > 3) {
-								isGFCS = detect(gfList.subList(0, gfList.size()), gf, t, SVID);
+								isGFslip = detect(gfList.subList(0, gfList.size()), gf, t, SVID);
 
 							}
 
 							else {
-								isGFCS = detect(gfList.subList(0, 3), gf, t, SVID);
+								isGFslip = detect(gfList.subList(0, 3), gf, t, SVID);
 
 							}
-							if (isGFCS) {
+							if (isGFslip) {
 
 								if (gfList.size() > 3) {
 									gfList = new ArrayList<LinearCombo>();
@@ -217,56 +220,52 @@ public class CycleSlip {
 				gfMap.put(SVID, gfList);
 
 				// Melbourne-Wubenna based CS detector
-
-				// Min arc length for MW CSD
-				int minAL_MW = 5;
-				double mean = 0;
-				double sigmaSq = 0;
-				double mean300 = 0;
-				int n300 = 300 / samplingRate;
-				int kFact = 5;
 				double pr1 = sat1.getPseudorange();
 				double pr2 = sat2.getPseudorange();
 				double f1 = sat1.getCarrier_frequency();
 				double f2 = sat2.getCarrier_frequency();
 				double mw = Combination.MelbourneWubenna(pr1, pr2, cp1, cp2, f1, f2);
+				double lamW = SpeedofLight / (f1 - f2);
+				MWfilter mwObj = mwMap.getOrDefault(SVID, null);
+				boolean isMWslip = true;
 
-				List<LinearCombo> mwList = mwMap.getOrDefault(SVID, null);
-				boolean isMWCS = true;
-
-				if (mwList == null) {
-					mwList = new ArrayList<LinearCombo>();
+				if (mwObj == null) {
+					mwObj = new MWfilter(samplingRate);
 				} else {
+					List<LinearCombo> mwList = mwObj.getMwList();
 					if (t - mwList.get(mwList.size() - 1).t() > maxDGper) {
-						mwList = new ArrayList<LinearCombo>();
+						mwObj = new MWfilter(samplingRate);
 
 					} else {
 						if (mwList.size() >= minAL_MW) {
-							double d = mw - mean;
-							double d300 = mw - mean300;
-							double th = kFact * Math.sqrt(sigmaSq);
 
+							double d = mw - mwObj.getMean();
+							double d300 = mw - mwObj.getMean300();
+							double sigma = Math.sqrt(mwObj.getSigmaSq());
+							double th = kFact * sigma;
+							isMWslip = (Math.abs(d) > th) && (sigma <= lamW) && (Math.abs(d300) > lamW);
+							if (isMWslip) {
+								mwObj = new MWfilter(samplingRate);
+							}
 						}
 					}
 
 				}
+				mwObj.update(mw, t);
+				mwMap.put(SVID, mwObj);
 
-				SV[0].get(j).setLocked(!isGFCS);
-				SV[1].get(j).setLocked(!isGFCS);
-
-				res.computeIfAbsent(SVID, k -> new int[n])[i] = isGFCS ? 1 : 2;
-
-				if (SVID == 4) {
+				boolean isSlip = isGFslip || isMWslip;
+				SV[0].get(j).setLocked(!isSlip);
+				SV[1].get(j).setLocked(!isSlip);
+				if (isMWslip == true && isGFslip == false && gfList.size() > 5) {
 					System.out.print("");
 				}
+				res.computeIfAbsent(SVID, k -> new int[n])[i] = isSlip ? 1 : 2;
+
 			}
 
 		}
 		return res;
-
-	}
-
-	private void MW() {
 
 	}
 

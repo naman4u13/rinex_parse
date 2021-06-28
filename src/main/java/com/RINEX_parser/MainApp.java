@@ -59,7 +59,7 @@ public class MainApp {
 	public static void main(String[] args) {
 
 		Instant start = Instant.now();
-		posEstimate(false, false, true, true, true, false, true, true, true, false, false, true, 5,
+		posEstimate(false, false, true, true, true, false, true, true, true, false, false, true, 4,
 				new String[] { "G1C", "G2L" }, 4);
 
 		Instant end = Instant.now();
@@ -94,7 +94,7 @@ public class MainApp {
 
 			String nav_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
-			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\IISC00IND_R_20201000000_01D_30S_MO.crx\\IISC00IND_R_20201000000_01D_30S_MO.rnx";
+			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\CEDU00AUS_R_20201000000_01D_30S_MO.crx\\CEDU00AUS_R_20201000000_01D_30S_MO.rnx";
 
 			String sbas_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\EGNOS_2020_100\\123\\D100.ems";
 
@@ -328,7 +328,15 @@ public class MainApp {
 			}
 			if (estimatorType == 5) {
 				CycleSlip cs = new CycleSlip(interval);
-
+//				int svid = 3;
+//				for (ArrayList<Satellite>[] SV : dualSVlist) {
+//					SV[0] = SV[0].stream().filter(i -> i.getSVID() == svid)
+//							.collect(Collectors.toCollection(ArrayList::new));
+//					SV[1] = SV[1].stream().filter(i -> i.getSVID() == svid)
+//							.collect(Collectors.toCollection(ArrayList::new));
+//				}
+//				dualSVlist = dualSVlist.stream().filter(i -> i[0].size() > 0)
+//						.collect(Collectors.toCollection(ArrayList::new));
 				HashMap<Integer, int[]> csMap = cs.process(dualSVlist);
 
 				for (int SVID : csMap.keySet()) {

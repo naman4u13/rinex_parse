@@ -58,7 +58,7 @@ public class StaticEKF {
 		this.usePhase = usePhase;
 		// Setting matrix R(Measurement noise) value
 		prObsNoiseVar = 9;
-		cpObsNoiseVar = 0.5;
+		cpObsNoiseVar = 9e-6;
 		double[][] x = null;
 		double[][] P = null;
 		if (usePhase) {
