@@ -64,7 +64,7 @@ public class StaticEKF {
 		if (usePhase) {
 			x = new double[][] { { refECEF[0] }, { refECEF[1] }, { refECEF[2] }, { 0.1 }, { 0.001 }, { 0.5 } };
 			P = new double[6][6];
-			P[5][5] = 1e13;
+			P[5][5] = 0.25;
 
 		} else {
 			x = new double[][] { { refECEF[0] }, { refECEF[1] }, { refECEF[2] }, { 0.1 }, { 0.001 } };
@@ -74,7 +74,7 @@ public class StaticEKF {
 		for (int i = 0; i < 3; i++) {
 			P[i][i] = 16;
 		}
-		P[3][3] = 1e13;
+		P[3][3] = 9e10;
 		P[4][4] = 1e13;
 
 		double[][] _x = x;
@@ -161,6 +161,15 @@ public class StaticEKF {
 		HashMap<Integer, Integer> order = new HashMap<Integer, Integer>();
 		for (int i = 1; i < dualSVlist.size(); i++) {
 
+//			for (int i = 0; i < SVcount; i++) {
+//				if (SV[0].get(i).isLocked() == false || SV[1].get(i).isLocked() == false) {
+//					Q[6 + i][6 + i] = 1e13 / c2;
+//
+//				} else {
+//					System.out.print("");
+//				}
+//			}
+
 			System.out.println("Step/Itr - " + i);
 			ArrayList<Satellite>[] SV = dualSVlist.get(i);
 			int SVcount = SV[0].size();
@@ -176,13 +185,23 @@ public class StaticEKF {
 			_P.set(3, 4, P.get(3, 4));
 			_P.set(4, 3, P.get(4, 3));
 			for (int j = 0; j < SVcount; j++) {
+
 				int svid = SV[0].get(j).getSVID();
 				double xVal = 0;
-				double pVal = 1e13;
-				if (order.containsKey(svid)) {
+				double pVal = 400;
+				if (order.containsKey(svid) && SV[0].get(j).isLocked() == true) {
 					int k = order.get(svid);
 					xVal = x.get(6 + k);
 					pVal = P.get(6 + k, 6 + k);
+				} else {
+					// PR and CP prealignment
+					Satellite sat1 = SV[0].get(j);
+					Satellite sat2 = SV[1].get(j);
+					double ifPR = getIonoFree(sat1.getPseudorange(), sat2.getPseudorange());
+					double ifCP = getIonoFree(sat1.getCycle() * sat1.getCarrier_wavelength(),
+							sat2.getCycle() * sat2.getCarrier_wavelength());
+					xVal = ifCP - ifPR;
+					System.out.println();
 				}
 				_x.set(6 + j, xVal);
 				_P.set(6 + j, 6 + j, pVal);
@@ -293,7 +312,9 @@ public class StaticEKF {
 				.forEach(i -> ze[i][0] = Math.sqrt(IntStream.range(0, 3).mapToDouble(j -> estECEF[j] - satECI[i][j])
 						.map(j -> j * j).reduce(0, (j, k) -> j + k)) + (estECEF[3]));
 		double[][] R = new double[SVcount][SVcount];// Weight.computeCovMat(SV);
-		IntStream.range(0, SVcount).forEach(i -> R[i][i] = prObsNoiseVar);
+		IntStream.range(0, SVcount).forEach(i -> R[i][i] = prObsNoiseVar);// prObsNoiseVar + (prObsNoiseVar *
+																			// Math.pow(Math.cos(SV[0].get(i).getElevAzm()[0]),
+																			// 2)));
 		kfObj.update(z, R, ze, H);
 
 	}
@@ -391,6 +412,7 @@ public class StaticEKF {
 	}
 
 	private double getIonoFree(double val1, double val2) {
+
 		return ((fSq[0] * val1) - (fSq[1] * val2)) / (fSq[0] - fSq[1]);
 	}
 
