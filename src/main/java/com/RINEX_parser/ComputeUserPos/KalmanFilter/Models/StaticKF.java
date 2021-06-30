@@ -41,9 +41,11 @@ public class StaticKF extends KF {
 		Q[4][3] = (sg * Math.pow(deltaT, 2)) / 2;
 		Q[4][4] = sg * deltaT;
 		Q[5][5] = (0.0001 / c2) * (deltaT / (60 * 60));
+
 		for (int i = 0; i < SVcount; i++) {
 			if (SV[0].get(i).isLocked() == false || SV[1].get(i).isLocked() == false) {
-				Q[6 + i][6 + i] = 1e8 / c2;
+				Q[6 + i][6 + i] = 1e13 / c2;
+
 			} else {
 				System.out.print("");
 			}

@@ -19,6 +19,7 @@ public class Satellite extends Observable {
 	private Calendar time;
 	// Elevation and Azimuth Angle
 	private double[] ElevAzm;
+	private double phaseWindUp;
 
 	public double[] getECEF() {
 		return ECEF;
@@ -147,6 +148,14 @@ public class Satellite extends Observable {
 
 	public void setElevAzm(double[] elevAzm) {
 		ElevAzm = elevAzm;
+	}
+
+	public double getPhaseWindUp() {
+		return phaseWindUp;
+	}
+
+	public void setPhaseWindUp(double phaseWindUp) {
+		this.phaseWindUp = phaseWindUp;
 	}
 
 }

@@ -94,7 +94,7 @@ public class MainApp {
 
 			String nav_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
-			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\CEDU00AUS_R_20201000000_01D_30S_MO.crx\\CEDU00AUS_R_20201000000_01D_30S_MO.rnx";
+			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\IISC00IND_R_20201000000_01D_30S_MO.crx\\IISC00IND_R_20201000000_01D_30S_MO.rnx";
 
 			String sbas_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\EGNOS_2020_100\\123\\D100.ems";
 
@@ -114,7 +114,7 @@ public class MainApp {
 
 			String RTKlib_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\RTKlib\\HARB.pos";
 
-			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\DUAL_PPP\\test3";
+			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\DUAL_PPP\\test1";
 			File output = new File(path + ".txt");
 			PrintStream stream;
 
@@ -140,6 +140,7 @@ public class MainApp {
 			ArrayList<ObservationMsg> ObsvMsgs = (ArrayList<ObservationMsg>) ObsvMsgComp.get("ObsvMsgs");
 			double[] rxARP = (double[]) ObsvMsgComp.get("ARP");
 			double[][] rxPCO = (double[][]) ObsvMsgComp.get("PCO");
+
 			int interval = (int) ObsvMsgComp.get("interval");
 			// Note PVT algos will compute for Antenna Reference Point as it is independent
 			// of frequency
@@ -328,7 +329,7 @@ public class MainApp {
 			}
 			if (estimatorType == 5) {
 				CycleSlip cs = new CycleSlip(interval);
-//				int svid = 3;
+//				int svid = 1;
 //				for (ArrayList<Satellite>[] SV : dualSVlist) {
 //					SV[0] = SV[0].stream().filter(i -> i.getSVID() == svid)
 //							.collect(Collectors.toCollection(ArrayList::new));

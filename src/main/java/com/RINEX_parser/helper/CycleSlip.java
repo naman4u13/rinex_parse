@@ -145,6 +145,9 @@ public class CycleSlip {
 		double a0 = 0.08;
 		// Max arc length for GF CSD
 		int maxAL_GF = 10;
+		// Min arc length for GF CSD
+		int minAL_GF = 5;
+
 		// iono time correlation
 		double T0 = 60;
 		// factor
@@ -164,18 +167,44 @@ public class CycleSlip {
 		HashMap<Integer, int[]> res = new HashMap<Integer, int[]>();
 
 		int n = dualSVlist.size();
-
+		HashMap<Integer, Double> windUpMap = new HashMap<Integer, Double>();
 		for (int i = 0; i < n; i++) {
 
 			ArrayList<Satellite>[] SV = dualSVlist.get(i);
 			long t = SV[0].get(0).gettRX();
-
+			HashMap<Integer, Double> cWindUpMap = new HashMap<Integer, Double>();
 			for (int j = 0; j < SV[0].size(); j++) {
 				Satellite sat1 = SV[0].get(j);
 				Satellite sat2 = SV[1].get(j);
-				double cp1 = sat1.getCycle() * sat1.getCarrier_wavelength();
-				double cp2 = sat2.getCycle() * sat2.getCarrier_wavelength();
+				double wlen1 = sat1.getCarrier_wavelength();
+				double wlen2 = sat2.getCarrier_wavelength();
 				int SVID = sat1.getSVID();
+				// Windup full cycle treatment
+				double windUpCycle = sat1.getPhaseWindUp();
+				double prevWindUpCycle = 0;
+				// Note : Initialization for windup related Integer ambiguity is zero, as it is
+				// assumed that general phase based ambiguity will absorb the rest of the
+				// constant, if slip occurs it wont affect the working of our windup param as
+				// that constant will be again be absorbed
+				int N = 0;
+				if (windUpMap.containsKey(SVID)) {
+					prevWindUpCycle = windUpMap.get(SVID);
+					N = (int) Math.round(prevWindUpCycle - windUpCycle);
+				}
+				windUpCycle = N + windUpCycle;
+				sat1.setPhaseWindUp(wlen1 * windUpCycle);
+				sat2.setPhaseWindUp(wlen2 * windUpCycle);
+
+				cWindUpMap.put(SVID, windUpCycle);
+				if (wlen1 * windUpCycle > 0.5 || wlen2 * windUpCycle > 0.5) {
+					System.err.println("Windup Err -" + wlen1 * windUpCycle + "  " + wlen2 * windUpCycle);
+				}
+				if (N > 0) {
+					System.err.println("windup N - " + N);
+				}
+
+				double cp1 = sat1.getCycle() * wlen1;
+				double cp2 = sat2.getCycle() * wlen2;
 
 				double gf = Combination.GeometryFree(cp1, cp2);
 				List<LinearCombo> gfList = gfMap.getOrDefault(SVID, null);
@@ -188,26 +217,26 @@ public class CycleSlip {
 						gfList = new ArrayList<LinearCombo>();
 
 					} else {
-						if (gfList.size() >= 3) {
+						if (gfList.size() >= minAL_GF) {
 							if (gfList.size() >= maxAL_GF) {
 								isGFslip = detect(gfList.subList(gfList.size() - maxAL_GF, gfList.size()), gf, t, SVID);
 
-							} else if (gfList.size() > 3) {
+							} else if (gfList.size() > minAL_GF) {
 								isGFslip = detect(gfList.subList(0, gfList.size()), gf, t, SVID);
 
 							}
 
 							else {
-								isGFslip = detect(gfList.subList(0, 3), gf, t, SVID);
+								isGFslip = detect(gfList.subList(0, minAL_GF), gf, t, SVID);
 
 							}
 							if (isGFslip) {
 
-								if (gfList.size() > 3) {
+								if (gfList.size() > minAL_GF) {
 									gfList = new ArrayList<LinearCombo>();
 
 								} else {
-									gfList = gfList.subList(1, 3);
+									gfList = gfList.subList(1, minAL_GF);
 								}
 
 							}
@@ -215,9 +244,6 @@ public class CycleSlip {
 
 					}
 				}
-
-				gfList.add(new LinearCombo(gf, t));
-				gfMap.put(SVID, gfList);
 
 				// Melbourne-Wubenna based CS detector
 				double pr1 = sat1.getPseudorange();
@@ -245,24 +271,41 @@ public class CycleSlip {
 							double th = kFact * sigma;
 							isMWslip = (Math.abs(d) > th) && (sigma <= lamW) && (Math.abs(d300) > lamW);
 							if (isMWslip) {
-								mwObj = new MWfilter(samplingRate);
+								mwObj = mwObj.reset(samplingRate);
 							}
 						}
 					}
 
 				}
-				mwObj.update(mw, t);
-				mwMap.put(SVID, mwObj);
 
 				boolean isSlip = isGFslip || isMWslip;
 				SV[0].get(j).setLocked(!isSlip);
 				SV[1].get(j).setLocked(!isSlip);
-				if (isMWslip == true && isGFslip == false && gfList.size() > 5) {
-					System.out.print("");
-				}
-				res.computeIfAbsent(SVID, k -> new int[n])[i] = isSlip ? 1 : 2;
 
+				// NOTE VERY IMPORTANT - below if code will only work correctly when both GF and
+				// MW Arc len is same
+				if (isMWslip == true && isGFslip == false) {
+
+					if (gfList.size() > minAL_GF) {
+						gfList = new ArrayList<LinearCombo>();
+
+					} else {
+						gfList = gfList.subList(1, minAL_GF);
+					}
+				}
+				if (isMWslip == false && isGFslip == true) {
+					mwObj = mwObj.reset(samplingRate);
+				}
+				gfList.add(new LinearCombo(gf, t));
+				mwObj.update(mw, t);
+				mwMap.put(SVID, mwObj);
+				gfMap.put(SVID, gfList);
+
+				res.computeIfAbsent(SVID, k -> new int[n])[i] = isSlip ? 1 : 2;
+				System.out.print("");
 			}
+			windUpMap.clear();
+			windUpMap.putAll(cWindUpMap);
 
 		}
 		return res;

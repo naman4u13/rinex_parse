@@ -58,7 +58,7 @@ public class StaticEKF {
 		this.usePhase = usePhase;
 		// Setting matrix R(Measurement noise) value
 		prObsNoiseVar = 9;
-		cpObsNoiseVar = 9e-6;
+		cpObsNoiseVar = 9e-4;
 		double[][] x = null;
 		double[][] P = null;
 		if (usePhase) {
@@ -178,7 +178,7 @@ public class StaticEKF {
 			for (int j = 0; j < SVcount; j++) {
 				int svid = SV[0].get(j).getSVID();
 				double xVal = 0;
-				double pVal = 1e8;
+				double pVal = 1e13;
 				if (order.containsKey(svid)) {
 					int k = order.get(svid);
 					xVal = x.get(6 + k);
@@ -337,8 +337,10 @@ public class StaticEKF {
 			double corr1 = (sat1.getSatClkOff() * SpeedofLight) - tropoCorr;
 			double corr2 = (sat2.getSatClkOff() * SpeedofLight) - tropoCorr;
 			double IFtropoCorrPR = getIonoFree(sat1.getPseudorange() + corr1, sat2.getPseudorange() + corr2);
-			double IFtropoCorrCP = getIonoFree((sat1.getCycle() * sat1.getCarrier_wavelength()) + corr1,
-					(sat2.getCycle() * sat2.getCarrier_wavelength()) + corr2);
+			double IFtropoCorrCP = getIonoFree(
+					(sat1.getCycle() * sat1.getCarrier_wavelength()) + corr1 - sat1.getPhaseWindUp(),
+					(sat2.getCycle() * sat2.getCarrier_wavelength()) + corr2 - sat2.getPhaseWindUp());
+
 			double[] unitLOS = SatUtil.getUnitLOS(satECI, estECEF);
 
 			for (int j = i * 2; j <= (i * 2) + 1; j++) {
@@ -353,6 +355,7 @@ public class StaticEKF {
 			double approxPR = Math.sqrt(IntStream.range(0, 3).mapToDouble(j -> estECEF[j] - satECI[j]).map(j -> j * j)
 					.reduce(0, (j, k) -> j + k)) + estRxClkOff + (M_wet * resTropo);
 			double approxCP = approxPR + ambiguity[i];
+
 			ze[2 * i][0] = approxPR;
 			ze[(2 * i) + 1][0] = approxCP;
 			R[2 * i][2 * i] = prObsNoiseVar;

@@ -6,6 +6,7 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.orekit.frames.Frame;
@@ -30,6 +31,7 @@ import com.RINEX_parser.models.Satellite;
 import com.RINEX_parser.models.SBAS.Correction;
 import com.RINEX_parser.models.SBAS.LongTermCorr;
 import com.RINEX_parser.utility.Closest;
+import com.RINEX_parser.utility.Vector;
 
 public class SingleFreq {
 	final static double SpeedofLight = 299792458;
@@ -62,31 +64,21 @@ public class SingleFreq {
 				double[] satECEF = satPV[0];
 				double[] satVel = satPV[1];
 
-				double dotProd = 0;
-				for (int j = 0; j < 3; j++) {
-					dotProd += satECEF[j] * satVel[j];
-				}
-				double relativistic_error = -2 * (dotProd) / Math.pow(SpeedofLight, 2);
+				double relativistic_error = -2 * (Vector.dotProd(satECEF, satVel)) / Math.pow(SpeedofLight, 2);
 				// Correct sat clock offset for relativistic error and recompute the Sat coords
 				satClkOff += relativistic_error;
 				t = tSV - satClkOff;
 
-				satECEF = antenna.getSatPC(SVID, obsvCode, tRX, weekNo, satECEF);
+				double[] satPC_windup = antenna.getSatPC_windup(SVID, obsvCode, tRX, weekNo, satECEF, userECEF);
+				IntStream.range(0, 3).forEach(j -> satECEF[j] = satPC_windup[j]);
+				// fractional Wind up in cycles, will require further processing to correct for
+				// full cycles and then multiply by wavelength
+				double windup = satPC_windup[3];
 
 				double[] EleAzm = ComputeEleAzm.computeEleAzm(userECEF, satECEF);
 				Satellite _sat = new Satellite(sat, satECEF, satClkOff, t, tRX, satVel, 0.0, null, EleAzm, time);
 				_sat.compECI();
-
-				// double ISC = bias.getISC(obsvCode, SVID);
-//				NavigationMsg NavMsg = NavMsgs.get(SVID).get(order[i]);
-//				Object[] SatParams = ComputeSatPos.computeSatPos(NavMsg, tSV, tRX, null, 0);
-				// double[] ECEF_SatClkOff = (double[]) SatParams[0];
-//				double XYZdiff = Math
-//						.sqrt(IntStream.range(0, 3).mapToDouble(j -> satECEF[j] - ECEF_SatClkOff[j])
-//								.map(j -> j * j).reduce(0, (j, k) -> j + k));
-//				double clkDiff = SpeedofLight
-//						* ((satClkOff + relativistic_error) - (ECEF_SatClkOff[3] + NavMsg.getTGD()));
-//			double TGDdiff = SpeedofLight * (temp[1] - (NavMsg.getTGD()));
+				_sat.setPhaseWindUp(windup);
 
 				SV.add(_sat);
 

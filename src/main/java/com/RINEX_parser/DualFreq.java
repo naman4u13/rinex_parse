@@ -17,6 +17,7 @@ import com.RINEX_parser.models.Observable;
 import com.RINEX_parser.models.ObservationMsg;
 import com.RINEX_parser.models.Satellite;
 import com.RINEX_parser.utility.Closest;
+import com.RINEX_parser.utility.Vector;
 
 public class DualFreq {
 
@@ -58,26 +59,35 @@ public class DualFreq {
 				double[] satECEF_MC = satPV[0];
 				double[] satVel = satPV[1];
 
-				double dotProd = 0;
-				for (int j = 0; j < 3; j++) {
-					dotProd += satECEF_MC[j] * satVel[j];
-				}
-				double relativistic_error = -2 * (dotProd) / Math.pow(SpeedofLight, 2);
+				double relativistic_error = -2 * (Vector.dotProd(satECEF_MC, satVel)) / Math.pow(SpeedofLight, 2);
 				// Correct sat clock offset for relativistic error and recompute the Sat coords
 				satClkOff[0] += relativistic_error;
 				satClkOff[1] += relativistic_error;
 				t = tSV1 - satClkOff[0];
 
-				double[] satECEF_PC1 = antenna.getSatPC(SVID, obsvCode[0], tRX, weekNo, satECEF_MC);
-				double[] satECEF_PC2 = antenna.getSatPC(SVID, obsvCode[1], tRX, weekNo, satECEF_MC);
-				double[] EleAzm = ComputeEleAzm.computeEleAzm(userECEF, satECEF_PC1);
+				double[][] satPC_windup = antenna.getSatPC_windup(SVID, obsvCode, tRX, weekNo, satECEF_MC, userECEF);
+				int fN = obsvCode.length;
+				double[][] satECEF_PC = new double[fN][3];
+				double[] windup = new double[fN];
+				for (int j = 0; j < fN; j++) {
+					for (int k = 0; k < 3; k++) {
+						satECEF_PC[j][k] = satPC_windup[j][k];
+					}
+					// fractional Wind up in cycles, will require further processing to correct for
+					// full cycles and then multiply by wavelength
+					// The cycle value will be same for both frequencies
+					windup[j] = satPC_windup[j][3];
+				}
+				double[] EleAzm = ComputeEleAzm.computeEleAzm(userECEF, satECEF_PC[0]);
 
-				Satellite _sat1 = new Satellite(sat1, satECEF_PC1, satClkOff[0], t, tRX, satVel, 0.0, null, EleAzm,
+				Satellite _sat1 = new Satellite(sat1, satECEF_PC[0], satClkOff[0], t, tRX, satVel, 0.0, null, EleAzm,
 						time);
 				_sat1.compECI();
-				Satellite _sat2 = new Satellite(sat2, satECEF_PC2, satClkOff[1], t, tRX, satVel, 0.0, null, EleAzm,
+				_sat1.setPhaseWindUp(windup[0]);
+				Satellite _sat2 = new Satellite(sat2, satECEF_PC[1], satClkOff[1], t, tRX, satVel, 0.0, null, EleAzm,
 						time);
 				_sat2.compECI();
+				_sat2.setPhaseWindUp(windup[1]);
 
 				SV[0].add(_sat1);
 				SV[1].add(_sat2);
@@ -166,8 +176,8 @@ public class DualFreq {
 			}
 		}
 		if (useCutOffAng) {
-			SV[0].removeIf(i -> i.getElevAzm()[0] < Math.toRadians(5));
-			SV[1].removeIf(i -> i.getElevAzm()[0] < Math.toRadians(5));
+			SV[0].removeIf(i -> i.getElevAzm()[0] < Math.toRadians(15));
+			SV[1].removeIf(i -> i.getElevAzm()[0] < Math.toRadians(15));
 
 		}
 

@@ -126,16 +126,20 @@ public class SINEX {
 			HashMap<Character, HashMap<Integer, double[]>> PCO, String[] obsvCode) {
 		int fN = obsvCode.length;
 		double[][] PCO_ECEF = new double[fN][3];
+
 		double[] ARP = LatLonUtil.ENUtoECEF(deltaARP, MM);
 		for (int i = 0; i < fN; i++) {
 			char SSI = obsvCode[i].charAt(0);
 			int freq = Integer.parseInt(obsvCode[i].charAt(1) + "");
 			double[] pco = PCO.get(SSI).get(freq);
+
 			if (pco == null) {
 				System.err.println("Rx PCO info unavailable for frequency - " + freq + " !");
+
 				PCO_ECEF[i] = new double[] { 0, 0, 0 };
 				continue;
 			}
+
 			double[] APC = LatLonUtil.ENUtoECEF(pco, ARP);
 			for (int j = 0; j < 3; j++) {
 				PCO_ECEF[i][j] = APC[j] - ARP[j];

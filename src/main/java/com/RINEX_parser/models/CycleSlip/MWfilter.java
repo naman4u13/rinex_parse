@@ -52,6 +52,20 @@ public class MWfilter {
 
 	}
 
+	public MWfilter reset(int samplingRate) {
+
+		MWfilter tempMWfilter = new MWfilter(samplingRate);
+		if (mwList.size() == 5) {
+			for (int i = 1; i < 5; i++) {
+				LinearCombo obj = mwList.get(i);
+				tempMWfilter.update(obj.lc(), obj.t());
+			}
+		}
+
+		return tempMWfilter;
+
+	}
+
 	private double smooth(double m, double val, double k) {
 		m = (((k - 1) / k) * m) + ((1 / k) * val);
 		return m;
