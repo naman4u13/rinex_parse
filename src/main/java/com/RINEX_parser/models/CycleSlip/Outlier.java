@@ -5,9 +5,9 @@ public class Outlier {
 	private int epochIndex;
 	private int satIndex;
 	private double gf;
-	private long t;
+	private double t;
 
-	public Outlier(int epochIndex, int satIndex, double gf, long t) {
+	public Outlier(int epochIndex, int satIndex, double gf, double t) {
 		super();
 		this.epochIndex = epochIndex;
 		this.satIndex = satIndex;
@@ -29,7 +29,7 @@ public class Outlier {
 		return gf;
 	}
 
-	public long t() {
+	public double t() {
 		return t;
 	}
 

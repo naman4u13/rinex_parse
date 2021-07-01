@@ -4,13 +4,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintStream;
 import java.text.SimpleDateFormat;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.stream.IntStream;
@@ -40,8 +37,6 @@ import com.RINEX_parser.fileParser.NavigationRNX;
 import com.RINEX_parser.fileParser.ObservationRNX;
 import com.RINEX_parser.fileParser.Orbit;
 import com.RINEX_parser.fileParser.RTKlib;
-import com.RINEX_parser.fileParser.SBAS;
-import com.RINEX_parser.fileParser.GoogleDecimeter.GroundTruth;
 import com.RINEX_parser.helper.CycleSlip;
 import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.IonoValue;
@@ -51,58 +46,27 @@ import com.RINEX_parser.models.Satellite;
 import com.RINEX_parser.models.TimeCorrection;
 import com.RINEX_parser.utility.ECEFtoLatLon;
 import com.RINEX_parser.utility.GraphPlotter;
-import com.RINEX_parser.utility.IGPgrid;
 import com.RINEX_parser.utility.LatLonUtil;
 import com.RINEX_parser.utility.Time;
 
-public class MainApp {
+public class GoogleDecimeter {
 
-	public static void main(String[] args) {
-
-		Instant start = Instant.now();
-		switch (2) {
-		case 1:
-			posEstimate(false, false, true, true, true, false, true, true, true, false, false, false, 4,
-					new String[] { "G1C", "G2X" }, 4);
-			break;
-		case 2:// GoogleDecimeter.posEstimate(doPosErrPlot, useCutOffAng, useBias, useIGS,
-				// isDual, useGIM, useRTKlib, usePhase, estimatorType, obsvCode, minSat);
-			break;
-		}
-		try {
-			GroundTruth.processCSV(
-					"E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2020-05-14-US-MTV-1\\Pixel4\\ground_truth.csv");
-			GroundTruth.processNMEA(
-					"E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2020-05-14-US-MTV-1\\Pixel4\\supplemental\\SPAN_Pixel4_10Hz.nmea");
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
-		Instant end = Instant.now();
-		System.out.println("EXECUTION TIME -  " + Duration.between(start, end));
-
-	}
-
-	public static void posEstimate(boolean doWeightPlot, boolean doIonoPlot, boolean doPosErrPlot, boolean useCutOffAng,
-			boolean useSNX, boolean useSBAS, boolean useBias, boolean useIGS, boolean isDual, boolean useGIM,
-			boolean useRTKlib, boolean usePhase, int estimatorType, String[] obsvCode, int minSat) {
+	public static void posEstimate(boolean doPosErrPlot, boolean useCutOffAng, boolean useBias, boolean useIGS,
+			boolean isDual, boolean useGIM, boolean useRTKlib, boolean usePhase, int estimatorType, String[] obsvCode,
+			int minSat) {
 		try {
 			TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
 			HashMap<Integer, ArrayList<IonoValue>> ionoValueMap = new HashMap<Integer, ArrayList<IonoValue>>();
 
 			HashMap<String, ArrayList<HashMap<String, double[]>>> ErrMap = new HashMap<String, ArrayList<HashMap<String, double[]>>>();
-			HashMap<String, ArrayList<Double>> RcvrClkMap = new HashMap<String, ArrayList<Double>>();
-			HashMap<String, ArrayList<Double>> WeightMap = new HashMap<String, ArrayList<Double>>();
+
 			ArrayList<Calendar> timeList = new ArrayList<Calendar>();
 			ArrayList<Double> GPSTimeList = new ArrayList<Double>();
 			ArrayList<ArrayList<Satellite>> SVlist = new ArrayList<ArrayList<Satellite>>();
 			ArrayList<ArrayList<Satellite>[]> dualSVlist = new ArrayList<ArrayList<Satellite>[]>();
-			ArrayList<String[]> IPPdelay = new ArrayList<String[]>();
 
-			SBAS sbas = null;
 			Bias bias = null;
-			HashMap<Integer, HashSet<Integer>> IODEmap = new HashMap<Integer, HashSet<Integer>>();
+
 			Orbit orbit = null;
 			Clock clock = null;
 			Antenna antenna = null;
@@ -113,13 +77,9 @@ public class MainApp {
 
 			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\GODN00USA_R_20201000000_01D_30S_MO.crx\\GODN00USA_R_20201000000_01D_30S_MO.rnx";
 
-			String sbas_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\EGNOS_2020_100\\123\\D100.ems";
-
 			String bias_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\CAS0MGXRAP_20201000000_01D_01D_DCB.BSX\\CAS0MGXRAP_20201000000_01D_01D_DCB.BSX";
 
 			String orbit_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\igs21004.sp3\\igs21004.sp3";
-
-			String sinex_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\igs20P21004.snx\\igs20P21004.snx";
 
 			String antenna_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\igs14.atx\\igs14.atx";
 
@@ -151,8 +111,8 @@ public class MainApp {
 					.getOrDefault("NavMsgs", null);
 			IonoCoeff ionoCoeff = (IonoCoeff) NavMsgComp.get("ionoCoeff");
 			TimeCorrection timeCorr = (TimeCorrection) NavMsgComp.getOrDefault("timeCorr", null);
-			HashMap<String, Object> ObsvMsgComp = ObservationRNX.rinex_obsv_process(obs_path, useSNX, sinex_path,
-					obsvCode, usePhase);
+			HashMap<String, Object> ObsvMsgComp = ObservationRNX.rinex_obsv_process(obs_path, false, "", obsvCode,
+					usePhase);
 			@SuppressWarnings("unchecked")
 			ArrayList<ObservationMsg> ObsvMsgs = (ArrayList<ObservationMsg>) ObsvMsgComp.get("ObsvMsgs");
 			double[] rxARP = (double[]) ObsvMsgComp.get("ARP");
@@ -168,11 +128,6 @@ public class MainApp {
 					new GeodeticPoint(Math.toRadians(userLatLon[0]), Math.toRadians(userLatLon[1]), userLatLon[2]),
 					"TPF");
 			Frame frame = FramesFactory.getITRF(ITRFVersion.ITRF_2014, IERSConventions.IERS_2010, true);
-
-			if (useSBAS) {
-				int[][][] IGP = IGPgrid.readCSV();
-				sbas = new SBAS(sbas_path, IGP);
-			}
 
 			if (useBias) {
 				bias = new Bias(bias_path);
@@ -199,29 +154,14 @@ public class MainApp {
 
 			}
 
-			long epochStart = 7200;
-			long epochEnd = 79200;
-
 			for (ObservationMsg obsvMsg : ObsvMsgs) {
 
 				double tRX = obsvMsg.getTRX();
-				double dayTime = tRX % 86400;
-				if (dayTime < epochStart) {
-					continue;
-				} else if (dayTime > epochEnd) {
-					break;
-				}
-				if (dayTime % 10 != 0) {
-					System.err.println("FATAL ERROR TIME daytime");
-					return;
-				}
+
 				long weekNo = obsvMsg.getWeekNo();
 
 				Calendar time = Time.getDate(tRX, weekNo, 0);
-				if (Time.getGPSTime(time)[0] != tRX) {
-					System.err.println("FATAL ERROR TIME calendar");
-					return;
-				}
+
 				ArrayList<Satellite>[] dualSV = null;
 				ArrayList<Satellite> SV = null;
 				if (isDual) {
@@ -232,9 +172,9 @@ public class MainApp {
 					}
 					dualSVlist.add(dualSV);
 				} else {
-					SV = SingleFreq.process(obsvMsg, NavMsgs, obsvCode[0], useIGS, useSBAS, doIonoPlot, useBias,
-							ionoCoeff, bias, orbit, clock, antenna, tRX, weekNo, time, sbas, userECEF, userLatLon,
-							ionoValueMap, useCutOffAng, tpf, frame);
+					SV = SingleFreq.process(obsvMsg, NavMsgs, obsvCode[0], useIGS, false, false, useBias, ionoCoeff,
+							bias, orbit, clock, antenna, tRX, weekNo, time, null, userECEF, userLatLon, ionoValueMap,
+							useCutOffAng, tpf, frame);
 					if (SV.size() < minSat) {
 						continue;
 					}
@@ -436,15 +376,6 @@ public class MainApp {
 
 			}
 
-			if (doIonoPlot) {
-
-				GraphPlotter chart = new GraphPlotter("GPS IONO - ", "Iono Correction", ionoValueMap);
-
-				chart.pack();
-				RefineryUtilities.positionFrameRandomly(chart);
-				chart.setVisible(true);
-
-			}
 			if (doPosErrPlot) {
 
 				GraphPlotter chart = new GraphPlotter("GPS PVT Error - ", "Error Estimate", timeList, GraphErrMap);
@@ -453,14 +384,6 @@ public class MainApp {
 				RefineryUtilities.positionFrameRandomly(chart);
 				chart.setVisible(true);
 
-			}
-
-			if (doWeightPlot) {
-				GraphPlotter chart = new GraphPlotter("Weight Matrix - ", "Weights", timeList, WeightMap);
-
-				chart.pack();
-				RefineryUtilities.positionFrameRandomly(chart);
-				chart.setVisible(true);
 			}
 
 		} catch (

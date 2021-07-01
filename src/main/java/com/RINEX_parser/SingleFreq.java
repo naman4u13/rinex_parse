@@ -39,7 +39,7 @@ public class SingleFreq {
 	public static ArrayList<Satellite> process(ObservationMsg obsvMsg,
 			HashMap<Integer, ArrayList<NavigationMsg>> NavMsgs, String obsvCode, boolean useIGS, boolean useSBAS,
 			boolean doIonoPlot, boolean useBias, IonoCoeff ionoCoeff, Bias bias, Orbit orbit, Clock clock,
-			Antenna antenna, long tRX, long weekNo, Calendar time, SBAS sbas, double[] userECEF, double[] userLatLon,
+			Antenna antenna, double tRX, long weekNo, Calendar time, SBAS sbas, double[] userECEF, double[] userLatLon,
 			HashMap<Integer, ArrayList<IonoValue>> ionoValueMap, boolean useCutOffAng, TopocentricFrame tpf,
 			Frame frame) {
 		ArrayList<Observable> observables = obsvMsg.getObsvSat(obsvCode);
@@ -88,7 +88,7 @@ public class SingleFreq {
 			// find out index of nav-msg inside the nav-msg list which is most suitable for
 			// each obs-msg based on time
 			int order[] = observables.stream().map(i -> NavMsgs.get(i.getSVID()))
-					.map(i -> (ArrayList<Long>) i.stream().map(j -> j.getTOC()).collect(Collectors.toList()))
+					.map(i -> (ArrayList<Double>) i.stream().map(j -> j.getTOC()).collect(Collectors.toList()))
 					.mapToInt(i -> Closest.findClosest(tRX, i)).toArray();
 
 			HashMap<Integer, Correction> PRNmap = null;

@@ -26,11 +26,11 @@ public class Closest {
 
 	}
 
-	public static int findClosest(long val, ArrayList<Long> list) {
-		long min = Long.MAX_VALUE;
+	public static int findClosest(double val, ArrayList<Double> list) {
+		double min = Double.MAX_VALUE;
 		int min_index = 0;
 		for (int i = 0; i < list.size(); i++) {
-			long diff = Math.abs(list.get(i) - val);
+			double diff = Math.abs(list.get(i) - val);
 			if (diff < min) {
 				min = diff;
 				min_index = i;

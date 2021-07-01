@@ -12,36 +12,36 @@ public class Time {
 	// Note this func does not handle conversion of UTC timestamp to GPS time
 	// Java does not support handling leap seconds, so Calendar or Date classes will
 	// not account for leap seconds
-	public static long[] getGPSTime(int year, int month, int day, int hour, int minute, int sec) {
+	public static double[] getGPSTime(int year, int month, int day, int hour, int minute, double sec) {
 
 		Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-		cal.set(year, month, day, hour, minute, sec);
+		cal.set(year, month, day, hour, minute, 0);
 		// Nomenclature is unixTime because getTimeInMillis does not account for leap
 		// seconds
-		long unixTime = cal.getTimeInMillis();
+		double unixTime = cal.getTimeInMillis() + (1000 * sec);
 		cal.set(1980, 0, 6, 0, 0, 0);
 		long GPSEpoch = cal.getTimeInMillis();
-		long GPSTime = ((unixTime - GPSEpoch)) % NumberMilliSecondsWeek;
-		long weekNo = ((unixTime - GPSEpoch)) / NumberMilliSecondsWeek;
-		GPSTime = Math.round((double) GPSTime / 1000);
-		return new long[] { GPSTime, weekNo };
+		double GPSTime = ((unixTime - GPSEpoch)) % NumberMilliSecondsWeek;
+		double weekNo = Math.round(((unixTime - GPSEpoch)) / NumberMilliSecondsWeek);
+		GPSTime = GPSTime / 1000;
+		return new double[] { GPSTime, weekNo };
 	}
 
-	public static long[] getGPSTime(Calendar time) {
+	public static double[] getGPSTime(Calendar time) {
 
 		Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
 
-		long unixTime = time.getTimeInMillis() / 1000;
+		double unixTime = time.getTimeInMillis() / 1000;
 
 		cal.set(1980, 0, 6, 0, 0, 0);
 		long GPSEpoch = cal.getTimeInMillis() / 1000;
-		long GPSTime = ((unixTime - GPSEpoch)) % NumberSecondsWeek;
-		long weekNo = ((unixTime - GPSEpoch)) / NumberSecondsWeek;
+		double GPSTime = ((unixTime - GPSEpoch)) % NumberSecondsWeek;
+		long weekNo = (long) (((unixTime - GPSEpoch)) / NumberSecondsWeek);
 
-		return new long[] { GPSTime, weekNo };
+		return new double[] { GPSTime, weekNo };
 	}
 
-	public static Calendar getDate(long GPSTime, long weekNo, double longitude) {
+	public static Calendar getDate(double GPSTime, long weekNo, double longitude) {
 		// There is no such thing as local GPS Time, the variable is a way of
 		// representing
 		// GPS time in local TIMEZONE
@@ -67,11 +67,11 @@ public class Time {
 
 	}
 
-	public static long[] getGPSTime(String[] strTime) {
+	public static double[] getGPSTime(String[] strTime) {
 
 		int[] tArr = IntStream.range(0, 5).map(x -> Integer.parseInt(strTime[x])).toArray();
-		int sec = (int) Math.round(Double.parseDouble(strTime[5]));
-		long[] GPStime = getGPSTime(tArr[0], tArr[1] - 1, tArr[2], tArr[3], tArr[4], sec);
+		double sec = Double.parseDouble(strTime[5]);
+		double[] GPStime = getGPSTime(tArr[0], tArr[1] - 1, tArr[2], tArr[3], tArr[4], sec);
 		return GPStime;
 	}
 

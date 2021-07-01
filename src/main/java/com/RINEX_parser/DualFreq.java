@@ -25,7 +25,7 @@ public class DualFreq {
 
 	public static ArrayList<Satellite>[] process(ObservationMsg obsvMsg,
 			HashMap<Integer, ArrayList<NavigationMsg>> NavMsgs, String[] obsvCode, boolean useIGS, boolean useBias,
-			Bias bias, Orbit orbit, Clock clock, Antenna antenna, long tRX, long weekNo, double[] userECEF,
+			Bias bias, Orbit orbit, Clock clock, Antenna antenna, double tRX, long weekNo, double[] userECEF,
 			Calendar time, boolean useCutOffAng) {
 
 		ArrayList<Observable> observables1 = obsvMsg.getObsvSat(obsvCode[0]);
@@ -105,7 +105,7 @@ public class DualFreq {
 					continue;
 				}
 				ArrayList<NavigationMsg> navMsg = NavMsgs.get(obs.getSVID());
-				ArrayList<Long> TOCs = (ArrayList<Long>) navMsg.stream().map(j -> j.getTOC())
+				ArrayList<Double> TOCs = (ArrayList<Double>) navMsg.stream().map(j -> j.getTOC())
 						.collect(Collectors.toList());
 				order[i] = Closest.findClosest(tRX, TOCs);
 			}
@@ -176,8 +176,8 @@ public class DualFreq {
 			}
 		}
 		if (useCutOffAng) {
-			SV[0].removeIf(i -> i.getElevAzm()[0] < Math.toRadians(5));
-			SV[1].removeIf(i -> i.getElevAzm()[0] < Math.toRadians(5));
+			SV[0].removeIf(i -> i.getElevAzm()[0] < Math.toRadians(2));
+			SV[1].removeIf(i -> i.getElevAzm()[0] < Math.toRadians(2));
 
 		}
 

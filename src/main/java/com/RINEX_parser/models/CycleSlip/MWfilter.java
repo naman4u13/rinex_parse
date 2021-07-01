@@ -33,7 +33,7 @@ public class MWfilter {
 		return mwList;
 	}
 
-	public void update(double mw, long t) {
+	public void update(double mw, double t) {
 		// the position of new element to be added
 		int k = mwList.size() + 1;
 

@@ -37,9 +37,9 @@ public class Orbit {
 				HashMap<Character, HashMap<Integer, double[]>> satECEF = new HashMap<Character, HashMap<Integer, double[]>>();
 				String[] strTime = StringUtil.splitter(lines[i], false, 3);
 				strTime = strTime[1].split("\\s+");
-				long[] time = Time.getGPSTime(strTime);
-				long GPSTime = time[0];
-				long weekNo = time[1];
+				double[] time = Time.getGPSTime(strTime);
+				double GPSTime = time[0];
+				long weekNo = (long) time[1];
 				for (int j = 0; j < satCount; j++) {
 					i += 1;
 					String[] line = StringUtil.splitter(lines[i], false, 1, 3, 14, 14, 14, 14);

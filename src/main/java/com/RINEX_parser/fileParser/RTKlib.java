@@ -15,13 +15,13 @@ import com.RINEX_parser.utility.Time;
 public class RTKlib {
 
 	private ArrayList<double[]> ecefList;
-	private ArrayList<Long> timeList;
+	private ArrayList<Double> timeList;
 
 	private String posMode = "";
 
 	public RTKlib(String path) throws Exception {
 		ecefList = new ArrayList<double[]>();
-		timeList = new ArrayList<Long>();
+		timeList = new ArrayList<Double>();
 		process(path);
 	}
 
@@ -50,7 +50,7 @@ public class RTKlib {
 				ecefList.add(ecef);
 				Date date = sdf.parse(strDate);
 				cal.setTime(date);
-				long GPSTime = Time.getGPSTime(cal)[0];
+				Double GPSTime = Time.getGPSTime(cal)[0];
 				timeList.add(GPSTime);
 
 			}
@@ -61,13 +61,13 @@ public class RTKlib {
 
 	}
 
-	public int getIndex(long GPSTime) {
+	public int getIndex(double GPSTime) {
 		int index = timeList.indexOf(GPSTime);
 		return index;
 	}
 
 	public int getIndex(Calendar time) {
-		long GPSTime = Time.getGPSTime(time)[0];
+		double GPSTime = Time.getGPSTime(time)[0];
 		int index = timeList.indexOf(GPSTime);
 		return index;
 	}
@@ -81,7 +81,7 @@ public class RTKlib {
 		return posMode;
 	}
 
-	public long getTime(int i) {
+	public double getTime(int i) {
 		return timeList.get(i);
 	}
 }

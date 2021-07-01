@@ -8,7 +8,7 @@ public class LongTermCorr extends SbasRoot {
 	// deltaXrate, deltaYrate, deltaZrate and deltaClkDrift
 	private double[] deltaXrate;
 
-	public LongTermCorr(long GPSTime, long weekNo, int velCode, double[] deltaX) {
+	public LongTermCorr(double GPSTime, long weekNo, int velCode, double[] deltaX) {
 		super(GPSTime, weekNo);
 		// TODO Auto-generated constructor stub
 		this.velCode = velCode;
@@ -16,7 +16,7 @@ public class LongTermCorr extends SbasRoot {
 
 	}
 
-	public LongTermCorr(long GPSTime, long weekNo, int velCode, double[] deltaX, double[] deltaXrate) {
+	public LongTermCorr(double GPSTime, long weekNo, int velCode, double[] deltaX, double[] deltaXrate) {
 		super(GPSTime, weekNo);
 		// TODO Auto-generated constructor stub
 		this.velCode = velCode;
@@ -49,7 +49,7 @@ public class LongTermCorr extends SbasRoot {
 		this.deltaXrate = deltaXrate;
 	}
 
-	public long getToA() {
+	public double getToA() {
 		return getGPStime();
 	}
 }

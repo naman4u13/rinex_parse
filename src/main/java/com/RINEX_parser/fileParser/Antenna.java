@@ -78,14 +78,14 @@ public class Antenna {
 
 	}
 
-	public double[] getSatPC_windup(int SVID, String obsvCode, long GPSTime, long weekNo, double[] satMC,
+	public double[] getSatPC_windup(int SVID, String obsvCode, double GPSTime, long weekNo, double[] satMC,
 			double[] userECEF) {
 
 		return getSatPC_windup(SVID, new String[] { obsvCode }, GPSTime, weekNo, satMC, userECEF)[0];
 
 	}
 
-	public double[][] getSatPC_windup(int SVID, String[] obsvCode, long GPSTime, long weekNo, double[] satMC,
+	public double[][] getSatPC_windup(int SVID, String[] obsvCode, double GPSTime, long weekNo, double[] satMC,
 			double[] userECEF) {
 		int fN = obsvCode.length;
 		double[][] eccXYZ = new double[fN][];
@@ -111,7 +111,7 @@ public class Antenna {
 			for (int j = n - 1; j >= 0; j--) {
 				IGSAntenna satAnt = satAntList.get(j);
 
-				if (satAnt.checkValidity(new long[] { GPSTime, weekNo })) {
+				if (satAnt.checkValidity(new double[] { GPSTime, weekNo })) {
 					eccXYZ[i] = satAnt.getEccXYZ();
 					break;
 				}
@@ -161,7 +161,7 @@ public class Antenna {
 		return satPC_windUp;
 	}
 
-	private double[] getSunCoord(long GPSTime, long weekNo) {
+	private double[] getSunCoord(double GPSTime, long weekNo) {
 
 		Date date = Time.getDate(GPSTime + 19, weekNo, 0).getTime();
 		AbsoluteDate absDate = new AbsoluteDate(date, TimeScalesFactory.getTAI());
@@ -216,7 +216,7 @@ public class Antenna {
 				int freqCount = Integer.parseInt(StringUtil.splitter(lines[4], false, 6, 54)[0]);
 
 				String[] temp = StringUtil.splitter(lines[5], 60, 20);
-				long[] validFrom = null;
+				double[] validFrom = null;
 				int index = 6;
 				if (temp[1].equalsIgnoreCase("VALID FROM")) {
 
@@ -226,7 +226,7 @@ public class Antenna {
 				}
 
 				temp = StringUtil.splitter(lines[6], 60, 20);
-				long[] validUntil = null;
+				double[] validUntil = null;
 
 				if (temp[1].equalsIgnoreCase("VALID UNTIL")) {
 

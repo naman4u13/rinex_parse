@@ -122,7 +122,7 @@ public class IONEX {
 	}
 
 	public double computeIonoCorr(double ElevAng_rad, double AzmAng_rad, double userLat_deg, double userLong_deg,
-			long GPSTime, double freq, Calendar time) {
+			double GPSTime, double freq, Calendar time) {
 
 		double[] IPP = ComputeIPP.computeIPP(ElevAng_rad, AzmAng_rad, userLat_deg, userLong_deg, Re, h);
 

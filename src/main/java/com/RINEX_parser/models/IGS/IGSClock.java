@@ -4,16 +4,16 @@ import java.util.HashMap;
 
 public class IGSClock {
 	// timestamp of record in GPS time scale
-	private long time;
+	private double time;
 
 	private HashMap<Integer, Double> clkBias;
 
-	public IGSClock(long time, HashMap<Integer, Double> clkBias) {
+	public IGSClock(double time, HashMap<Integer, Double> clkBias) {
 		this.time = time;
 		this.clkBias = clkBias;
 	}
 
-	public long getTime() {
+	public double getTime() {
 		return time;
 	}
 

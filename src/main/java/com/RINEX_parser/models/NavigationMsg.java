@@ -40,7 +40,7 @@ public class NavigationMsg {
 	private int IODC;
 	private double transmission_time_of_msg;
 	private double fit_interval;
-	private long TOC;
+	private double TOC;
 
 	public NavigationMsg(String[] arr) {
 		SVID = arr[0].replaceAll("[a-zA-Z]", "");
@@ -78,7 +78,7 @@ public class NavigationMsg {
 		TGD = Double.parseDouble(arr[32].replace('D', 'E'));
 		IODC = (int) Double.parseDouble(arr[33].replace('D', 'E'));
 		transmission_time_of_msg = Double.parseDouble(arr[34].replace('D', 'E'));
-		TOC = Time.getGPSTime(year, month - 1, day, hour, minute, (int) second)[0];
+		TOC = Time.getGPSTime(year, month - 1, day, hour, minute, second)[0];
 		// fit_interval = Double.parseDouble(arr[35].replace('D', 'E'));
 		// TODO Auto-generated constructor stub
 	}
@@ -281,7 +281,7 @@ public class NavigationMsg {
 		return fit_interval;
 	}
 
-	public long getTOC() {
+	public double getTOC() {
 		return TOC;
 	}
 }

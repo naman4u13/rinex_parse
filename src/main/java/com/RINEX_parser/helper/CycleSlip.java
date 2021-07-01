@@ -49,7 +49,7 @@ public class CycleSlip {
 		for (int i = 0; i < n; i++) {
 			HashMap<Integer, Outlier> cOutlier = new HashMap<Integer, Outlier>();
 			ArrayList<Satellite>[] SV = dualSVlist.get(i);
-			long t = SV[0].get(0).gettRX();
+			double t = SV[0].get(0).gettRX();
 			if (i == 508) {
 				System.out.print("");
 			}
@@ -171,7 +171,7 @@ public class CycleSlip {
 		for (int i = 0; i < n; i++) {
 
 			ArrayList<Satellite>[] SV = dualSVlist.get(i);
-			long t = SV[0].get(0).gettRX();
+			double t = SV[0].get(0).gettRX();
 			HashMap<Integer, Double> cWindUpMap = new HashMap<Integer, Double>();
 			for (int j = 0; j < SV[0].size(); j++) {
 				Satellite sat1 = SV[0].get(j);

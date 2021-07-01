@@ -29,7 +29,7 @@ public class SBASprint {
 				int n = msg.length;
 
 				int[] tArr = IntStream.range(1, 7).map(x -> Integer.parseInt(msg[x])).toArray();
-				long time = Time.getGPSTime(tArr[0], tArr[1] - 1, tArr[2], tArr[3], tArr[4], tArr[5])[0];
+				double time = Time.getGPSTime(tArr[0], tArr[1] - 1, tArr[2], tArr[3], tArr[4], tArr[5])[0];
 
 				String hex = msg[n - 1];
 				String bin = hexToBin(hex);

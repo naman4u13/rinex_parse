@@ -7,7 +7,7 @@ public class FastCorr extends SbasRoot {
 	private int IODF;
 	private int UDREI;
 
-	public FastCorr(long GPSTime, long weekNo, double PRC, int IODP, int IODF, int UDREI) {
+	public FastCorr(double GPSTime, long weekNo, double PRC, int IODP, int IODF, int UDREI) {
 		super(GPSTime, weekNo);
 		// TODO Auto-generated constructor stub
 		this.PRC = PRC;
@@ -35,7 +35,7 @@ public class FastCorr extends SbasRoot {
 		IODP = iODP;
 	}
 
-	public long getToA() {
+	public double getToA() {
 		return getGPStime();
 	}
 

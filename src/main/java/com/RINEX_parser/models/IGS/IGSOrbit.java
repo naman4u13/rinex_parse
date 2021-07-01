@@ -5,16 +5,16 @@ import java.util.HashMap;
 public class IGSOrbit {
 
 	// timestamp of record in GPS time scale
-	private long time;
+	private double time;
 	private HashMap<Integer, double[]> satECEF;
 
-	public IGSOrbit(long time, HashMap<Integer, double[]> satECEF) {
+	public IGSOrbit(double time, HashMap<Integer, double[]> satECEF) {
 		this.time = time;
 		this.satECEF = satECEF;
 
 	}
 
-	public long getTime() {
+	public double getTime() {
 		return time;
 	}
 

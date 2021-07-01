@@ -6,8 +6,8 @@ public class IGSAntenna {
 
 	private double dazi;
 	private double[] zen;
-	private long[] valid_from;
-	private long[] valid_until;
+	private double[] valid_from;
+	private double[] valid_until;
 	private double[] eccXYZ;
 	private double[] PCV_NOAZI;
 	private double[][] PCV_AZI;
@@ -17,9 +17,9 @@ public class IGSAntenna {
 		super();
 		this.dazi = Double.parseDouble(dazi);
 		this.zen = StringUtil.str2arr_D(zen);
-		this.valid_from = StringUtil.str2arr_L(valid_from);
+		this.valid_from = StringUtil.str2arr_D(valid_from);
 		if (!valid_until.equalsIgnoreCase("null")) {
-			this.valid_until = StringUtil.str2arr_L(valid_until);
+			this.valid_until = StringUtil.str2arr_D(valid_until);
 		}
 		this.eccXYZ = StringUtil.str2arr_D(eccXYZ, 1e-3);
 
@@ -29,7 +29,7 @@ public class IGSAntenna {
 		}
 	}
 
-	public IGSAntenna(double dazi, double[] zen, long[] valid_from, long[] valid_until, double[] eccXYZ,
+	public IGSAntenna(double dazi, double[] zen, double[] valid_from, double[] valid_until, double[] eccXYZ,
 			double[] PCV_NOAZI, double[][] PCV_AZI) {
 		super();
 		this.dazi = dazi;
@@ -50,7 +50,8 @@ public class IGSAntenna {
 //		return ENU;
 //	}
 
-	public boolean checkValidity(long[] time) {
+	public boolean checkValidity(double[] time) {
+
 		if (valid_until == null) {
 			if ((time[1] > valid_from[1]) || (time[1] == valid_from[1] && time[0] >= valid_from[0])) {
 				return true;

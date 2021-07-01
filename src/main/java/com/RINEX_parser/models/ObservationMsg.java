@@ -15,7 +15,7 @@ public class ObservationMsg {
 	private double second;
 	private int ObsvSatCount;
 	private HashMap<Character, HashMap<Integer, HashMap<Character, ArrayList<Observable>>>> obsvSat = new HashMap<Character, HashMap<Integer, HashMap<Character, ArrayList<Observable>>>>();
-	private long tRX;
+	private double tRX;
 	private long weekNo;
 
 	public void setObsvSat(HashMap<Character, HashMap<Integer, HashMap<Character, ArrayList<Observable>>>> obsvSat) {
@@ -30,9 +30,9 @@ public class ObservationMsg {
 		hour = Integer.parseInt(RxTime[3]);
 		minute = Integer.parseInt(RxTime[4]);
 		second = Double.parseDouble(RxTime[5]);
-		long[] GPStime = Time.getGPSTime(year, month - 1, day, hour, minute, (int) second);
+		double[] GPStime = Time.getGPSTime(year, month - 1, day, hour, minute, second);
 		tRX = GPStime[0];
-		weekNo = GPStime[1];
+		weekNo = (long) GPStime[1];
 	}
 
 	public int getYear() {
@@ -85,7 +85,7 @@ public class ObservationMsg {
 		return obsvSat.get(SSI).get(freqID).get(codeID);
 	}
 
-	public long getTRX() {
+	public double getTRX() {
 		return tRX;
 	}
 

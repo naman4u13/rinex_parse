@@ -16,7 +16,7 @@ public class ComputeIonoCorr {
 	final static double SpeedofLight = 299792458;
 
 	public static double computeIonoCorr(double ElevAng_rad, double AzmAng_rad, double userLat_deg, double userLong_deg,
-			long tRX, IonoCoeff ionoCoeff, double freq, Calendar time) {
+			double tRX, IonoCoeff ionoCoeff, double freq, Calendar time) {
 
 		/*
 		 * double Central_Angle = (0.0137/(ElevAng+0.11))-0.022; double IPP_Lat =

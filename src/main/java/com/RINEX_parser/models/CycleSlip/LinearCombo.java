@@ -3,9 +3,9 @@ package com.RINEX_parser.models.CycleSlip;
 public class LinearCombo {
 
 	private double lc;
-	private long t;
+	private double t;
 
-	public LinearCombo(double lc, long t) {
+	public LinearCombo(double lc, double t) {
 		super();
 		this.lc = lc;
 		this.t = t;
@@ -15,7 +15,7 @@ public class LinearCombo {
 		return lc;
 	}
 
-	public long t() {
+	public double t() {
 		return t;
 	}
 

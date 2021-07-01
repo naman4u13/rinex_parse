@@ -144,6 +144,7 @@ public class ObservationRNX {
 				}
 
 				Msg.set_RxTime(msgLines[0].trim().split("\\s+"));
+
 				Msg.setObsvSat(SV);
 				ObsvMsgs.add(Msg);
 

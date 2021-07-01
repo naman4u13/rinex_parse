@@ -48,9 +48,9 @@ public class Clock {
 				String clkType = StringUtil.splitter(data[i], false, 3)[0];
 				if (clkType.equalsIgnoreCase("AS")) {
 					String[] strTime = StringUtil.splitter(data[i], false, 8, 26)[1].split("\\s+");
-					long[] time = Time.getGPSTime(strTime);
-					long GPSTime = time[0];
-					long weekNo = time[1];
+					double[] time = Time.getGPSTime(strTime);
+					double GPSTime = time[0];
+					long weekNo = (long) time[1];
 					HashMap<Integer, Double> biasMap = new HashMap<Integer, Double>();
 					for (int j = 0; j < satCount; j++) {
 						String[] clkData = StringUtil.splitter(data[i], false, 3, 5, 32, 19);

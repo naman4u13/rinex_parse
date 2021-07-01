@@ -53,7 +53,7 @@ public class SBAS {
 
 	}
 
-	public void process(long timeBound) {
+	public void process(double timeBound) {
 
 		while (lineCtr < lines.length) {
 			String line = lines[lineCtr];
@@ -67,9 +67,9 @@ public class SBAS {
 				System.out.println(line);
 			}
 
-			long[] time = Time.getGPSTime(tArr[0], tArr[1] - 1, tArr[2], tArr[3], tArr[4], tArr[5]);
-			long GPSTime = time[0];
-			long weekNo = time[1];
+			double[] time = Time.getGPSTime(tArr[0], tArr[1] - 1, tArr[2], tArr[3], tArr[4], tArr[5]);
+			double GPSTime = time[0];
+			long weekNo = (long) time[1];
 			if (GPSTime > timeBound) {
 				return;
 			}
@@ -265,7 +265,7 @@ public class SBAS {
 		return dec;
 	}
 
-	private void LTCparse(String halfMsg, long GPSTime, long weekNo) {
+	private void LTCparse(String halfMsg, double GPSTime, long weekNo) {
 
 		if (halfMsg.charAt(0) == '0') {
 			String[] data = StringUtil.splitter(halfMsg, 1, 51, 51, 2, 1);
@@ -305,7 +305,7 @@ public class SBAS {
 				double deltaClkDrift = Math.pow(2, -39) * binToDec(data[10], VIII);
 				long ToA = 16 * Long.parseLong(data[11], 2);
 
-				long modGPSTime = GPSTime - (GPSTime % 86400) + ToA;
+				double modGPSTime = GPSTime - (GPSTime % 86400) + ToA;
 
 				int IODP = Integer.parseInt(data[3], 2);
 				int prn = PRNmask.get(PRNmaskNo - 1);

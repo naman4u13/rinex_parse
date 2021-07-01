@@ -21,11 +21,11 @@ public class ComputeSatPos {
 		double A = Math.pow(Sat.getSqrt_A(), 2);
 		double n0 = Math.sqrt((Mu / (A * A * A)));
 
-		long TOC = Sat.getTOC();
+		double TOC = Sat.getTOC();
 
 		double[] dX = new double[] { 0, 0, 0, 0 };
 		double[] dXrate = new double[] { 0, 0, 0, 0 };
-		long ToA = 0;
+		double ToA = 0;
 		// useSBAS corrections
 		if (ltc != null) {
 			dX = ltc.getDeltaX();
