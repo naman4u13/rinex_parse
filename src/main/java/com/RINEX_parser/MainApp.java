@@ -59,8 +59,8 @@ public class MainApp {
 	public static void main(String[] args) {
 
 		Instant start = Instant.now();
-		posEstimate(false, false, true, true, true, false, true, true, true, false, false, true, 4,
-				new String[] { "G1C", "G2L" }, 4);
+		posEstimate(false, false, true, true, true, false, true, true, true, false, false, true, 5,
+				new String[] { "G1C", "G2X" }, 4);
 
 		Instant end = Instant.now();
 		System.out.println("EXECUTION TIME -  " + Duration.between(start, end));
@@ -94,7 +94,7 @@ public class MainApp {
 
 			String nav_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
-			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\IISC00IND_R_20201000000_01D_30S_MO.crx\\IISC00IND_R_20201000000_01D_30S_MO.rnx";
+			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\GODN00USA_R_20201000000_01D_30S_MO.crx\\GODN00USA_R_20201000000_01D_30S_MO.rnx";
 
 			String sbas_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\EGNOS_2020_100\\123\\D100.ems";
 

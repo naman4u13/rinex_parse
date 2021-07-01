@@ -32,18 +32,16 @@ public class StaticKF extends KF {
 	public void configurePPP(double deltaT, ArrayList<Satellite>[] SV) {
 
 		int SVcount = SV[0].size();
-		int n = SVcount + 6;// Rcvr pos(3), clk off & drift(2),Residual wet tropo(1), Ambiguity
+		int n = SVcount + 5;// Rcvr pos(3), clk off(1),Residual wet tropo(1), Ambiguity
 							// params(satCount)
 		double[][] F = new double[n][n];
 		double[][] Q = new double[n][n];
-		Q[3][3] = (sf * deltaT) + ((sg * Math.pow(deltaT, 3)) / 3);
-		Q[3][4] = (sg * Math.pow(deltaT, 2)) / 2;
-		Q[4][3] = (sg * Math.pow(deltaT, 2)) / 2;
-		Q[4][4] = sg * deltaT;
-		Q[5][5] = (0.0001 / c2) * (deltaT / (60 * 60));
+		Q[3][3] = 9e10 / c2;
+
+		Q[4][4] = (0.0001 / c2) * (deltaT / (60 * 60));
 
 		IntStream.range(0, n).forEach(x -> F[x][x] = 1);
-		F[3][4] = deltaT;
+		F[3][3] = 0;
 		super.configure(F, Q);
 	}
 }

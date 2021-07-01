@@ -62,20 +62,20 @@ public class StaticEKF {
 		double[][] x = null;
 		double[][] P = null;
 		if (usePhase) {
-			x = new double[][] { { refECEF[0] }, { refECEF[1] }, { refECEF[2] }, { 0.1 }, { 0.001 }, { 0.5 } };
-			P = new double[6][6];
-			P[5][5] = 0.25;
+			x = new double[][] { { refECEF[0] }, { refECEF[1] }, { refECEF[2] }, { 0 }, { 0 } };
+			P = new double[5][5];
+			P[4][4] = 0.25;
 
 		} else {
 			x = new double[][] { { refECEF[0] }, { refECEF[1] }, { refECEF[2] }, { 0.1 }, { 0.001 } };
 			P = new double[5][5];
+			P[4][4] = 1e13;
 
 		}
 		for (int i = 0; i < 3; i++) {
 			P[i][i] = 16;
 		}
 		P[3][3] = 9e10;
-		P[4][4] = 1e13;
 
 		double[][] _x = x;
 		double[][] _P = P;
@@ -161,29 +161,19 @@ public class StaticEKF {
 		HashMap<Integer, Integer> order = new HashMap<Integer, Integer>();
 		for (int i = 1; i < dualSVlist.size(); i++) {
 
-//			for (int i = 0; i < SVcount; i++) {
-//				if (SV[0].get(i).isLocked() == false || SV[1].get(i).isLocked() == false) {
-//					Q[6 + i][6 + i] = 1e13 / c2;
-//
-//				} else {
-//					System.out.print("");
-//				}
-//			}
-
 			System.out.println("Step/Itr - " + i);
 			ArrayList<Satellite>[] SV = dualSVlist.get(i);
 			int SVcount = SV[0].size();
 			HashMap<Integer, Integer> cOrder = new HashMap<Integer, Integer>();
 			SimpleMatrix x = kfObj.getState();
 			SimpleMatrix P = kfObj.getCovariance();
-			SimpleMatrix _x = new SimpleMatrix(6 + SVcount, 1);
-			SimpleMatrix _P = new SimpleMatrix(6 + SVcount, 6 + SVcount);
-			for (int j = 0; j < 6; j++) {
+			SimpleMatrix _x = new SimpleMatrix(5 + SVcount, 1);
+			SimpleMatrix _P = new SimpleMatrix(5 + SVcount, 5 + SVcount);
+			for (int j = 0; j < 5; j++) {
 				_x.set(j, x.get(j));
 				_P.set(j, j, P.get(j, j));
 			}
-			_P.set(3, 4, P.get(3, 4));
-			_P.set(4, 3, P.get(4, 3));
+
 			for (int j = 0; j < SVcount; j++) {
 
 				int svid = SV[0].get(j).getSVID();
@@ -191,8 +181,8 @@ public class StaticEKF {
 				double pVal = 400;
 				if (order.containsKey(svid) && SV[0].get(j).isLocked() == true) {
 					int k = order.get(svid);
-					xVal = x.get(6 + k);
-					pVal = P.get(6 + k, 6 + k);
+					xVal = x.get(5 + k);
+					pVal = P.get(5 + k, 5 + k);
 				} else {
 					// PR and CP prealignment
 					Satellite sat1 = SV[0].get(j);
@@ -201,10 +191,10 @@ public class StaticEKF {
 					double ifCP = getIonoFree(sat1.getCycle() * sat1.getCarrier_wavelength(),
 							sat2.getCycle() * sat2.getCarrier_wavelength());
 					xVal = ifCP - ifPR;
-					System.out.println();
+
 				}
-				_x.set(6 + j, xVal);
-				_P.set(6 + j, 6 + j, pVal);
+				_x.set(5 + j, xVal);
+				_P.set(5 + j, 5 + j, pVal);
 				cOrder.put(svid, j);
 			}
 			order.clear();
@@ -220,10 +210,10 @@ public class StaticEKF {
 			ecefList.add(estECEF);
 			double err = Math.sqrt(IntStream.range(0, 3).mapToDouble(j -> estECEF[j] - trueUserECEF[j]).map(j -> j * j)
 					.reduce(0, (j, k) -> j + k));
-			System.out.println("State -" + x.extractMatrix(0, 6, 0, 1).toString());
+			System.out.println("State -" + x.extractMatrix(0, 5, 0, 1).toString());
 			for (int j = 0; j < SVcount; j++) {
 				int svid = SV[0].get(j).getSVID();
-				System.out.println(svid + "  -  " + x.get(6 + j));
+				System.out.println(svid + "  -  " + x.get(5 + j));
 			}
 			if (!MatrixFeatures_DDRM.isPositiveDefinite(P.getMatrix())) {
 				System.out.println("PositiveDefinite test Failed");
@@ -330,8 +320,8 @@ public class StaticEKF {
 		SimpleMatrix x = kfObj.getState();
 		double[] estECEF = new double[] { x.get(0) + PCO[0], x.get(1) + PCO[1], x.get(2) + PCO[2] };
 		double estRxClkOff = x.get(3);// In Meters - Multiplied by c
-		double resTropo = x.get(5);
-		double[] ambiguity = IntStream.range(0, SVcount).mapToDouble(i -> x.get(6 + i)).toArray();
+		double resTropo = x.get(4);
+		double[] ambiguity = IntStream.range(0, SVcount).mapToDouble(i -> x.get(5 + i)).toArray();
 		double[] estLatLon = ECEFtoLatLon.ecef2lla(estECEF);
 		double[][] z = new double[2 * SVcount][1];
 
@@ -340,7 +330,7 @@ public class StaticEKF {
 		double[][] ze = new double[2 * SVcount][1];
 		ArrayList<double[]> EleAzm = (ArrayList<double[]>) SV[0].stream().map(i -> i.getElevAzm())
 				.collect(Collectors.toList());
-		double[][] H = new double[2 * SVcount][6 + SVcount];
+		double[][] H = new double[2 * SVcount][5 + SVcount];
 		double[][] R = new double[2 * SVcount][2 * SVcount];
 		for (int i = 0; i < SVcount; i++) {
 			Satellite sat1 = SV[0].get(i);
@@ -368,9 +358,9 @@ public class StaticEKF {
 				final int _j = j;
 				IntStream.range(0, 3).forEach(k -> H[_j][k] = -unitLOS[k]);
 				H[j][3] = 1;
-				H[j][5] = M_wet;
+				H[j][4] = M_wet;
 			}
-			H[(i * 2) + 1][6 + i] = 1;
+			H[(i * 2) + 1][5 + i] = 1;
 			z[2 * i][0] = IFtropoCorrPR;
 			z[(2 * i) + 1][0] = IFtropoCorrCP;
 			double approxPR = Math.sqrt(IntStream.range(0, 3).mapToDouble(j -> estECEF[j] - satECI[j]).map(j -> j * j)
