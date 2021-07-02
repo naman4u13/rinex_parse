@@ -305,8 +305,9 @@ public class LinearLeastSquare {
 			}
 //			ionoCorrKlob = IntStream
 //					.range(0, SVcount).mapToDouble(x -> ComputeIonoCorr.computeIonoCorr(EleAzm.get(x)[0],
-//							EleAzm.get(x)[1], refLatLon[0], refLatLon[1], SV.get(x).gettRX(), ionoCoeff, freq))
+//							EleAzm.get(x)[1], refLatLon[0], refLatLon[1], SV.get(x).gettRX(), ionoCoeff, freq, time))
 //					.toArray();
+//			System.out.println();
 
 		} else {
 			if (Optional.ofNullable(ionoCoeff).isEmpty()) {

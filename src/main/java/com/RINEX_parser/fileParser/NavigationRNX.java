@@ -1,7 +1,6 @@
 package com.RINEX_parser.fileParser;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -15,7 +14,7 @@ import com.RINEX_parser.utility.SymbolToken;
 
 public class NavigationRNX {
 
-	public static Map<String, Object> rinex_nav_process(String path, boolean getIonoOnly) {
+	public static Map<String, Object> rinex_nav_process(String path, boolean getIonoOnly) throws Exception {
 
 		File file = new File(path);
 		// HashMap<String, Object> resMap = new HashMap<String, Object>();
@@ -86,16 +85,16 @@ public class NavigationRNX {
 			}
 			SV.forEach((k, v) -> v.sort((x, y) -> (int) ((x.getTOC() - y.getTOC()))));
 			input.close();
+			// Create a Object map to return multiple values each of different type
+			Map<String, Object> resMap = Map.of("NavMsgs", SV, "ionoCoeff", ionoCoeff, "timeCorr", timeCorr);
+			return resMap;
 
 		} catch (
 
-		IOException e) {
-			// TODO Auto-generated catch block
+		Exception e) {
 			e.printStackTrace();
+			throw new Exception("Error occured during parsing of Navigation RINEX(.rnx) file \n" + e);
 		}
-		// Create a Object map to return multiple values each of different type
-		Map<String, Object> resMap = Map.of("NavMsgs", SV, "ionoCoeff", ionoCoeff, "timeCorr", timeCorr);
-		return resMap;
 
 	}
 }

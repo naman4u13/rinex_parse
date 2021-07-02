@@ -22,7 +22,7 @@ public class Time {
 		cal.set(1980, 0, 6, 0, 0, 0);
 		long GPSEpoch = cal.getTimeInMillis();
 		double GPSTime = ((unixTime - GPSEpoch)) % NumberMilliSecondsWeek;
-		double weekNo = Math.round(((unixTime - GPSEpoch)) / NumberMilliSecondsWeek);
+		double weekNo = Math.floor(((unixTime - GPSEpoch)) / NumberMilliSecondsWeek);
 		GPSTime = GPSTime / 1000;
 		return new double[] { GPSTime, weekNo };
 	}

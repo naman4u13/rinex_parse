@@ -176,8 +176,8 @@ public class DualFreq {
 			}
 		}
 		if (useCutOffAng) {
-			SV[0].removeIf(i -> i.getElevAzm()[0] < Math.toRadians(2));
-			SV[1].removeIf(i -> i.getElevAzm()[0] < Math.toRadians(2));
+			SV[0].removeIf(i -> i.getElevAzm()[0] < Math.toRadians(5));
+			SV[1].removeIf(i -> i.getElevAzm()[0] < Math.toRadians(5));
 
 		}
 

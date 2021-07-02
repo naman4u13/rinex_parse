@@ -41,7 +41,6 @@ import com.RINEX_parser.fileParser.ObservationRNX;
 import com.RINEX_parser.fileParser.Orbit;
 import com.RINEX_parser.fileParser.RTKlib;
 import com.RINEX_parser.fileParser.SBAS;
-import com.RINEX_parser.fileParser.GoogleDecimeter.GroundTruth;
 import com.RINEX_parser.helper.CycleSlip;
 import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.IonoValue;
@@ -62,21 +61,20 @@ public class MainApp {
 		Instant start = Instant.now();
 		switch (2) {
 		case 1:
-			posEstimate(false, false, true, true, true, false, true, true, true, false, false, false, 4,
+			posEstimate(false, false, true, true, true, false, true, true, false, true, false, false, 3,
 					new String[] { "G1C", "G2X" }, 4);
 			break;
-		case 2:// GoogleDecimeter.posEstimate(doPosErrPlot, useCutOffAng, useBias, useIGS,
-				// isDual, useGIM, useRTKlib, usePhase, estimatorType, obsvCode, minSat);
+
+		case 2:
+			/*
+			 * public static void posEstimate(boolean doPosErrPlot, boolean useCutOffAng,
+			 * boolean useBias, boolean useIGS, boolean isDual, boolean useGIM, boolean
+			 * useRTKlib, boolean usePhase, int estimatorType, String[] obsvCode, int
+			 * minSat)
+			 */
+			GoogleDecimeter.posEstimate(true, true, true, false, true, false, false, false, 1,
+					new String[] { "G1C", "G5X" }, 4);
 			break;
-		}
-		try {
-			GroundTruth.processCSV(
-					"E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2020-05-14-US-MTV-1\\Pixel4\\ground_truth.csv");
-			GroundTruth.processNMEA(
-					"E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2020-05-14-US-MTV-1\\Pixel4\\supplemental\\SPAN_Pixel4_10Hz.nmea");
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		}
 
 		Instant end = Instant.now();
@@ -111,7 +109,7 @@ public class MainApp {
 
 			String nav_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
-			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\GODN00USA_R_20201000000_01D_30S_MO.crx\\GODN00USA_R_20201000000_01D_30S_MO.rnx";
+			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRUX00BEL_S_20201000300_15M_01S_MO.crx\\BRUX00BEL_S_20201000300_15M_01S_MO.rnx";
 
 			String sbas_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\EGNOS_2020_100\\123\\D100.ems";
 
@@ -131,7 +129,7 @@ public class MainApp {
 
 			String RTKlib_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\RTKlib\\HARB.pos";
 
-			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\DUAL_PPP\\test1";
+			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\google\\brux_gim_ppp";
 			File output = new File(path + ".txt");
 			PrintStream stream;
 

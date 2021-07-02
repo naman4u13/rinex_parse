@@ -8,7 +8,6 @@ import java.util.HashMap;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import org.hipparchus.geometry.euclidean.threed.Vector3D;
 import org.orekit.frames.Frame;
 import org.orekit.frames.TopocentricFrame;
 import org.orekit.time.AbsoluteDate;
@@ -156,21 +155,21 @@ public class SingleFreq {
 				// ECI coordinates
 				double[] ECI = (double[]) SatParams[4];
 				AbsoluteDate date = new AbsoluteDate(time.getTime(), TimeScalesFactory.getGPS());
-				double ele = tpf.getElevation(new Vector3D(Arrays.copyOfRange(ECEF_SatClkOff, 0, 3)), frame, date);
-				double az = tpf.getAzimuth(new Vector3D(Arrays.copyOfRange(ECEF_SatClkOff, 0, 3)), frame, date);
+//				double ele = tpf.getElevation(new Vector3D(Arrays.copyOfRange(ECEF_SatClkOff, 0, 3)), frame, date);
+//				double az = tpf.getAzimuth(new Vector3D(Arrays.copyOfRange(ECEF_SatClkOff, 0, 3)), frame, date);
 
 				double[] EleAzm = ComputeEleAzm.computeEleAzm(userECEF, Arrays.copyOfRange(ECEF_SatClkOff, 0, 3));
-				az %= 2 * Math.PI;
-				if (az > Math.PI) {
-					az += -2 * Math.PI;
-				} else if (az < -Math.PI) {
-					az += 2 * Math.PI;
-				}
+//				az %= 2 * Math.PI;
+//				if (az > Math.PI) {
+//					az += -2 * Math.PI;
+//				} else if (az < -Math.PI) {
+//					az += 2 * Math.PI;
+//				}
 				SV.add(new Satellite(sat, Arrays.copyOfRange(ECEF_SatClkOff, 0, 3), ECEF_SatClkOff[3], t, tRX, SatVel,
 						SatClkDrift, ECI, EleAzm, time));
-				if (Math.abs(ele - EleAzm[0]) > 0.0001 || Math.abs(az - EleAzm[1]) > 0.0001) {
-					System.err.println("Elevation and Azimuth are wrongly estimated");
-				}
+//				if (Math.abs(ele - EleAzm[0]) > 0.0001 || Math.abs(az - EleAzm[1]) > 0.0001) {
+//					System.err.println("Elevation and Azimuth are wrongly estimated");
+//				}
 				if (doIonoPlot) {
 
 					double freq = SV.get(0).getCarrier_frequency();
@@ -187,7 +186,7 @@ public class SingleFreq {
 		}
 
 		if (useCutOffAng) {
-			SV.removeIf(i -> i.getElevAzm()[0] < Math.toRadians(15));
+			SV.removeIf(i -> i.getElevAzm()[0] < Math.toRadians(2));
 		}
 
 		return SV;
