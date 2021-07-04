@@ -41,8 +41,11 @@ public class SingleFreq {
 			Antenna antenna, double tRX, long weekNo, Calendar time, SBAS sbas, double[] userECEF, double[] userLatLon,
 			HashMap<Integer, ArrayList<IonoValue>> ionoValueMap, boolean useCutOffAng, TopocentricFrame tpf,
 			Frame frame) {
-		ArrayList<Observable> observables = obsvMsg.getObsvSat(obsvCode);
 		ArrayList<Satellite> SV = new ArrayList<Satellite>();
+		ArrayList<Observable> observables = obsvMsg.getObsvSat(obsvCode);
+		if (observables == null) {
+			return SV;
+		}
 		observables.removeAll(Collections.singleton(null));
 		int satCount = observables.size();
 
@@ -186,7 +189,7 @@ public class SingleFreq {
 		}
 
 		if (useCutOffAng) {
-			SV.removeIf(i -> i.getElevAzm()[0] < Math.toRadians(2));
+			SV.removeIf(i -> i.getElevAzm()[0] < Math.toRadians(0));
 		}
 
 		return SV;

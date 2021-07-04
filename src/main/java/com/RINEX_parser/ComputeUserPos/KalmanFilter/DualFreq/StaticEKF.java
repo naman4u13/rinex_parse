@@ -11,7 +11,7 @@ import org.ejml.simple.SimpleMatrix;
 import org.jfree.ui.RefineryUtilities;
 import org.orekit.models.earth.Geoid;
 
-import com.RINEX_parser.ComputeUserPos.KalmanFilter.Models.StaticKF;
+import com.RINEX_parser.ComputeUserPos.KalmanFilter.Models.KFconfig;
 import com.RINEX_parser.helper.ComputeEleAzm;
 import com.RINEX_parser.helper.ComputeTropoCorr;
 import com.RINEX_parser.models.Satellite;
@@ -21,7 +21,7 @@ import com.RINEX_parser.utility.SatUtil;
 
 public class StaticEKF {
 
-	private StaticKF kfObj;
+	private KFconfig kfObj;
 	private ArrayList<ArrayList<Satellite>[]> dualSVlist;
 	private double[] trueUserECEF;
 
@@ -42,7 +42,7 @@ public class StaticEKF {
 
 	public StaticEKF(ArrayList<ArrayList<Satellite>[]> dualSVlist, double[][] PCO, double[] refECEF,
 			double[] trueUserECEF, Geoid geoid, ArrayList<Calendar> timeList, boolean usePhase) {
-		kfObj = new StaticKF();
+		kfObj = new KFconfig();
 		this.dualSVlist = dualSVlist;
 		fSq = new double[2];
 		fSq[0] = Math.pow(dualSVlist.get(0)[0].get(0).getCarrier_frequency(), 2);
@@ -236,7 +236,7 @@ public class StaticEKF {
 
 		int SVcount = SV[0].size();
 
-		kfObj.configureSPP(deltaT);
+		kfObj.configStaticSPP(deltaT);
 		kfObj.predict();
 
 		SimpleMatrix x = kfObj.getState();
@@ -271,7 +271,7 @@ public class StaticEKF {
 
 		int SVcount = SV[0].size();
 
-		kfObj.configureSPP(deltaT);
+		kfObj.configStaticSPP(deltaT);
 		kfObj.predict();
 
 		SimpleMatrix x = kfObj.getState();

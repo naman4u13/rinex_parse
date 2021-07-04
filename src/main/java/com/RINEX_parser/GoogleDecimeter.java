@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.PrintStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
@@ -23,6 +24,7 @@ import org.orekit.models.earth.Geoid;
 import org.orekit.models.earth.ReferenceEllipsoid;
 import org.orekit.utils.IERSConventions;
 
+import com.RINEX_parser.ComputeUserPos.KalmanFilter.EKF;
 import com.RINEX_parser.ComputeUserPos.Regression.LS;
 import com.RINEX_parser.ComputeUserPos.Regression.WLS;
 import com.RINEX_parser.fileParser.Antenna;
@@ -48,9 +50,11 @@ import com.RINEX_parser.utility.Time;
 
 public class GoogleDecimeter {
 
-	public static void posEstimate(boolean doPosErrPlot, boolean useCutOffAng, boolean useBias, boolean useIGS,
-			boolean isDual, boolean useGIM, boolean useRTKlib, boolean usePhase, int estimatorType, String[] obsvCode,
-			int minSat) {
+	public static final long milliSecInWeek = 604800000;
+
+	public static ArrayList<String[]> posEstimate(boolean doPosErrPlot, boolean useCutOffAng, boolean useBias,
+			boolean useIGS, boolean isDual, boolean useGIM, boolean useRTKlib, boolean usePhase, int estimatorType,
+			String[] obsvCode, int minSat, String obsPath) {
 		try {
 			TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
 			HashMap<Integer, ArrayList<IonoValue>> ionoValueMap = new HashMap<Integer, ArrayList<IonoValue>>();
@@ -58,10 +62,10 @@ public class GoogleDecimeter {
 			HashMap<String, ArrayList<HashMap<String, Double>>> ErrMap = new HashMap<String, ArrayList<HashMap<String, Double>>>();
 
 			ArrayList<Calendar> timeList = new ArrayList<Calendar>();
-			ArrayList<Double> GPSTimeList = new ArrayList<Double>();
+			ArrayList<double[]> trueLLHlist = new ArrayList<double[]>();
 			ArrayList<ArrayList<Satellite>> SVlist = new ArrayList<ArrayList<Satellite>>();
 			ArrayList<ArrayList<Satellite>[]> dualSVlist = new ArrayList<ArrayList<Satellite>[]>();
-
+			ArrayList<String[]> csvRes = new ArrayList<String[]>();
 			Bias bias = null;
 
 			Orbit orbit = null;
@@ -69,8 +73,12 @@ public class GoogleDecimeter {
 			Antenna antenna = null;
 			IONEX ionex = null;
 			RTKlib rtkLib = null;
-
-			String obs_path = "E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2020-05-14-US-MTV-1\\Pixel4\\supplemental\\Pixel4_GnssLog.20o";
+			String obs_path;
+			if (obsPath != null) {
+				obs_path = obsPath;
+			} else {
+				obs_path = "E:\\Study\\Google Decimeter Challenge\\decimeter\\test\\2020-05-28-US-MTV-2\\Pixel4XLModded\\supplemental\\Pixel4XLModded_GnssLog.20o";
+			}
 			String GTcsv = "E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2020-05-14-US-MTV-1\\Pixel4\\ground_truth.csv";
 
 			HashMap<String, Object> ObsvMsgComp = ObservationRNX.rinex_obsv_process(obs_path, false, "", obsvCode,
@@ -80,29 +88,32 @@ public class GoogleDecimeter {
 			ArrayList<double[]> rxLLH = GroundTruth.processCSV(GTcsv);
 			double[][] rxPCO = new double[obsvCode.length][3];
 			int interval = (int) ObsvMsgComp.get("interval");
-			int dayNo = Time.getDate(ObsvMsgs.get(0).getTRX(), ObsvMsgs.get(0).getWeekNo(), 0)
-					.get(Calendar.DAY_OF_YEAR);
+			long week = ObsvMsgs.get(0).getWeekNo();
+			int year = Time.getDate(ObsvMsgs.get(0).getTRX(), week, 0).get(Calendar.YEAR);
+			int dayNo = Time.getDate(ObsvMsgs.get(0).getTRX(), week, 0).get(Calendar.DAY_OF_YEAR);
+			int doW = Time.getDate(ObsvMsgs.get(0).getTRX(), week, 0).get(Calendar.DAY_OF_WEEK) - 1;
+
 			String day = String.format("%03d", dayNo);
 			String base_url = "E:\\Study\\Google Decimeter Challenge\\input_files\\";
-			String nav_path = base_url + day + "\\BRDC00IGS_R_2020" + day + "0000_01D_MN.rnx\\BRDC00IGS_R_2020" + day
-					+ "0000_01D_MN.rnx";
 
-			String bias_path = base_url + day + "\\CAS0MGXRAP_2020" + day + "0000_01D_01D_DCB.BSX" + "\\CAS0MGXRAP_2020"
-					+ day + "0000_01D_01D_DCB.BSX";
+			String nav_path = base_url + year + "_" + day + "\\BRDC00IGS_R_" + year + day + "0000_01D_MN.rnx";
 
-			String orbit_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\igs21004.sp3\\igs21004.sp3";
+			String bias_path = base_url + year + "_" + day + "\\CAS0MGXRAP_" + year + day + "0000_01D_01D_DCB.BSX";
+
+			String orbit_path = base_url + year + "_" + day + "\\igs" + week + doW + ".sp3";
 
 			String antenna_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\igs14.atx\\igs14.atx";
 
 			String antenna_csv_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\antenna.csv";
 
-			String clock_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\igs21004.clk_30s\\igs21004.clk_30s";
+			String clock_path = base_url + year + "_" + day + "\\igs" + week + doW + ".clk_30s";
 
-			String ionex_path = base_url + day + "\\igsg" + day + "0.20i\\igsg" + day + "0.20i";
+			int year2dig = year % 2000;
+			String ionex_path = base_url + year + "_" + day + "\\igsg" + day + "0." + year2dig + "i";
 
-			String RTKlib_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\RTKlib\\HARB.pos";
+			String RTKlib_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\RTKlib\\decimeter_GIM_IGS.pos";
 
-			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\google\\dual";
+			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\google\\test";
 			File output = new File(path + ".txt");
 			PrintStream stream;
 
@@ -117,7 +128,7 @@ public class GoogleDecimeter {
 
 			int fN = obsvCode.length;
 
-			Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path, useIGS);
+			Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path, false);
 			@SuppressWarnings("unchecked")
 			HashMap<Integer, ArrayList<NavigationMsg>> NavMsgs = (HashMap<Integer, ArrayList<NavigationMsg>>) NavMsgComp
 					.getOrDefault("NavMsgs", null);
@@ -159,13 +170,16 @@ public class GoogleDecimeter {
 				ObservationMsg obsvMsg = ObsvMsgs.get(i);
 				double tRX = obsvMsg.getTRX();
 				long weekNo = obsvMsg.getWeekNo();
-				if (tRX != rxLLH.get(i)[0] && weekNo != rxLLH.get(i)[1]) {
+				double[] trueUserLLH = null;
+				if (estimatorType != 6) {
+					if (Math.floor(tRX * 1000) != (rxLLH.get(i)[0] * 1000) || weekNo != rxLLH.get(i)[1]) {
 
-					System.err.println("FATAL ERROR - GT timestamp does not match");
-					return;
+						System.err.println("FATAL ERROR - GT timestamp does not match");
+						return null;
 
+					}
+					trueUserLLH = new double[] { rxLLH.get(i)[2], rxLLH.get(i)[3], rxLLH.get(i)[4] };
 				}
-				double[] trueUserLLH = new double[] { rxLLH.get(i)[2], rxLLH.get(i)[3], rxLLH.get(i)[4] };
 
 				Calendar time = Time.getDate(tRX, weekNo, 0);
 				ArrayList<Satellite> SV = SingleFreq.process(obsvMsg, NavMsgs, obsvCode[0], false, false, false,
@@ -175,17 +189,21 @@ public class GoogleDecimeter {
 					continue;
 				}
 				LS ls = new LS(SV, rxPCO[0], ionoCoeff, time, null, geoid);
-				double[] userECEF = ls.getEstECEF();
-				double[] userLatLon = ECEFtoLatLon.ecef2lla(userECEF);
+				double[] userECEF = null;
+				try {
+					userECEF = ls.getEstECEF();
+				} catch (org.ejml.data.SingularMatrixException e) {
+					continue;
+				}
 
+				double[] userLatLon = ECEFtoLatLon.ecef2lla(userECEF);
+				SV = null;
 				ArrayList<Satellite>[] dualSV = null;
 				if (isDual) {
 					dualSV = DualFreq.process(obsvMsg, NavMsgs, obsvCode, useIGS, useBias, bias, orbit, clock, antenna,
 							tRX, weekNo, userECEF, time, useCutOffAng);
 					if (dualSV[0].size() < minSat && dualSV[1].size() < minSat) {
 						continue;
-					} else {
-						System.out.print("");
 					}
 					dualSVlist.add(dualSV);
 				} else {
@@ -274,15 +292,26 @@ public class GoogleDecimeter {
 										time));
 					}
 					break;
+				case 6:
+					long millisSinceGpsEpoch = (weekNo * milliSecInWeek) + (Math.round(tRX * 1000));
+					wls = new WLS(SV, rxPCO[0], ionoCoeff, time, ionex, geoid);
+					double[] estLLH = ECEFtoLatLon.ecef2lla(wls.getTropoCorrECEF());
+					String[] row = new String[] { "", "" + millisSinceGpsEpoch, "" + estLLH[0], "" + estLLH[1] };
+					csvRes.add(row);
+					break;
 
 				}
-				GPSTimeList.add(tRX);
+
 				timeList.add(time);
+				trueLLHlist.add(trueUserLLH);
 
 			}
+			if (estimatorType == 6) {
+				return csvRes;
+			}
 
-//			if (estimatorType == 4) {
-//
+			if (estimatorType == 4) {
+
 //				if (isDual) {
 //					if (usePhase) {
 //						CycleSlip cs = new CycleSlip(interval);
@@ -300,16 +329,17 @@ public class GoogleDecimeter {
 //
 //					}
 //				} else {
-//					ErrMap.put("EKF", new ArrayList<HashMap<String, double[]>>());
-//					StaticEKF staticEkf = new StaticEKF(SVlist, rxPCO[0], userECEF, ionoCoeff, ionex, geoid, timeList);
-//					ArrayList<double[]> estECEFList = staticEkf.compute();
-//					for (int i = 0; i < SVlist.size() - 1; i++) {
-//						double[] estECEF = estECEFList.get(i);
-//						ErrMap.get("EKF").add(estimateError(Map.of("TropoCorr", estECEF), userECEF, timeList.get(i)));
-//					}
-//				}
-//
-//			}
+				ErrMap.put("EKF", new ArrayList<HashMap<String, Double>>());
+				EKF dynamicEkf = new EKF(SVlist, rxPCO[0], null, ionoCoeff, ionex, geoid, timeList);
+				ArrayList<double[]> estECEFList = dynamicEkf.computeDynamic(trueLLHlist);
+				for (int i = 0; i < SVlist.size() - 1; i++) {
+
+					double[] estECEF = estECEFList.get(i);
+					ErrMap.get("EKF")
+							.add(estimateError(Map.of("TropoCorr", estECEF), trueLLHlist.get(i), timeList.get(i)));
+				}
+
+			}
 			if (estimatorType == 5) {
 				CycleSlip cs = new CycleSlip(interval);
 //				int svid = 1;
@@ -334,17 +364,25 @@ public class GoogleDecimeter {
 				}
 
 			}
-//			if (useRTKlib) {
-//				int len = GPSTimeList.size();
-//				int start = rtkLib.getIndex(GPSTimeList.get(0));
-//				int end = rtkLib.getIndex(GPSTimeList.get(len - 1));
-//				String posMode = rtkLib.getPosMode();
-//				for (int i = start; i < end; i++) {
-//
-//					ErrMap.get("RTKlib")
-//							.add(estimateError(Map.of(posMode, rtkLib.getECEF(i)), userECEF, timeList.get(i - start)));
-//				}
-//			}
+			if (useRTKlib) {
+
+				String posMode = rtkLib.getPosMode();
+				ArrayList<Double> rtkTimeList = rtkLib.getTimeList();
+				double[] _timeList = rxLLH.stream().mapToDouble(i -> i[0]).toArray();
+				for (int i = 0; i < rtkTimeList.size(); i++) {
+
+					double GPStime = rtkTimeList.get(i);
+
+					int key = Arrays.binarySearch(_timeList, GPStime);
+					if (key < 0) {
+						System.err.println("ERROR in rtklib implementation");
+						return null;
+					}
+					double[] trueUserLLH = new double[] { rxLLH.get(key)[2], rxLLH.get(key)[3], rxLLH.get(key)[4] };
+					Calendar time = Time.getDate(rxLLH.get(key)[0], (long) rxLLH.get(key)[1], 0);
+					ErrMap.get("RTKlib").add(estimateError(Map.of(posMode, rtkLib.getECEF(i)), trueUserLLH, time));
+				}
+			}
 
 			HashMap<String, ArrayList<Double>> GraphErrMap = new HashMap<String, ArrayList<Double>>();
 
@@ -407,6 +445,7 @@ public class GoogleDecimeter {
 			System.out.println(e.getMessage());
 			e.printStackTrace();
 		}
+		return null;
 	}
 
 	public static HashMap<String, Double> estimateError(Map<String, double[]> ecefMap, double[] userLLH,
@@ -420,9 +459,9 @@ public class GoogleDecimeter {
 		for (String key : ecefMap.keySet()) {
 			double[] estLLH = ECEFtoLatLon.ecef2lla(ecefMap.get(key));
 
-			;
 			// Great Circle Distance
 			double gcErr = LatLonUtil.getHaversineDistance(estLLH, userLLH);
+
 			errMap.put(key, gcErr);
 			errStr += " " + key + " LL diff " + gcErr;
 

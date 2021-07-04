@@ -56,6 +56,7 @@ public class Clock {
 						String[] clkData = StringUtil.splitter(data[i], false, 3, 5, 32, 19);
 						String SVName = clkData[1];
 						char SSI = SVName.charAt(0);
+
 						int SVID = Integer.parseInt(SVName.substring(1));
 						double clkBias = Double.parseDouble(clkData[3]);
 						biasMap.put(SVID, clkBias);

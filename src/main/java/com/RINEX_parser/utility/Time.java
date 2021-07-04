@@ -23,10 +23,13 @@ public class Time {
 		long GPSEpoch = cal.getTimeInMillis();
 		double GPSTime = ((unixTime - GPSEpoch)) % NumberMilliSecondsWeek;
 		double weekNo = Math.floor(((unixTime - GPSEpoch)) / NumberMilliSecondsWeek);
+
 		GPSTime = GPSTime / 1000;
 		return new double[] { GPSTime, weekNo };
 	}
 
+	// Remember this method will not work if you have milliseconds
+	// So handling of millisec outside this func is must
 	public static double[] getGPSTime(Calendar time) {
 
 		Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));

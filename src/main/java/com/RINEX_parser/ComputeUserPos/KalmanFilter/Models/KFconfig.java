@@ -5,7 +5,7 @@ import java.util.stream.IntStream;
 
 import com.RINEX_parser.models.Satellite;
 
-public class StaticKF extends KF {
+public class KFconfig extends KF {
 
 	private final double SpeedofLight = 299792458;
 	private final double c2 = SpeedofLight * SpeedofLight;
@@ -15,7 +15,7 @@ public class StaticKF extends KF {
 	private final double sf = h0 / 2;
 	private final double sg = 2 * Math.PI * Math.PI * h_2;
 
-	public void configureSPP(double deltaT) {
+	public void configStaticSPP(double deltaT) {
 
 		double[][] F = new double[5][5];
 		double[][] Q = new double[5][5];
@@ -26,6 +26,19 @@ public class StaticKF extends KF {
 
 		IntStream.range(0, 5).forEach(x -> F[x][x] = 1);
 		F[3][4] = deltaT;
+		super.configure(F, Q);
+	}
+
+	public void configDynamicSPP(double deltaT) {
+
+		double[][] F = new double[4][4];
+		double[][] Q = new double[4][4];
+		IntStream.range(0, 3).forEach(i -> {
+			Q[i][i] = 1e8/c2;
+			F[i][i] = 1;
+		});
+		Q[3][3] = 9e10/c2;
+		F[3][3] = 1;
 		super.configure(F, Q);
 	}
 

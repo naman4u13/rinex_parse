@@ -27,12 +27,14 @@ public class DualFreq {
 			HashMap<Integer, ArrayList<NavigationMsg>> NavMsgs, String[] obsvCode, boolean useIGS, boolean useBias,
 			Bias bias, Orbit orbit, Clock clock, Antenna antenna, double tRX, long weekNo, double[] userECEF,
 			Calendar time, boolean useCutOffAng) {
-
-		ArrayList<Observable> observables1 = obsvMsg.getObsvSat(obsvCode[0]);
-		ArrayList<Observable> observables2 = obsvMsg.getObsvSat(obsvCode[1]);
 		ArrayList<Satellite>[] SV = new ArrayList[2];
 		SV[0] = new ArrayList<Satellite>();
 		SV[1] = new ArrayList<Satellite>();
+		ArrayList<Observable> observables1 = obsvMsg.getObsvSat(obsvCode[0]);
+		ArrayList<Observable> observables2 = obsvMsg.getObsvSat(obsvCode[1]);
+		if (observables1 == null || observables1 == null) {
+			return SV;
+		}
 		int satCount = observables1.size();
 
 		if (useIGS) {

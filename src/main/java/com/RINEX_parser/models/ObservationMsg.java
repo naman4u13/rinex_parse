@@ -82,7 +82,13 @@ public class ObservationMsg {
 		int freqID = Integer.parseInt(obsvCode.charAt(1) + "");
 		char codeID = obsvCode.charAt(2);
 
-		return obsvSat.get(SSI).get(freqID).get(codeID);
+		if (obsvSat.containsKey(SSI)) {
+			if (obsvSat.get(SSI).containsKey(freqID)) {
+				return obsvSat.get(SSI).get(freqID).getOrDefault(codeID, null);
+			}
+			return null;
+		}
+		return null;
 	}
 
 	public double getTRX() {

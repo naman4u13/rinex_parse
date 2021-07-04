@@ -40,34 +40,32 @@ public class RTKlib {
 			String[] lines = body.split("\\n");
 			int len = lines.length;
 			lines = Arrays.copyOfRange(lines, 2, len);
-			SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSS");
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 			TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
 			Calendar cal = Calendar.getInstance();
 			for (String rec : lines) {
 				String[] data = rec.split("\\s+");
-				String strDate = data[0].trim() + " " + data[1].trim();
+				String[] strDate = (data[0].trim() + " " + data[1].trim()).split("\\.");
+
 				double[] ecef = IntStream.range(2, 5).mapToDouble(i -> Double.parseDouble(data[i])).toArray();
 				ecefList.add(ecef);
-				Date date = sdf.parse(strDate);
+				Date date = sdf.parse(strDate[0]);
 				cal.setTime(date);
 				Double GPSTime = Time.getGPSTime(cal)[0];
+				GPSTime += Double.parseDouble(strDate[1]) * Math.pow(10, -strDate[1].length());
 				timeList.add(GPSTime);
 
 			}
 
 		} catch (Exception e) {
+			e.printStackTrace();
+			throw new Exception("Error occured during parsing of RTKlib file(.pos) file \n" + e);
 			// TODO: handle exception
 		}
 
 	}
 
 	public int getIndex(double GPSTime) {
-		int index = timeList.indexOf(GPSTime);
-		return index;
-	}
-
-	public int getIndex(Calendar time) {
-		double GPSTime = Time.getGPSTime(time)[0];
 		int index = timeList.indexOf(GPSTime);
 		return index;
 	}
@@ -83,5 +81,9 @@ public class RTKlib {
 
 	public double getTime(int i) {
 		return timeList.get(i);
+	}
+
+	public ArrayList<Double> getTimeList() {
+		return timeList;
 	}
 }

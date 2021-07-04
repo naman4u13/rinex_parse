@@ -79,6 +79,7 @@ public class NavigationMsg {
 		IODC = (int) Double.parseDouble(arr[33].replace('D', 'E'));
 		transmission_time_of_msg = Double.parseDouble(arr[34].replace('D', 'E'));
 		TOC = Time.getGPSTime(year, month - 1, day, hour, minute, second)[0];
+
 		// fit_interval = Double.parseDouble(arr[35].replace('D', 'E'));
 		// TODO Auto-generated constructor stub
 	}

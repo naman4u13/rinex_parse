@@ -2,6 +2,8 @@ package com.RINEX_parser;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
@@ -29,7 +31,7 @@ import org.orekit.models.earth.Geoid;
 import org.orekit.models.earth.ReferenceEllipsoid;
 import org.orekit.utils.IERSConventions;
 
-import com.RINEX_parser.ComputeUserPos.KalmanFilter.StaticEKF;
+import com.RINEX_parser.ComputeUserPos.KalmanFilter.EKF;
 import com.RINEX_parser.ComputeUserPos.Regression.LS;
 import com.RINEX_parser.ComputeUserPos.Regression.WLS;
 import com.RINEX_parser.fileParser.Antenna;
@@ -49,19 +51,28 @@ import com.RINEX_parser.models.ObservationMsg;
 import com.RINEX_parser.models.Satellite;
 import com.RINEX_parser.models.TimeCorrection;
 import com.RINEX_parser.utility.ECEFtoLatLon;
+import com.RINEX_parser.utility.GoogleData;
 import com.RINEX_parser.utility.GraphPlotter;
 import com.RINEX_parser.utility.IGPgrid;
 import com.RINEX_parser.utility.LatLonUtil;
 import com.RINEX_parser.utility.Time;
+import com.opencsv.CSVWriter;
 
 public class MainApp {
 
 	public static void main(String[] args) {
 
 		Instant start = Instant.now();
-		switch (2) {
+		switch (3) {
 		case 1:
-			posEstimate(false, false, true, true, true, false, true, true, false, true, false, false, 3,
+			/*
+			 * public static void posEstimate(boolean doWeightPlot, boolean doIonoPlot,
+			 * boolean doPosErrPlot, boolean useCutOffAng, boolean useSNX, boolean useSBAS,
+			 * boolean useBias, boolean useIGS, boolean isDual, boolean useGIM, boolean
+			 * useRTKlib, boolean usePhase, int estimatorType, String[] obsvCode, int
+			 * minSat)
+			 */
+			posEstimate(false, false, true, true, true, false, true, true, true, false, false, false, 4,
 					new String[] { "G1C", "G2X" }, 4);
 			break;
 
@@ -72,8 +83,47 @@ public class MainApp {
 			 * useRTKlib, boolean usePhase, int estimatorType, String[] obsvCode, int
 			 * minSat)
 			 */
-			GoogleDecimeter.posEstimate(true, true, true, false, true, false, false, false, 1,
-					new String[] { "G1C", "G5X" }, 4);
+			GoogleDecimeter.posEstimate(true, true, true, false, false, true, false, false, 4,
+					new String[] { "G1C", "G5X" }, 4, null);
+			break;
+		case 3:
+			try {
+				CSVWriter writer = null;
+				String filePath = "E:\\Study\\Google Decimeter Challenge\\result\\output.csv";
+				String[] header = new String[] { "phone", "millisSinceGpsEpoch", "latDeg", "lngDeg" };
+
+				File file = new File(filePath);
+				// create FileWriter object with file as parameter
+				FileWriter outputfile;
+
+				outputfile = new FileWriter(file);
+
+				// create CSVWriter object filewriter object as parameter
+				writer = new CSVWriter(outputfile);
+				writer.writeNext(header);
+				File testDir = new File("E:\\Study\\Google Decimeter Challenge\\decimeter\\test");
+				File[] dayFiles = testDir.listFiles();
+				for (File dayFile : dayFiles) {
+					File[] mobFiles = dayFile.listFiles();
+					for (File mobFile : mobFiles) {
+						String mobName = mobFile.getName();
+						String path = mobFile.getAbsolutePath();
+						String year = dayFile.getName().split("-")[0].substring(2);
+						String obs_path = path + "\\supplemental\\" + mobName + "_GnssLog." + year + "o";
+						ArrayList<String[]> csvRes = GoogleDecimeter.posEstimate(true, true, true, false, false, true,
+								false, false, 6, new String[] { "G1C" }, 4, obs_path);
+						csvRes.stream().forEach(i -> i[0] = dayFile.getName() + "_" + mobName);
+						csvRes = GoogleData.predict(csvRes);
+						GoogleData.filter(csvRes);
+						writer.writeAll(csvRes);
+
+					}
+				}
+				writer.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 			break;
 		}
 
@@ -109,7 +159,7 @@ public class MainApp {
 
 			String nav_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
-			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRUX00BEL_S_20201000300_15M_01S_MO.crx\\BRUX00BEL_S_20201000300_15M_01S_MO.rnx";
+			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\NYA100NOR_S_20201000000_01D_30S_MO.rnx\\NYA100NOR_S_20201000000_01D_30S_MO.rnx";
 
 			String sbas_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\EGNOS_2020_100\\123\\D100.ems";
 
@@ -127,9 +177,9 @@ public class MainApp {
 
 			String ionex_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\igsg1000.20i\\igsg1000.20i";
 
-			String RTKlib_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\RTKlib\\HARB.pos";
+			String RTKlib_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\RTKlib\\AGGO_GIM_PPP.pos";
 
-			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\google\\brux_gim_ppp";
+			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\RTKlib_compare\\test";
 			File output = new File(path + ".txt");
 			PrintStream stream;
 
@@ -203,6 +253,7 @@ public class MainApp {
 			for (ObservationMsg obsvMsg : ObsvMsgs) {
 
 				double tRX = obsvMsg.getTRX();
+
 				double dayTime = tRX % 86400;
 				if (dayTime < epochStart) {
 					continue;
@@ -211,7 +262,7 @@ public class MainApp {
 				}
 				if (dayTime % 10 != 0) {
 					System.err.println("FATAL ERROR TIME daytime");
-					return;
+					// return;
 				}
 				long weekNo = obsvMsg.getWeekNo();
 
@@ -339,8 +390,8 @@ public class MainApp {
 					}
 				} else {
 					ErrMap.put("EKF", new ArrayList<HashMap<String, double[]>>());
-					StaticEKF staticEkf = new StaticEKF(SVlist, rxPCO[0], userECEF, ionoCoeff, ionex, geoid, timeList);
-					ArrayList<double[]> estECEFList = staticEkf.compute();
+					EKF staticEkf = new EKF(SVlist, rxPCO[0], userECEF, ionoCoeff, ionex, geoid, timeList);
+					ArrayList<double[]> estECEFList = staticEkf.computeStatic();
 					for (int i = 0; i < SVlist.size() - 1; i++) {
 						double[] estECEF = estECEFList.get(i);
 						ErrMap.get("EKF").add(estimateError(Map.of("TropoCorr", estECEF), userECEF, timeList.get(i)));
