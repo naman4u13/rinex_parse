@@ -33,7 +33,7 @@ public class GroundTruth {
 
 			}
 			reader.close();
-			System.out.print("");
+
 		} catch (Exception e) {
 			// TODO: handle exception
 			throw new Exception("Error occured during parsing of Ground Truth CSV file \n" + e);

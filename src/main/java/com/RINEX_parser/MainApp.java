@@ -34,6 +34,7 @@ import org.orekit.utils.IERSConventions;
 import com.RINEX_parser.ComputeUserPos.KalmanFilter.EKF;
 import com.RINEX_parser.ComputeUserPos.Regression.LS;
 import com.RINEX_parser.ComputeUserPos.Regression.WLS;
+import com.RINEX_parser.GoogleDecimeter.GoogleDeciApp;
 import com.RINEX_parser.fileParser.Antenna;
 import com.RINEX_parser.fileParser.Bias;
 import com.RINEX_parser.fileParser.Clock;
@@ -43,6 +44,7 @@ import com.RINEX_parser.fileParser.ObservationRNX;
 import com.RINEX_parser.fileParser.Orbit;
 import com.RINEX_parser.fileParser.RTKlib;
 import com.RINEX_parser.fileParser.SBAS;
+import com.RINEX_parser.fileParser.GoogleDecimeter.DerivedCSV;
 import com.RINEX_parser.helper.CycleSlip;
 import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.IonoValue;
@@ -63,7 +65,7 @@ public class MainApp {
 	public static void main(String[] args) {
 
 		Instant start = Instant.now();
-		switch (3) {
+		switch (4) {
 		case 1:
 			/*
 			 * public static void posEstimate(boolean doWeightPlot, boolean doIonoPlot,
@@ -83,8 +85,8 @@ public class MainApp {
 			 * useRTKlib, boolean usePhase, int estimatorType, String[] obsvCode, int
 			 * minSat)
 			 */
-			GoogleDecimeter.posEstimate(true, true, true, false, false, true, false, false, 4,
-					new String[] { "G1C", "G5X" }, 4, null);
+			GoogleDeciApp.posEstimate(true, true, true, false, false, true, false, false, 4,
+					new String[] { "G1C", "G5X" }, 4, null, null, false);
 			break;
 		case 3:
 			try {
@@ -110,8 +112,9 @@ public class MainApp {
 						String path = mobFile.getAbsolutePath();
 						String year = dayFile.getName().split("-")[0].substring(2);
 						String obs_path = path + "\\supplemental\\" + mobName + "_GnssLog." + year + "o";
-						ArrayList<String[]> csvRes = GoogleDecimeter.posEstimate(true, true, true, false, false, true,
-								false, false, 6, new String[] { "G1C" }, 4, obs_path);
+						String derived_csv_path = path + "\\" + mobName + "_derived,csv";
+						ArrayList<String[]> csvRes = GoogleDeciApp.posEstimate(true, true, true, false, false, true,
+								false, false, 6, new String[] { "G1C" }, 4, obs_path, derived_csv_path, false);
 						csvRes.stream().forEach(i -> i[0] = dayFile.getName() + "_" + mobName);
 						csvRes = GoogleData.predict(csvRes);
 						GoogleData.filter(csvRes);
@@ -125,6 +128,15 @@ public class MainApp {
 				e.printStackTrace();
 			}
 			break;
+
+		case 4:
+			try {
+				DerivedCSV.processCSV(
+						"E:\\Study\\Google Decimeter Challenge\\decimeter\\test\\2021-03-16-US-RWC-2\\Pixel4XL\\Pixel4XL_derived.csv");
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 
 		Instant end = Instant.now();

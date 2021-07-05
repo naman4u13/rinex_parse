@@ -1,4 +1,4 @@
-package com.RINEX_parser;
+package com.RINEX_parser.GoogleDecimeter;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -24,6 +24,8 @@ import org.orekit.models.earth.Geoid;
 import org.orekit.models.earth.ReferenceEllipsoid;
 import org.orekit.utils.IERSConventions;
 
+import com.RINEX_parser.DualFreq;
+import com.RINEX_parser.SingleFreq;
 import com.RINEX_parser.ComputeUserPos.KalmanFilter.EKF;
 import com.RINEX_parser.ComputeUserPos.Regression.LS;
 import com.RINEX_parser.ComputeUserPos.Regression.WLS;
@@ -35,6 +37,7 @@ import com.RINEX_parser.fileParser.NavigationRNX;
 import com.RINEX_parser.fileParser.ObservationRNX;
 import com.RINEX_parser.fileParser.Orbit;
 import com.RINEX_parser.fileParser.RTKlib;
+import com.RINEX_parser.fileParser.GoogleDecimeter.DerivedCSV;
 import com.RINEX_parser.fileParser.GoogleDecimeter.GroundTruth;
 import com.RINEX_parser.helper.CycleSlip;
 import com.RINEX_parser.models.IonoCoeff;
@@ -43,18 +46,19 @@ import com.RINEX_parser.models.NavigationMsg;
 import com.RINEX_parser.models.ObservationMsg;
 import com.RINEX_parser.models.Satellite;
 import com.RINEX_parser.models.TimeCorrection;
+import com.RINEX_parser.models.GoogleDecimeter.Derived;
 import com.RINEX_parser.utility.ECEFtoLatLon;
 import com.RINEX_parser.utility.GraphPlotter;
 import com.RINEX_parser.utility.LatLonUtil;
 import com.RINEX_parser.utility.Time;
 
-public class GoogleDecimeter {
+public class GoogleDeciApp {
 
 	public static final long milliSecInWeek = 604800000;
 
 	public static ArrayList<String[]> posEstimate(boolean doPosErrPlot, boolean useCutOffAng, boolean useBias,
 			boolean useIGS, boolean isDual, boolean useGIM, boolean useRTKlib, boolean usePhase, int estimatorType,
-			String[] obsvCode, int minSat, String obsPath) {
+			String[] obsvCode, int minSat, String obsPath, String derived_csv_path) {
 		try {
 			TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
 			HashMap<Integer, ArrayList<IonoValue>> ionoValueMap = new HashMap<Integer, ArrayList<IonoValue>>();
@@ -127,13 +131,18 @@ public class GoogleDecimeter {
 			Geoid geoid = buildGeoid();
 
 			int fN = obsvCode.length;
+			HashMap<Integer, ArrayList<NavigationMsg>> NavMsgs = null;
+			IonoCoeff ionoCoeff = null;
+			boolean useDerived = derived_csv_path != null;
+			Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path, useDerived);
 
-			Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path, false);
-			@SuppressWarnings("unchecked")
-			HashMap<Integer, ArrayList<NavigationMsg>> NavMsgs = (HashMap<Integer, ArrayList<NavigationMsg>>) NavMsgComp
-					.getOrDefault("NavMsgs", null);
-			IonoCoeff ionoCoeff = (IonoCoeff) NavMsgComp.get("ionoCoeff");
+			NavMsgs = (HashMap<Integer, ArrayList<NavigationMsg>>) NavMsgComp.getOrDefault("NavMsgs", null);
+			ionoCoeff = (IonoCoeff) NavMsgComp.get("ionoCoeff");
 			TimeCorrection timeCorr = (TimeCorrection) NavMsgComp.getOrDefault("timeCorr", null);
+			HashMap<Double, HashMap<String, HashMap<Integer, Derived>>> derivedMap = null;
+			if (useDerived) {
+				derivedMap = DerivedCSV.processCSV(derived_csv_path);
+			}
 
 			// Note PVT algos will compute for Antenna Reference Point as it is independent
 			// of frequency
@@ -182,9 +191,14 @@ public class GoogleDecimeter {
 				}
 
 				Calendar time = Time.getDate(tRX, weekNo, 0);
-				ArrayList<Satellite> SV = SingleFreq.process(obsvMsg, NavMsgs, obsvCode[0], false, false, false,
-						useBias, ionoCoeff, bias, orbit, clock, antenna, tRX, weekNo, time, null,
-						new double[] { 0, 0, 0 }, null, ionoValueMap, false, null, frame);
+				ArrayList<Satellite> SV = null;
+				if (useDerived) {
+
+				} else {
+					SV = SingleFreq.process(obsvMsg, NavMsgs, obsvCode[0], false, false, false, useBias, ionoCoeff,
+							bias, orbit, clock, antenna, tRX, weekNo, time, null, new double[] { 0, 0, 0 }, null,
+							ionoValueMap, false, null, frame);
+				}
 				if (SV.size() < minSat) {
 					continue;
 				}
