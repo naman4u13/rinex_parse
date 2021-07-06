@@ -2,11 +2,12 @@ package com.RINEX_parser.models.GoogleDecimeter;
 
 public class Derived {
 	private final static double SpeedofLight = 299792458;
-	private double tSV;
+	private final static long NumberNanoSecondsWeek = (long) (604800 * 1e9);
+	private long tSV;
 	private double[] satECEF;
 	private double[] satVel;
 	private double satClkBias;
-	private double satClkDriftMps;
+	private double satClkDrift;
 	private double rawPrM;
 	private double rawPrUncM;
 	private double isrbM;
@@ -14,13 +15,14 @@ public class Derived {
 	private double tropoDelayM;
 
 	public Derived(String[] data) {
-		this.tSV = Double.parseDouble(data[0]) * 1e-9;
+
+		this.tSV = ((Long.parseLong(data[0])) % NumberNanoSecondsWeek);
 		this.satECEF = new double[] { Double.parseDouble(data[1]), Double.parseDouble(data[2]),
 				Double.parseDouble(data[3]) };
 		this.satVel = new double[] { Double.parseDouble(data[4]), Double.parseDouble(data[5]),
 				Double.parseDouble(data[6]) };
 		this.satClkBias = Double.parseDouble(data[7]) / SpeedofLight;
-		this.satClkDriftMps = Double.parseDouble(data[8]);
+		this.satClkDrift = Double.parseDouble(data[8]) / SpeedofLight;
 		this.rawPrM = Double.parseDouble(data[9]);
 		this.rawPrUncM = Double.parseDouble(data[10]);
 		this.isrbM = Double.parseDouble(data[11]);
@@ -40,8 +42,8 @@ public class Derived {
 		return satClkBias;
 	}
 
-	public double getSatClkBiasMps() {
-		return satClkDriftMps;
+	public double getSatClkDrift() {
+		return satClkDrift;
 	}
 
 	public double getRawPrM() {
@@ -64,7 +66,7 @@ public class Derived {
 		return tropoDelayM;
 	}
 
-	public double gettSV() {
+	public long gettSV() {
 		return tSV;
 	}
 }

@@ -1,10 +1,12 @@
 package com.RINEX_parser.GoogleDecimeter;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.TimeZone;
 
 import com.RINEX_parser.helper.ComputeEleAzm;
 import com.RINEX_parser.models.IonoCoeff;
@@ -15,31 +17,74 @@ import com.RINEX_parser.models.GoogleDecimeter.Derived;
 
 public class SingleFreq {
 
-	public static ArrayList<Satellite> process(ObservationMsg obsvMsg, String obsvCode, IonoCoeff ionoCoeff, double tRX,
-			double[] userECEF, double[] userLatLon, boolean useCutOffAng,
-			HashMap<Double, HashMap<String, HashMap<Integer, Derived>>> derivedMap, Calendar time) {
+	public static ArrayList<Satellite> process(ObservationMsg obsvMsg, IonoCoeff ionoCoeff, double tRX,
+			double[] userECEF, boolean useCutOffAng,
+			HashMap<Long, HashMap<String, HashMap<Integer, Derived>>> derivedMap, Calendar time,
+			String[] obsvCodeList) {
 
+		SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/YYYY kk:mm:ss.SSS");
+		sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
 		ArrayList<Satellite> SV = new ArrayList<Satellite>();
-		ArrayList<Observable> observables = obsvMsg.getObsvSat(obsvCode);
-		if (observables == null) {
+		long key = Math.round(tRX * 1e3);
+		HashMap<String, HashMap<Integer, Derived>> obsvMap = null;
+
+		if (derivedMap.containsKey(key)) {
+			obsvMap = derivedMap.get(key);
+		} else if (derivedMap.containsKey(key + 1)) {
+			obsvMap = derivedMap.get(key + 1);
+		} else if (derivedMap.containsKey(key - 1)) {
+			obsvMap = derivedMap.get(key - 1);
+		} else {
+			String errStr = sdf.format(time.getTime());
+			System.err.println("Missing data in derived.csv at time = " + errStr);
 			return SV;
 		}
-		observables.removeAll(Collections.singleton(null));
-		int satCount = observables.size();
-		for (int i = 0; i < satCount; i++) {
-			Observable sat = observables.get(i);
-			int svid = sat.getSVID();
-			double key = Math.round(tRX * 1000) / 1000;
-			Derived navData = derivedMap.get(key).get(obsvCode).get(svid);
-			double[] satECEF = navData.getSatECEF();
-			double[] EleAzm = ComputeEleAzm.computeEleAzm(userECEF, Arrays.copyOfRange(satECEF, 0, 3));
-			double t = navData.gettSV() - navData.getSatClkBias();
-			// SV.add(new Satellite(sat, satECEF, navData.getSatClkBias(), t, tRX, satVel,
-			// satClkDrift, ECI, ElevAzm, time))
 
+		for (String obsvCode : obsvCodeList) {
+
+			if (!obsvMap.containsKey(obsvCode)) {
+				String errStr = sdf.format(time.getTime());
+				System.err.println("No data for obsvCode " + obsvCode + " in derived.csv at time = " + errStr);
+				continue;
+			}
+
+			HashMap<Integer, Derived> navMap = obsvMap.get(obsvCode);
+			ArrayList<Observable> observables = obsvMsg.getObsvSat(obsvCode);
+			if (observables == null) {
+				continue;
+			}
+			observables.removeAll(Collections.singleton(null));
+			int satCount = observables.size();
+			for (int i = 0; i < satCount; i++) {
+				Observable sat = observables.get(i);
+				int svid = sat.getSVID();
+				if (!navMap.containsKey(svid)) {
+					String errStr = sdf.format(time.getTime());
+					System.err.println("No data for svid " + svid + " belonging to obsvCode" + obsvCode
+							+ " in derived.csv at time = " + errStr);
+					continue;
+				}
+				Derived navData = navMap.get(svid);
+
+				double[] satECEF = navData.getSatECEF();
+				double[] ElevAzm = ComputeEleAzm.computeEleAzm(userECEF, Arrays.copyOfRange(satECEF, 0, 3));
+				double t = (navData.gettSV() * 1e-9) - navData.getSatClkBias();
+
+				sat.setPseudorange(sat.getPseudorange() - navData.getIsrbM());
+				// NOTE: satClkDrift require investigation
+				Satellite _sat = new Satellite(sat, satECEF, navData.getSatClkBias(), t, tRX, navData.getSatVel(),
+						navData.getSatClkDrift(), null, ElevAzm, time);
+				_sat.compECI();
+				SV.add(_sat);
+
+			}
 		}
 
-		return null;
+		if (useCutOffAng) {
+			SV.removeIf(i -> i.getElevAzm()[0] < Math.toRadians(0));
+		}
+
+		return SV;
 
 	}
 }

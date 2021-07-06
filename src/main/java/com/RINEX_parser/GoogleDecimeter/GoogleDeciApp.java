@@ -45,7 +45,6 @@ import com.RINEX_parser.models.IonoValue;
 import com.RINEX_parser.models.NavigationMsg;
 import com.RINEX_parser.models.ObservationMsg;
 import com.RINEX_parser.models.Satellite;
-import com.RINEX_parser.models.TimeCorrection;
 import com.RINEX_parser.models.GoogleDecimeter.Derived;
 import com.RINEX_parser.utility.ECEFtoLatLon;
 import com.RINEX_parser.utility.GraphPlotter;
@@ -56,9 +55,10 @@ public class GoogleDeciApp {
 
 	public static final long milliSecInWeek = 604800000;
 
+	@SuppressWarnings("unchecked")
 	public static ArrayList<String[]> posEstimate(boolean doPosErrPlot, boolean useCutOffAng, boolean useBias,
 			boolean useIGS, boolean isDual, boolean useGIM, boolean useRTKlib, boolean usePhase, int estimatorType,
-			String[] obsvCode, int minSat, String obsPath, String derived_csv_path) {
+			String[] obsvCode, int minSat, String obs_path, String derived_csv_path, String[] obsvCodeList) {
 		try {
 			TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
 			HashMap<Integer, ArrayList<IonoValue>> ionoValueMap = new HashMap<Integer, ArrayList<IonoValue>>();
@@ -77,13 +77,8 @@ public class GoogleDeciApp {
 			Antenna antenna = null;
 			IONEX ionex = null;
 			RTKlib rtkLib = null;
-			String obs_path;
-			if (obsPath != null) {
-				obs_path = obsPath;
-			} else {
-				obs_path = "E:\\Study\\Google Decimeter Challenge\\decimeter\\test\\2020-05-28-US-MTV-2\\Pixel4XLModded\\supplemental\\Pixel4XLModded_GnssLog.20o";
-			}
-			String GTcsv = "E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2020-05-14-US-MTV-1\\Pixel4\\ground_truth.csv";
+
+			String GTcsv = "E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2021-04-29-US-SJC-2\\SamsungS20Ultra\\ground_truth.csv";
 
 			HashMap<String, Object> ObsvMsgComp = ObservationRNX.rinex_obsv_process(obs_path, false, "", obsvCode,
 					usePhase);
@@ -115,17 +110,19 @@ public class GoogleDeciApp {
 			int year2dig = year % 2000;
 			String ionex_path = base_url + year + "_" + day + "\\igsg" + day + "0." + year2dig + "i";
 
-			String RTKlib_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\RTKlib\\decimeter_GIM_IGS.pos";
+			String RTKlib_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\RTKlib\\decimeter_samsung119.pos";
 
-			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\google\\test";
-			File output = new File(path + ".txt");
-			PrintStream stream;
+			if (true) {
+				String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\google\\2021-04-29-US-SJC-2\\test";
+				File output = new File(path + ".txt");
+				PrintStream stream;
 
-			try {
-				stream = new PrintStream(output);
-				System.setOut(stream);
-			} catch (FileNotFoundException e) { // TODO Auto-generated catch block
-				e.printStackTrace();
+				try {
+					stream = new PrintStream(output);
+					System.setOut(stream);
+				} catch (FileNotFoundException e) { // TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}
 
 			Geoid geoid = buildGeoid();
@@ -138,8 +135,8 @@ public class GoogleDeciApp {
 
 			NavMsgs = (HashMap<Integer, ArrayList<NavigationMsg>>) NavMsgComp.getOrDefault("NavMsgs", null);
 			ionoCoeff = (IonoCoeff) NavMsgComp.get("ionoCoeff");
-			TimeCorrection timeCorr = (TimeCorrection) NavMsgComp.getOrDefault("timeCorr", null);
-			HashMap<Double, HashMap<String, HashMap<Integer, Derived>>> derivedMap = null;
+
+			HashMap<Long, HashMap<String, HashMap<Integer, Derived>>> derivedMap = null;
 			if (useDerived) {
 				derivedMap = DerivedCSV.processCSV(derived_csv_path);
 			}
@@ -178,10 +175,12 @@ public class GoogleDeciApp {
 
 				ObservationMsg obsvMsg = ObsvMsgs.get(i);
 				double tRX = obsvMsg.getTRX();
+
 				long weekNo = obsvMsg.getWeekNo();
+
 				double[] trueUserLLH = null;
 				if (estimatorType != 6) {
-					if (Math.floor(tRX * 1000) != (rxLLH.get(i)[0] * 1000) || weekNo != rxLLH.get(i)[1]) {
+					if (Math.round(tRX * 1000) != (rxLLH.get(i)[0] * 1000) || weekNo != rxLLH.get(i)[1]) {
 
 						System.err.println("FATAL ERROR - GT timestamp does not match");
 						return null;
@@ -194,12 +193,16 @@ public class GoogleDeciApp {
 				ArrayList<Satellite> SV = null;
 				if (useDerived) {
 
+					SV = com.RINEX_parser.GoogleDecimeter.SingleFreq.process(obsvMsg, ionoCoeff, tRX,
+							new double[] { 0, 0, 0 }, false, derivedMap, time, obsvCodeList);
+
 				} else {
 					SV = SingleFreq.process(obsvMsg, NavMsgs, obsvCode[0], false, false, false, useBias, ionoCoeff,
 							bias, orbit, clock, antenna, tRX, weekNo, time, null, new double[] { 0, 0, 0 }, null,
 							ionoValueMap, false, null, frame);
 				}
 				if (SV.size() < minSat) {
+					System.err.println("visible satellite count is below threshold");
 					continue;
 				}
 				LS ls = new LS(SV, rxPCO[0], ionoCoeff, time, null, geoid);
@@ -207,27 +210,41 @@ public class GoogleDeciApp {
 				try {
 					userECEF = ls.getEstECEF();
 				} catch (org.ejml.data.SingularMatrixException e) {
+					System.err.println("Matrix Singularity Error occured");
 					continue;
 				}
 
 				double[] userLatLon = ECEFtoLatLon.ecef2lla(userECEF);
 				SV = null;
 				ArrayList<Satellite>[] dualSV = null;
-				if (isDual) {
-					dualSV = DualFreq.process(obsvMsg, NavMsgs, obsvCode, useIGS, useBias, bias, orbit, clock, antenna,
-							tRX, weekNo, userECEF, time, useCutOffAng);
-					if (dualSV[0].size() < minSat && dualSV[1].size() < minSat) {
-						continue;
-					}
-					dualSVlist.add(dualSV);
-				} else {
-					SV = SingleFreq.process(obsvMsg, NavMsgs, obsvCode[0], useIGS, false, false, useBias, ionoCoeff,
-							bias, orbit, clock, antenna, tRX, weekNo, time, null, userECEF, userLatLon, ionoValueMap,
-							useCutOffAng, null, frame);
+				if (useDerived) {
+					SV = com.RINEX_parser.GoogleDecimeter.SingleFreq.process(obsvMsg, ionoCoeff, tRX, userECEF,
+							useCutOffAng, derivedMap, time, obsvCodeList);
 					if (SV.size() < minSat) {
+						System.err.println("visible satellite count is below threshold");
 						continue;
 					}
-					SVlist.add(SV);
+
+				} else {
+					if (isDual) {
+						dualSV = DualFreq.process(obsvMsg, NavMsgs, obsvCode, useIGS, useBias, bias, orbit, clock,
+								antenna, tRX, weekNo, userECEF, time, useCutOffAng);
+						if (dualSV[0].size() < minSat && dualSV[1].size() < minSat) {
+
+							System.err.println("visible satellite count is below threshold");
+							continue;
+						}
+						dualSVlist.add(dualSV);
+					} else {
+						SV = SingleFreq.process(obsvMsg, NavMsgs, obsvCode[0], useIGS, false, false, useBias, ionoCoeff,
+								bias, orbit, clock, antenna, tRX, weekNo, time, null, userECEF, userLatLon,
+								ionoValueMap, useCutOffAng, null, frame);
+						if (SV.size() < minSat) {
+							System.err.println("visible satellite count is below threshold");
+							continue;
+						}
+						SVlist.add(SV);
+					}
 				}
 
 				switch (estimatorType) {
@@ -309,7 +326,14 @@ public class GoogleDeciApp {
 				case 6:
 					long millisSinceGpsEpoch = (weekNo * milliSecInWeek) + (Math.round(tRX * 1000));
 					wls = new WLS(SV, rxPCO[0], ionoCoeff, time, ionex, geoid);
-					double[] estLLH = ECEFtoLatLon.ecef2lla(wls.getTropoCorrECEF());
+					double[] estLLH = null;
+					try {
+						estLLH = ECEFtoLatLon.ecef2lla(wls.getTropoCorrECEF());
+					} catch (org.ejml.data.SingularMatrixException e) {
+						System.err.println("Matrix Singularity Error occured");
+						continue;
+					}
+
 					String[] row = new String[] { "", "" + millisSinceGpsEpoch, "" + estLLH[0], "" + estLLH[1] };
 					csvRes.add(row);
 					break;

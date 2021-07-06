@@ -44,7 +44,6 @@ import com.RINEX_parser.fileParser.ObservationRNX;
 import com.RINEX_parser.fileParser.Orbit;
 import com.RINEX_parser.fileParser.RTKlib;
 import com.RINEX_parser.fileParser.SBAS;
-import com.RINEX_parser.fileParser.GoogleDecimeter.DerivedCSV;
 import com.RINEX_parser.helper.CycleSlip;
 import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.IonoValue;
@@ -65,7 +64,8 @@ public class MainApp {
 	public static void main(String[] args) {
 
 		Instant start = Instant.now();
-		switch (4) {
+
+		switch (3) {
 		case 1:
 			/*
 			 * public static void posEstimate(boolean doWeightPlot, boolean doIonoPlot,
@@ -80,20 +80,30 @@ public class MainApp {
 
 		case 2:
 			/*
-			 * public static void posEstimate(boolean doPosErrPlot, boolean useCutOffAng,
-			 * boolean useBias, boolean useIGS, boolean isDual, boolean useGIM, boolean
-			 * useRTKlib, boolean usePhase, int estimatorType, String[] obsvCode, int
-			 * minSat)
+			 * posEstimate(boolean doPosErrPlot, boolean useCutOffAng, boolean useBias,
+			 * boolean useIGS, boolean isDual, boolean useGIM, boolean useRTKlib, boolean
+			 * usePhase, int estimatorType, String[] obsvCode, int minSat, String obs_path,
+			 * String derived_csv_path,String[] obsvCodeList)
+			 * 
 			 */
-			GoogleDeciApp.posEstimate(true, true, true, false, false, true, false, false, 4,
-					new String[] { "G1C", "G5X" }, 4, null, null, false);
+
+			String[] obsvCodeList = new String[] { "G1C", "E1C", "C2I", "J1C" };
+			String obs_path = "E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2021-04-29-US-SJC-2\\SamsungS20Ultra\\supplemental\\SamsungS20Ultra_GnssLog.21o";
+			String derived_csv_path = "E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2021-04-29-US-SJC-2\\SamsungS20Ultra\\SamsungS20Ultra_derived.csv";
+			GoogleDeciApp.posEstimate(true, true, false, false, false, false, false, false, 3, new String[] { "G1C" },
+					4, obs_path, derived_csv_path, obsvCodeList);
 			break;
 		case 3:
-			try {
-				CSVWriter writer = null;
-				String filePath = "E:\\Study\\Google Decimeter Challenge\\result\\output.csv";
-				String[] header = new String[] { "phone", "millisSinceGpsEpoch", "latDeg", "lngDeg" };
+			File output = new File("E:\\Study\\Google Decimeter Challenge\\decimeter\\errReport.txt");
+			PrintStream stream;
 
+			try {
+				stream = new PrintStream(output);
+				System.setErr(stream);
+				CSVWriter writer = null;
+				String filePath = "E:\\Study\\Google Decimeter Challenge\\result\\test.csv";
+				String[] header = new String[] { "phone", "millisSinceGpsEpoch", "latDeg", "lngDeg" };
+				obsvCodeList = new String[] { "G1C", "E1C", "C2I", "J1C" };
 				File file = new File(filePath);
 				// create FileWriter object with file as parameter
 				FileWriter outputfile;
@@ -111,13 +121,13 @@ public class MainApp {
 						String mobName = mobFile.getName();
 						String path = mobFile.getAbsolutePath();
 						String year = dayFile.getName().split("-")[0].substring(2);
-						String obs_path = path + "\\supplemental\\" + mobName + "_GnssLog." + year + "o";
-						String derived_csv_path = path + "\\" + mobName + "_derived,csv";
-						ArrayList<String[]> csvRes = GoogleDeciApp.posEstimate(true, true, true, false, false, true,
-								false, false, 6, new String[] { "G1C" }, 4, obs_path, derived_csv_path, false);
+						obs_path = path + "\\supplemental\\" + mobName + "_GnssLog." + year + "o";
+						derived_csv_path = path + "\\" + mobName + "_derived.csv";
+						ArrayList<String[]> csvRes = GoogleDeciApp.posEstimate(true, true, false, false, false, false,
+								false, false, 6, new String[] { "G1C" }, 4, obs_path, derived_csv_path, obsvCodeList);
 						csvRes.stream().forEach(i -> i[0] = dayFile.getName() + "_" + mobName);
 						csvRes = GoogleData.predict(csvRes);
-						GoogleData.filter(csvRes);
+						// GoogleData.filter(csvRes);
 						writer.writeAll(csvRes);
 
 					}
@@ -129,14 +139,6 @@ public class MainApp {
 			}
 			break;
 
-		case 4:
-			try {
-				DerivedCSV.processCSV(
-						"E:\\Study\\Google Decimeter Challenge\\decimeter\\test\\2021-03-16-US-RWC-2\\Pixel4XL\\Pixel4XL_derived.csv");
-			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
 		}
 
 		Instant end = Instant.now();
