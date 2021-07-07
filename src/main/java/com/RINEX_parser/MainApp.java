@@ -62,6 +62,38 @@ import com.opencsv.CSVWriter;
 public class MainApp {
 
 	public static void main(String[] args) {
+		try {
+			CSVWriter writer = null;
+			String filePath = "E:\\Study\\Google Decimeter Challenge\\decimeter\\test\\2020-05-28-US-MTV-1\\Pixel4XL\\rinexObs.csv";
+			String[] header = new String[] { "MillisSinceGpsEpoch" };
+			String obs_path = "E:\\Study\\Google Decimeter Challenge\\decimeter\\test\\2020-05-28-US-MTV-1\\Pixel4XL\\supplemental\\Pixel4XL_GnssLog.20o";
+			HashMap<String, Object> ObsvMsgComp;
+			File file = new File(filePath);
+			// create FileWriter object with file as parameter
+			FileWriter outputfile;
+
+			outputfile = new FileWriter(file);
+
+			// create CSVWriter object filewriter object as parameter
+			writer = new CSVWriter(outputfile);
+			writer.writeNext(header);
+			ObsvMsgComp = ObservationRNX.rinex_obsv_process(obs_path, false, null, new String[] { "G1C" }, false);
+			@SuppressWarnings("unchecked")
+			ArrayList<ObservationMsg> ObsvMsgs = (ArrayList<ObservationMsg>) ObsvMsgComp.get("ObsvMsgs");
+			for (ObservationMsg obs : ObsvMsgs) {
+				long tRX = (long) Math.floor((obs.getTRX() + (604800 * obs.getWeekNo())) * 1000);
+				writer.writeNext(new String[] { tRX + "" });
+			}
+			writer.close();
+
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+	}
+
+	public static void main2(String[] args) {
 
 		Instant start = Instant.now();
 
@@ -94,16 +126,16 @@ public class MainApp {
 					4, obs_path, derived_csv_path, obsvCodeList);
 			break;
 		case 3:
-			File output = new File("E:\\Study\\Google Decimeter Challenge\\decimeter\\errReport.txt");
-			PrintStream stream;
+//			File output = new File("E:\\Study\\Google Decimeter Challenge\\decimeter\\errReport2.txt");
+//			PrintStream stream;
 
 			try {
-				stream = new PrintStream(output);
-				System.setErr(stream);
+//				stream = new PrintStream(output);
+//				System.setErr(stream);
 				CSVWriter writer = null;
-				String filePath = "E:\\Study\\Google Decimeter Challenge\\result\\test.csv";
+				String filePath = "E:\\Study\\Google Decimeter Challenge\\result\\test2.csv";
 				String[] header = new String[] { "phone", "millisSinceGpsEpoch", "latDeg", "lngDeg" };
-				obsvCodeList = new String[] { "G1C", "E1C", "C2I", "J1C" };
+				obsvCodeList = new String[] { "G1C" };
 				File file = new File(filePath);
 				// create FileWriter object with file as parameter
 				FileWriter outputfile;
@@ -122,9 +154,10 @@ public class MainApp {
 						String path = mobFile.getAbsolutePath();
 						String year = dayFile.getName().split("-")[0].substring(2);
 						obs_path = path + "\\supplemental\\" + mobName + "_GnssLog." + year + "o";
+
 						derived_csv_path = path + "\\" + mobName + "_derived.csv";
 						ArrayList<String[]> csvRes = GoogleDeciApp.posEstimate(true, true, false, false, false, false,
-								false, false, 6, new String[] { "G1C" }, 4, obs_path, derived_csv_path, obsvCodeList);
+								false, false, 6, new String[] { "G1C" }, 4, obs_path, null, obsvCodeList);
 						csvRes.stream().forEach(i -> i[0] = dayFile.getName() + "_" + mobName);
 						csvRes = GoogleData.predict(csvRes);
 						// GoogleData.filter(csvRes);

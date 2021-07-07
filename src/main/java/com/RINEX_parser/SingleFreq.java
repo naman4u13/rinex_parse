@@ -189,7 +189,7 @@ public class SingleFreq {
 		}
 
 		if (useCutOffAng) {
-			SV.removeIf(i -> i.getElevAzm()[0] < Math.toRadians(5));
+			SV.removeIf(i -> i.getElevAzm()[0] < Math.toRadians(0));
 		}
 
 		return SV;

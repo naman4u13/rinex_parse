@@ -139,6 +139,7 @@ public class GoogleDeciApp {
 			HashMap<Long, HashMap<String, HashMap<Integer, Derived>>> derivedMap = null;
 			if (useDerived) {
 				derivedMap = DerivedCSV.processCSV(derived_csv_path);
+
 			}
 
 			// Note PVT algos will compute for Antenna Reference Point as it is independent
@@ -177,7 +178,6 @@ public class GoogleDeciApp {
 				double tRX = obsvMsg.getTRX();
 
 				long weekNo = obsvMsg.getWeekNo();
-
 				double[] trueUserLLH = null;
 				if (estimatorType != 6) {
 					if (Math.round(tRX * 1000) != (rxLLH.get(i)[0] * 1000) || weekNo != rxLLH.get(i)[1]) {
@@ -194,7 +194,7 @@ public class GoogleDeciApp {
 				if (useDerived) {
 
 					SV = com.RINEX_parser.GoogleDecimeter.SingleFreq.process(obsvMsg, ionoCoeff, tRX,
-							new double[] { 0, 0, 0 }, false, derivedMap, time, obsvCodeList);
+							new double[] { 0, 0, 0 }, false, derivedMap, time, obsvCodeList, weekNo);
 
 				} else {
 					SV = SingleFreq.process(obsvMsg, NavMsgs, obsvCode[0], false, false, false, useBias, ionoCoeff,
@@ -219,7 +219,7 @@ public class GoogleDeciApp {
 				ArrayList<Satellite>[] dualSV = null;
 				if (useDerived) {
 					SV = com.RINEX_parser.GoogleDecimeter.SingleFreq.process(obsvMsg, ionoCoeff, tRX, userECEF,
-							useCutOffAng, derivedMap, time, obsvCodeList);
+							useCutOffAng, derivedMap, time, obsvCodeList, weekNo);
 					if (SV.size() < minSat) {
 						System.err.println("visible satellite count is below threshold");
 						continue;
