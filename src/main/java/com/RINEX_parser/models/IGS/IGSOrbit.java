@@ -6,9 +6,9 @@ public class IGSOrbit {
 
 	// timestamp of record in GPS time scale
 	private double time;
-	private HashMap<Integer, double[]> satECEF;
+	private HashMap<Character, HashMap<Integer, double[]>> satECEF;
 
-	public IGSOrbit(double time, HashMap<Integer, double[]> satECEF) {
+	public IGSOrbit(double time, HashMap<Character, HashMap<Integer, double[]>> satECEF) {
 		this.time = time;
 		this.satECEF = satECEF;
 
@@ -18,7 +18,7 @@ public class IGSOrbit {
 		return time;
 	}
 
-	public HashMap<Integer, double[]> getSatECEF() {
+	public HashMap<Character, HashMap<Integer, double[]>> getSatECEF() {
 		return satECEF;
 	}
 

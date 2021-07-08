@@ -101,20 +101,26 @@ public class Bias {
 		char SSI = obsvCode.charAt(0);
 		// Observable/Observation code in RINEX format
 		String _obsvCode = 'C' + obsvCode.substring(1);
+		double ISC = 0;
 		if (SSI == 'G') {
 			int index = GPSindexMap.get(_obsvCode);
-			double ISC = C1Wmap.get(PRN)[index];
-			return ISC;
-		}
-		HashMap<String, HashMap<String, Double>> _biasMap = biasMap.get(SSI).get(PRN);
-		double ISC = 0;
-		if (_biasMap.containsKey("C1W") && _biasMap.get("C1W").containsKey(_obsvCode)) {
+			ISC = C1Wmap.get(PRN)[index];
 
-			ISC = _biasMap.get("C1W").get(_obsvCode);
-		} else {
-			ISC = -_biasMap.get(_obsvCode).get("C1W");
-		}
+		} else if (SSI == 'E') {
+			HashMap<String, HashMap<String, Double>> galileoMap = biasMap.get(SSI).get(PRN);
+			if (_obsvCode.equals("C5Q")) {
+				ISC = galileoMap.get("C1C").get("C5Q");
+			} else if (_obsvCode.equals("C5X")) {
+				ISC = galileoMap.get("C1X").get("C5X");
+			}
 
+		} else if (SSI == 'C') {
+			HashMap<String, HashMap<String, Double>> beidouMap = biasMap.get(SSI).get(PRN);
+			if (_obsvCode.equals("C7I")) {
+				ISC = beidouMap.get("C2I").get("C7I");
+			}
+		}
 		return ISC;
+
 	}
 }

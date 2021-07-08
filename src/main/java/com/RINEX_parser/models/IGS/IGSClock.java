@@ -6,9 +6,9 @@ public class IGSClock {
 	// timestamp of record in GPS time scale
 	private double time;
 
-	private HashMap<Integer, Double> clkBias;
+	private HashMap<Character, HashMap<Integer, Double>> clkBias;
 
-	public IGSClock(double time, HashMap<Integer, Double> clkBias) {
+	public IGSClock(double time, HashMap<Character, HashMap<Integer, Double>> clkBias) {
 		this.time = time;
 		this.clkBias = clkBias;
 	}
@@ -17,7 +17,7 @@ public class IGSClock {
 		return time;
 	}
 
-	public HashMap<Integer, Double> getClkBias() {
+	public HashMap<Character, HashMap<Integer, Double>> getClkBias() {
 		return clkBias;
 	}
 

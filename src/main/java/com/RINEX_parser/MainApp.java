@@ -62,42 +62,10 @@ import com.opencsv.CSVWriter;
 public class MainApp {
 
 	public static void main(String[] args) {
-		try {
-			CSVWriter writer = null;
-			String filePath = "E:\\Study\\Google Decimeter Challenge\\decimeter\\test\\2020-05-28-US-MTV-1\\Pixel4XL\\rinexObs.csv";
-			String[] header = new String[] { "MillisSinceGpsEpoch" };
-			String obs_path = "E:\\Study\\Google Decimeter Challenge\\decimeter\\test\\2020-05-28-US-MTV-1\\Pixel4XL\\supplemental\\Pixel4XL_GnssLog.20o";
-			HashMap<String, Object> ObsvMsgComp;
-			File file = new File(filePath);
-			// create FileWriter object with file as parameter
-			FileWriter outputfile;
-
-			outputfile = new FileWriter(file);
-
-			// create CSVWriter object filewriter object as parameter
-			writer = new CSVWriter(outputfile);
-			writer.writeNext(header);
-			ObsvMsgComp = ObservationRNX.rinex_obsv_process(obs_path, false, null, new String[] { "G1C" }, false);
-			@SuppressWarnings("unchecked")
-			ArrayList<ObservationMsg> ObsvMsgs = (ArrayList<ObservationMsg>) ObsvMsgComp.get("ObsvMsgs");
-			for (ObservationMsg obs : ObsvMsgs) {
-				long tRX = (long) Math.floor((obs.getTRX() + (604800 * obs.getWeekNo())) * 1000);
-				writer.writeNext(new String[] { tRX + "" });
-			}
-			writer.close();
-
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
-	}
-
-	public static void main2(String[] args) {
 
 		Instant start = Instant.now();
 
-		switch (3) {
+		switch (2) {
 		case 1:
 			/*
 			 * public static void posEstimate(boolean doWeightPlot, boolean doIonoPlot,
@@ -106,7 +74,7 @@ public class MainApp {
 			 * useRTKlib, boolean usePhase, int estimatorType, String[] obsvCode, int
 			 * minSat)
 			 */
-			posEstimate(false, false, true, true, true, false, true, true, true, false, false, false, 4,
+			posEstimate(false, false, true, true, true, false, true, true, false, true, false, false, 4,
 					new String[] { "G1C", "G2X" }, 4);
 			break;
 
@@ -119,11 +87,11 @@ public class MainApp {
 			 * 
 			 */
 
-			String[] obsvCodeList = new String[] { "G1C", "E1C", "C2I", "J1C" };
+			String[] obsvCodeList = new String[] { "G1C", "E1C" };
 			String obs_path = "E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2021-04-29-US-SJC-2\\SamsungS20Ultra\\supplemental\\SamsungS20Ultra_GnssLog.21o";
 			String derived_csv_path = "E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2021-04-29-US-SJC-2\\SamsungS20Ultra\\SamsungS20Ultra_derived.csv";
-			GoogleDeciApp.posEstimate(true, true, false, false, false, false, false, false, 3, new String[] { "G1C" },
-					4, obs_path, derived_csv_path, obsvCodeList);
+			GoogleDeciApp.posEstimate(true, true, true, true, false, true, false, false, 3, new String[] { "G1C" }, 4,
+					obs_path, derived_csv_path, obsvCodeList);
 			break;
 		case 3:
 //			File output = new File("E:\\Study\\Google Decimeter Challenge\\decimeter\\errReport2.txt");
@@ -172,6 +140,19 @@ public class MainApp {
 			}
 			break;
 
+		case 4:
+			try {
+				String orbit_path = "E:\\Study\\Google Decimeter Challenge\\input_files\\2021_119\\COD0MGXFIN_20211190000_01D_05M_ORB.SP3";
+				Orbit orbit = new Orbit(orbit_path);
+
+				String clock_path = "E:\\Study\\Google Decimeter Challenge\\input_files\\2021_119\\COD0MGXFIN_20211190000_01D_30S_CLK.CLK";
+				Clock clock = new Clock(clock_path, null);
+				System.err.println();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
 		}
 
 		Instant end = Instant.now();
@@ -206,7 +187,7 @@ public class MainApp {
 
 			String nav_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\BRDC00IGS_R_20201000000_01D_MN.rnx\\BRDC00IGS_R_20201000000_01D_MN.rnx";
 
-			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\NYA100NOR_S_20201000000_01D_30S_MO.rnx\\NYA100NOR_S_20201000000_01D_30S_MO.rnx";
+			String obs_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\IISC00IND_R_20201000000_01D_30S_MO.crx\\IISC00IND_R_20201000000_01D_30S_MO.rnx";
 
 			String sbas_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\EGNOS_2020_100\\123\\D100.ems";
 
@@ -275,8 +256,8 @@ public class MainApp {
 			}
 			if (useIGS) {
 
-				char SSI = obsvCode[0].charAt(0);
-				orbit = new Orbit(orbit_path, SSI);
+				orbit = new Orbit(orbit_path);
+
 				clock = new Clock(clock_path, bias);
 				antenna = new Antenna(antenna_csv_path);
 

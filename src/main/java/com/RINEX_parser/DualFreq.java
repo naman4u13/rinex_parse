@@ -38,6 +38,7 @@ public class DualFreq {
 		int satCount = observables1.size();
 
 		if (useIGS) {
+			char SSI = obsvCode[0].charAt(0);
 			int polyOrder = 10;
 			orbit.findPts(tRX, polyOrder);
 			clock.findPts(tRX);
@@ -52,12 +53,12 @@ public class DualFreq {
 				double tSV1 = tRX - (sat1.getPseudorange() / SpeedofLight);
 				double tSV2 = tRX - (sat2.getPseudorange() / SpeedofLight);
 
-				double[] satClkOff = clock.getBias(tSV1, SVID, obsvCode);
+				double[] satClkOff = clock.getBias(tSV1, SVID, obsvCode, true);
 
 				// GPS System transmission time
 				double t = tSV1 - satClkOff[0];
 
-				double[][] satPV = orbit.getPV(t, SVID, polyOrder);
+				double[][] satPV = orbit.getPV(t, SVID, polyOrder, SSI);
 				double[] satECEF_MC = satPV[0];
 				double[] satVel = satPV[1];
 

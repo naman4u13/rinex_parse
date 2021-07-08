@@ -14,25 +14,38 @@ import com.RINEX_parser.utility.Time;
 
 public class Orbit {
 
-	private ArrayList<IGSOrbit> IGSOrbitList;
+	private ArrayList<IGSOrbit> IGSOrbitList = new ArrayList<IGSOrbit>();
 	private int[] pts;
 
-	public Orbit(String path, char SSI) throws Exception {
-		HashMap<Character, ArrayList<IGSOrbit>> IGSOrbitMap = orbit_process(path);
+	public Orbit(String path) throws Exception {
 
-		IGSOrbitList = IGSOrbitMap.get(SSI);
+		orbit_process(path);
+
 	}
 
-	private HashMap<Character, ArrayList<IGSOrbit>> orbit_process(String path) throws Exception {
-		HashMap<Character, ArrayList<IGSOrbit>> IGSOrbitMap = new HashMap<Character, ArrayList<IGSOrbit>>();
+	private void orbit_process(String path) throws Exception {
+
 		try {
 			Path fileName = Path.of(path);
 			String input = Files.readString(fileName);
 			String[] lines = input.split("\r\n|\r|\n");
-			int satCount = Integer.parseInt(StringUtil.splitter(lines[2], false, 4, 2)[1]);
-
+			int satCount = 0;
+			if (lines[0].charAt(1) == 'c') {
+				satCount = Integer.parseInt(StringUtil.splitter(lines[2], false, 4, 2)[1]);
+				lines = Arrays.copyOfRange(lines, 22, lines.length - 1);
+			} else if (lines[0].charAt(1) == 'd') {
+				satCount = Integer.parseInt(StringUtil.splitter(lines[2], false, 3, 3)[1]);
+				int start = 0;
+				for (int i = 0; i < lines.length; i++) {
+					if (lines[i].charAt(0) == '*') {
+						start = i;
+						break;
+					}
+				}
+				lines = Arrays.copyOfRange(lines, start, lines.length - 1);
+			}
 			// "EOF" is last line of Orbit file, which will be excluded
-			lines = Arrays.copyOfRange(lines, 22, lines.length - 1);
+
 			for (int i = 0; i < lines.length; i++) {
 				HashMap<Character, HashMap<Integer, double[]>> satECEF = new HashMap<Character, HashMap<Integer, double[]>>();
 				String[] strTime = StringUtil.splitter(lines[i], false, 3);
@@ -60,11 +73,9 @@ public class Orbit {
 					}
 
 				}
-
-				satECEF.forEach((key, value) -> IGSOrbitMap.computeIfAbsent(key, k -> new ArrayList<IGSOrbit>())
-						.add(new IGSOrbit(GPSTime, value)));
+				IGSOrbitList.add(new IGSOrbit(GPSTime, satECEF));
 			}
-			return IGSOrbitMap;
+
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw new Exception("Error occured during parsing of IGS Orbit(.sp3) file \n" + e);
@@ -105,7 +116,7 @@ public class Orbit {
 
 	}
 
-	public double[][] getPV(double x, int SVID, int n) {
+	public double[][] getPV(double x, int SVID, int n, char SSI) {
 		double[] X = new double[n];
 		double[][] Y = new double[3][n];
 
@@ -113,7 +124,7 @@ public class Orbit {
 			int index = i - pts[0];
 			IGSOrbit orbit = IGSOrbitList.get(i);
 			X[index] = orbit.getTime();
-			double[] satECEF = orbit.getSatECEF().get(SVID);
+			double[] satECEF = orbit.getSatECEF().get(SSI).get(SVID);
 			IntStream.range(0, 3).forEach(j -> Y[j][index] = satECEF[j]);
 
 		}

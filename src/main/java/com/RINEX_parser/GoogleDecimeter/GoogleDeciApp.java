@@ -71,7 +71,6 @@ public class GoogleDeciApp {
 			ArrayList<ArrayList<Satellite>[]> dualSVlist = new ArrayList<ArrayList<Satellite>[]>();
 			ArrayList<String[]> csvRes = new ArrayList<String[]>();
 			Bias bias = null;
-
 			Orbit orbit = null;
 			Clock clock = null;
 			Antenna antenna = null;
@@ -91,7 +90,6 @@ public class GoogleDeciApp {
 			int year = Time.getDate(ObsvMsgs.get(0).getTRX(), week, 0).get(Calendar.YEAR);
 			int dayNo = Time.getDate(ObsvMsgs.get(0).getTRX(), week, 0).get(Calendar.DAY_OF_YEAR);
 			int doW = Time.getDate(ObsvMsgs.get(0).getTRX(), week, 0).get(Calendar.DAY_OF_WEEK) - 1;
-
 			String day = String.format("%03d", dayNo);
 			String base_url = "E:\\Study\\Google Decimeter Challenge\\input_files\\";
 
@@ -99,30 +97,28 @@ public class GoogleDeciApp {
 
 			String bias_path = base_url + year + "_" + day + "\\CAS0MGXRAP_" + year + day + "0000_01D_01D_DCB.BSX";
 
-			String orbit_path = base_url + year + "_" + day + "\\igs" + week + doW + ".sp3";
+			String orbit_path = base_url + year + "_" + day + "\\COD0MGXFIN_" + year + day + "0000_01D_05M_ORB.SP3";
 
 			String antenna_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\igs14.atx\\igs14.atx";
 
 			String antenna_csv_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\antenna.csv";
 
-			String clock_path = base_url + year + "_" + day + "\\igs" + week + doW + ".clk_30s";
+			String clock_path = base_url + year + "_" + day + "\\COD0MGXFIN_" + year + day + "0000_01D_30S_CLK.CLK";
 
 			int year2dig = year % 2000;
 			String ionex_path = base_url + year + "_" + day + "\\igsg" + day + "0." + year2dig + "i";
 
 			String RTKlib_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\RTKlib\\decimeter_samsung119.pos";
 
-			if (true) {
-				String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\google\\2021-04-29-US-SJC-2\\test";
-				File output = new File(path + ".txt");
-				PrintStream stream;
+			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\google\\2021-04-29-US-SJC-2\\test3";
+			File output = new File(path + ".txt");
+			PrintStream stream;
 
-				try {
-					stream = new PrintStream(output);
-					System.setOut(stream);
-				} catch (FileNotFoundException e) { // TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+			try {
+				stream = new PrintStream(output);
+				System.setOut(stream);
+			} catch (FileNotFoundException e) { // TODO Auto-generated catch block
+				e.printStackTrace();
 			}
 
 			Geoid geoid = buildGeoid();
@@ -153,8 +149,7 @@ public class GoogleDeciApp {
 			}
 			if (useIGS) {
 
-				char SSI = obsvCode[0].charAt(0);
-				orbit = new Orbit(orbit_path, SSI);
+				orbit = new Orbit(orbit_path);
 				clock = new Clock(clock_path, bias);
 				antenna = new Antenna(antenna_csv_path);
 
@@ -194,7 +189,8 @@ public class GoogleDeciApp {
 				if (useDerived) {
 
 					SV = com.RINEX_parser.GoogleDecimeter.SingleFreq.process(obsvMsg, ionoCoeff, tRX,
-							new double[] { 0, 0, 0 }, false, derivedMap, time, obsvCodeList, weekNo);
+							new double[] { 0, 0, 0 }, false, derivedMap, time, obsvCodeList, weekNo, false, false, null,
+							null, null, null);
 
 				} else {
 					SV = SingleFreq.process(obsvMsg, NavMsgs, obsvCode[0], false, false, false, useBias, ionoCoeff,
@@ -219,7 +215,8 @@ public class GoogleDeciApp {
 				ArrayList<Satellite>[] dualSV = null;
 				if (useDerived) {
 					SV = com.RINEX_parser.GoogleDecimeter.SingleFreq.process(obsvMsg, ionoCoeff, tRX, userECEF,
-							useCutOffAng, derivedMap, time, obsvCodeList, weekNo);
+							useCutOffAng, derivedMap, time, obsvCodeList, weekNo, useIGS, useBias, bias, orbit, clock,
+							antenna);
 					if (SV.size() < minSat) {
 						System.err.println("visible satellite count is below threshold");
 						continue;

@@ -50,6 +50,8 @@ public class SingleFreq {
 		int satCount = observables.size();
 
 		if (useIGS) {
+			char SSI = obsvCode.charAt(0);
+
 			int polyOrder = 10;
 			orbit.findPts(tRX, polyOrder);
 			clock.findPts(tRX);
@@ -59,10 +61,10 @@ public class SingleFreq {
 				int SVID = sat.getSVID();
 				double tSV = tRX - (sat.getPseudorange() / SpeedofLight);
 
-				double satClkOff = clock.getBias(tSV, SVID, obsvCode);
+				double satClkOff = clock.getBias(tSV, SVID, obsvCode, true);
 				// GPS System transmission time
 				double t = tSV - satClkOff;
-				double[][] satPV = orbit.getPV(t, SVID, polyOrder);
+				double[][] satPV = orbit.getPV(t, SVID, polyOrder, SSI);
 				double[] satECEF = satPV[0];
 				double[] satVel = satPV[1];
 
@@ -189,7 +191,7 @@ public class SingleFreq {
 		}
 
 		if (useCutOffAng) {
-			SV.removeIf(i -> i.getElevAzm()[0] < Math.toRadians(0));
+			SV.removeIf(i -> i.getElevAzm()[0] < Math.toRadians(15));
 		}
 
 		return SV;

@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner;
 
+import com.RINEX_parser.constants.Constellation;
 import com.RINEX_parser.models.IGS.IGSClock;
 import com.RINEX_parser.utility.Interpolator;
 import com.RINEX_parser.utility.StringUtil;
@@ -15,7 +16,6 @@ public class Clock {
 	private ArrayList<IGSClock> IGSClockList;
 	private int[] pts;
 	private Bias bias;
-	private final static double GPS_FREQ_RATIO = ((154.0 * 154.0) / (120.0 * 120.0));
 
 	public Clock(String path, Bias bias) throws Exception {
 		IGSClockList = new ArrayList<IGSClock>();
@@ -32,10 +32,17 @@ public class Clock {
 			Scanner input = new Scanner(file);
 			input.useDelimiter("END OF HEADER");
 			String[] header = input.next().split("\r\n|\r|\n");
+			int recLen = 60;
+			int[] recFormat = new int[] { 3, 5, 26, 6, 19 };
+			boolean rnx304 = false;
+			if (header[0].split("\\s")[0].trim().equals("3.04")) {
+				recLen = 65;
+				recFormat = new int[] { 3, 10, 27, 5, 19 };
+			}
 			int satCount = 0;
 			for (String line : header) {
 
-				String[] cols = StringUtil.splitter(line, 60, 20);
+				String[] cols = StringUtil.splitter(line, recLen, 20);
 				String label = cols[1];
 				if (label.equalsIgnoreCase("# OF SOLN SATS")) {
 					satCount = Integer.parseInt(cols[0]);
@@ -47,19 +54,41 @@ public class Clock {
 			for (int i = 0; i < data.length; i++) {
 				String clkType = StringUtil.splitter(data[i], false, 3)[0];
 				if (clkType.equalsIgnoreCase("AS")) {
-					String[] strTime = StringUtil.splitter(data[i], false, 8, 26)[1].split("\\s+");
+					String[] strTime = StringUtil.splitter(data[i], false, recFormat[0] + recFormat[1], recFormat[2])[1]
+							.split("\\s+");
 					double[] time = Time.getGPSTime(strTime);
 					double GPSTime = time[0];
 					long weekNo = (long) time[1];
-					HashMap<Integer, Double> biasMap = new HashMap<Integer, Double>();
-					for (int j = 0; j < satCount; j++) {
-						String[] clkData = StringUtil.splitter(data[i], false, 3, 5, 32, 19);
+					HashMap<Character, HashMap<Integer, Double>> biasMap = new HashMap<Character, HashMap<Integer, Double>>();
+
+					while (i < data.length) {
+						clkType = StringUtil.splitter(data[i], false, 3)[0];
+						if (clkType.equalsIgnoreCase("AR")) {
+							i++;
+							continue;
+						}
+						String[] cStrTime = StringUtil.splitter(data[i], false, recFormat[0] + recFormat[1],
+								recFormat[2])[1].split("\\s+");
+						boolean flag = false;
+						for (int k = strTime.length - 1; k > 1; k--) {
+							if (!cStrTime[k].equals(strTime[k])) {
+								flag = true;
+								break;
+							}
+						}
+						if (flag) {
+							i--;
+							break;
+						}
+						String[] clkData = StringUtil.splitter(data[i], false, recFormat[0], recFormat[1],
+								recFormat[2] + recFormat[3], recFormat[4]);
 						String SVName = clkData[1];
 						char SSI = SVName.charAt(0);
 
 						int SVID = Integer.parseInt(SVName.substring(1));
 						double clkBias = Double.parseDouble(clkData[3]);
-						biasMap.put(SVID, clkBias);
+						biasMap.computeIfAbsent(SSI, k -> new HashMap<Integer, Double>()).put(SVID, clkBias);
+
 						i++;
 
 					}
@@ -96,33 +125,69 @@ public class Clock {
 
 	}
 
-	public double getBias(double x, int SVID, String obsvCode) {
+	public double getBias(double x, int SVID, String obsvCode, boolean applyDCB) {
 
-		return getBias(x, SVID, new String[] { obsvCode })[0];
+		return getBias(x, SVID, new String[] { obsvCode }, applyDCB)[0];
 
 	}
 
-	public double[] getBias(double x, int SVID, String[] obsvCode) {
+	public double[] getBias(double x, int SVID, String[] obsvCode, boolean applyDCB) {
 		double[] X = new double[2];
 		double[] Y = new double[2];
-
+		char SSI = obsvCode[0].charAt(0);
 		for (int i = 0; i < 2; i++) {
+
 			IGSClock clk = IGSClockList.get(pts[i]);
 			X[i] = clk.getTime();
-			Y[i] = clk.getClkBias().get(SVID);
+			try {
+				Y[i] = clk.getClkBias().get(SSI).get(SVID);
+			} catch (Exception e) {
+				System.out.println();
+			}
 
 		}
 
 		double clkBias = Interpolator.linear(X, Y, x);
-
-		double TGD = bias.getISC("G2W", SVID) / (1 - GPS_FREQ_RATIO);
 		int fN = obsvCode.length;
 		double[] clkBiases = new double[fN];
-		for (int i = 0; i < fN; i++) {
-			double ISC = bias.getISC(obsvCode[i], SVID);
-			clkBiases[i] = clkBias - TGD + ISC;
-		}
+		if (applyDCB) {
+			if (SSI == 'G') {
+				double gpsFreqRatio = Math.pow(Constellation.frequency.get('G').get(1), 2)
+						/ Math.pow(Constellation.frequency.get('G').get(2), 2);
 
+				double TGD = bias.getISC("G2W", SVID) / (1 - gpsFreqRatio);
+
+				for (int i = 0; i < fN; i++) {
+					double ISC = bias.getISC(obsvCode[i], SVID);
+					clkBiases[i] = clkBias - TGD + ISC;
+				}
+			} else if (SSI == 'E') {
+				double galileoFreqRatio = Math.pow(Constellation.frequency.get('E').get(1), 2)
+						/ Math.pow(Constellation.frequency.get('E').get(5), 2);
+				for (int i = 0; i < fN; i++) {
+
+					if (obsvCode[i] == "E1C") {
+						double BGD = bias.getISC("E5Q", SVID) / (1 - galileoFreqRatio);
+						clkBiases[i] = clkBias - BGD;
+
+					} else if (obsvCode[i] == "E5X") {
+						double BGD = bias.getISC("E5X", SVID) / (1 - galileoFreqRatio);
+						clkBiases[i] = clkBias - (galileoFreqRatio * BGD);
+					}
+				}
+			} else if (SSI == 'C') {
+				double beidouFreqRatio = Math.pow(Constellation.frequency.get('C').get(2), 2)
+						/ Math.pow(Constellation.frequency.get('C').get(7), 2);
+
+				for (int i = 0; i < fN; i++) {
+					if (obsvCode[i] == "C2I") {
+						double ISC = -bias.getISC("C7I", SVID) / (1 - beidouFreqRatio);
+						clkBiases[i] = clkBias + ISC;
+					}
+				}
+
+			}
+		}
 		return clkBiases;
 
 	}
