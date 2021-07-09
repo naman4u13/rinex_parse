@@ -7,6 +7,9 @@ import com.RINEX_parser.models.Satellite;
 
 public class Weight {
 
+	// private static final Map<Character, Double> ssiWeightMap = Map.of('G', 3.0,
+	// 'E', 2.3, 'C', 2.5, 'R', 8.5);
+
 	// Sarab Tay and Juliette Marais -
 	// https://www.researchgate.net/publication/260200581_Weighting_models_for_GPS_Pseudorange_observations_for_land_transportation_in_urban_canyons
 	// Hybrid WLS estimator combines both Carrier to Noise ratio and Elevation angle
@@ -50,25 +53,25 @@ public class Weight {
 
 	}
 
-	public static double[][] computeWeight2(ArrayList<Satellite>[] SV) {
-
-		int SVcount = SV[0].size();
-		double[][] weight = new double[SVcount][SVcount];
-		double[] CNo = new double[SVcount];
-		double f1 = Math.pow(SV[0].get(0).getCarrier_frequency(), 2);
-		double f2 = Math.pow(SV[1].get(0).getCarrier_frequency(), 2);
-		double diff = f1 - f2;
-		for (int i = 0; i < SVcount; i++) {
-			CNo[i] = ((f1 * SV[0].get(i).getCNo()) - (f2 * SV[1].get(i).getCNo())) / diff;
-		}
-
-		IntStream.range(0, SVcount)
-				.forEach(i -> weight[i][i] = 1 / Weight.computeCoVariance(CNo[i], SV[0].get(i).getElevAzm()[0]));
-
-		double[][] normWeight = Weight.normalize(weight);
-		return normWeight;
-
-	}
+//	public static double[][] computeWeight2(ArrayList<Satellite>[] SV) {
+//
+//		int SVcount = SV[0].size();
+//		double[][] weight = new double[SVcount][SVcount];
+//		double[] CNo = new double[SVcount];
+//		double f1 = Math.pow(SV[0].get(0).getCarrier_frequency(), 2);
+//		double f2 = Math.pow(SV[1].get(0).getCarrier_frequency(), 2);
+//		double diff = f1 - f2;
+//		for (int i = 0; i < SVcount; i++) {
+//			CNo[i] = ((f1 * SV[0].get(i).getCNo()) - (f2 * SV[1].get(i).getCNo())) / diff;
+//		}
+//
+//		IntStream.range(0, SVcount)
+//				.forEach(i -> weight[i][i] = 1 / Weight.computeCoVariance(CNo[i], SV[0].get(i).getElevAzm()[0]));
+//
+//		double[][] normWeight = Weight.normalize(weight);
+//		return normWeight;
+//
+//	}
 
 	public static double[][] computeIdentityMat(int SVcount) {
 		double[][] Weight = new double[SVcount][SVcount];

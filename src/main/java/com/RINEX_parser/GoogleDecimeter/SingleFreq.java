@@ -9,7 +9,6 @@ import java.util.HashMap;
 import java.util.TimeZone;
 
 import com.RINEX_parser.fileParser.Antenna;
-import com.RINEX_parser.fileParser.Bias;
 import com.RINEX_parser.fileParser.Clock;
 import com.RINEX_parser.fileParser.Orbit;
 import com.RINEX_parser.helper.ComputeEleAzm;
@@ -24,11 +23,12 @@ public class SingleFreq {
 	private final static double SpeedofLight = 299792458;
 
 	public static ArrayList<Satellite> process(ObservationMsg obsvMsg, IonoCoeff ionoCoeff, double tRX,
-			double[] userECEF, boolean useCutOffAng,
-			HashMap<Long, HashMap<String, HashMap<Integer, Derived>>> derivedMap, Calendar time, String[] obsvCodeList,
-			long weekNo, boolean useIGS, boolean useBias, Bias bias, Orbit orbit, Clock clock, Antenna antenna) {
+			double[] userECEF, double cutOffAng, HashMap<Long, HashMap<String, HashMap<Integer, Derived>>> derivedMap,
+			Calendar time, String[] obsvCodeList, long weekNo, boolean useIGS, Orbit orbit, Clock clock,
+			Antenna antenna) {
 
 		SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/YYYY kk:mm:ss.SSS");
+		String errStr = sdf.format(time.getTime());
 		sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
 		ArrayList<Satellite> SV = new ArrayList<Satellite>();
 		long key = Math.round(tRX * 1e3);
@@ -41,28 +41,27 @@ public class SingleFreq {
 		} else if (derivedMap.containsKey(key - 1)) {
 			obsvMap = derivedMap.get(key - 1);
 		} else {
-			String errStr = sdf.format(time.getTime());
 
-			ArrayList<Observable> x = null;
+			ArrayList<Observable> errObsv = null;
 			for (int i = 0; i < obsvCodeList.length; i++) {
 				if (obsvMsg.getObsvSat(obsvCodeList[i]) != null) {
-					x = obsvMsg.getObsvSat(obsvCodeList[i]);
+					errObsv = obsvMsg.getObsvSat(obsvCodeList[i]);
 					break;
 				}
 			}
 
-			if (x == null) {
+			if (errObsv == null) {
 				System.err.println("No PR info available or captured = " + errStr);
 				return SV;
 			}
-			x.removeAll(Collections.singleton(null));
-			if (x.size() == 0) {
+			errObsv.removeAll(Collections.singleton(null));
+			if (errObsv.size() == 0) {
 				System.err.println("No PR info available or captured = " + errStr);
 				return SV;
 			}
 
 			System.err.println("Missing data in derived.csv at time = " + errStr);
-			long tSV = Math.round(((tRX - (x.get(0).getPseudorange() / SpeedofLight)) + (weekNo * 604800)) * 1e9);
+			long tSV = Math.round(((tRX - (errObsv.get(0).getPseudorange() / SpeedofLight)) + (weekNo * 604800)) * 1e9);
 			long _tRX = Math.round((tRX + (604800 * weekNo)) * 1e3);
 
 			return SV;
@@ -71,7 +70,7 @@ public class SingleFreq {
 		for (String obsvCode : obsvCodeList) {
 
 			if (!obsvMap.containsKey(obsvCode)) {
-				String errStr = sdf.format(time.getTime());
+
 				System.err.println("No data for obsvCode " + obsvCode + " in derived.csv at time = " + errStr);
 				continue;
 			}
@@ -79,6 +78,8 @@ public class SingleFreq {
 			HashMap<Integer, Derived> navMap = obsvMap.get(obsvCode);
 			ArrayList<Observable> observables = obsvMsg.getObsvSat(obsvCode);
 			if (observables == null) {
+
+				System.err.println("No data for obsvCode " + obsvCode + " in Rinex Obs at time = " + errStr);
 				continue;
 			}
 			observables.removeAll(Collections.singleton(null));
@@ -94,7 +95,7 @@ public class SingleFreq {
 				Observable sat = observables.get(i);
 				int svid = sat.getSVID();
 				if (!navMap.containsKey(svid)) {
-					String errStr = sdf.format(time.getTime());
+
 					System.err.println("No data for svid " + svid + " belonging to obsvCode" + obsvCode
 							+ " in derived.csv at time = " + errStr);
 					continue;
@@ -138,8 +139,8 @@ public class SingleFreq {
 			}
 		}
 
-		if (useCutOffAng) {
-			SV.removeIf(i -> i.getElevAzm()[0] < Math.toRadians(5));
+		if (cutOffAng >= 0) {
+			SV.removeIf(i -> i.getElevAzm()[0] < Math.toRadians(cutOffAng));
 		}
 
 		return SV;

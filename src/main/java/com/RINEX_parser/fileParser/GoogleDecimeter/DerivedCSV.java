@@ -30,9 +30,7 @@ public class DerivedCSV {
 				int svid = Integer.parseInt(line[4]);
 				String signalType = line[5];
 				String obsvCode = codeMap.get(signalType);
-//				if (obsvCode.charAt(0) == 'J') {
-//					svid = QZSSprn.get(svid);
-//				}
+
 				Derived derivedData = new Derived(Arrays.copyOfRange(line, 6, line.length));
 				long tRX = derivedData.gettSV() + Math.round((derivedData.getRawPrM() / SpeedofLight) * 1e9);
 				tRX = Math.round(tRX / 1e6);

@@ -44,7 +44,7 @@ import com.RINEX_parser.fileParser.ObservationRNX;
 import com.RINEX_parser.fileParser.Orbit;
 import com.RINEX_parser.fileParser.RTKlib;
 import com.RINEX_parser.fileParser.SBAS;
-import com.RINEX_parser.helper.CycleSlip;
+import com.RINEX_parser.helper.CycleSlip.DFcycleSlip;
 import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.IonoValue;
 import com.RINEX_parser.models.NavigationMsg;
@@ -74,23 +74,23 @@ public class MainApp {
 			 * useRTKlib, boolean usePhase, int estimatorType, String[] obsvCode, int
 			 * minSat)
 			 */
-			posEstimate(false, false, true, true, true, false, true, true, false, true, false, false, 4,
+			posEstimate(false, false, true, 5, true, false, true, true, false, true, false, false, 4,
 					new String[] { "G1C", "G2X" }, 4);
 			break;
 
 		case 2:
 			/*
-			 * posEstimate(boolean doPosErrPlot, boolean useCutOffAng, boolean useBias,
-			 * boolean useIGS, boolean isDual, boolean useGIM, boolean useRTKlib, boolean
-			 * usePhase, int estimatorType, String[] obsvCode, int minSat, String obs_path,
-			 * String derived_csv_path,String[] obsvCodeList)
+			 * posEstimate(boolean doPosErrPlot, double cutOffAng, boolean, boolean useIGS,
+			 * boolean isDual, boolean useGIM, boolean useRTKlib, boolean usePhase, int
+			 * estimatorType, String[] obsvCode, int minSat, String obs_path, String
+			 * derived_csv_path,String[] obsvCodeList)
 			 * 
 			 */
 
-			String[] obsvCodeList = new String[] { "G1C", "E1C" };
+			String[] obsvCodeList = new String[] { "G1C", "E1C", "C2I" };
 			String obs_path = "E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2021-04-29-US-SJC-2\\SamsungS20Ultra\\supplemental\\SamsungS20Ultra_GnssLog.21o";
 			String derived_csv_path = "E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2021-04-29-US-SJC-2\\SamsungS20Ultra\\SamsungS20Ultra_derived.csv";
-			GoogleDeciApp.posEstimate(true, true, true, true, false, true, false, false, 3, new String[] { "G1C" }, 4,
+			GoogleDeciApp.posEstimate(true, 5, false, false, false, false, false, false, 3, new String[] { "G1C" }, 4,
 					obs_path, derived_csv_path, obsvCodeList);
 			break;
 		case 3:
@@ -124,7 +124,7 @@ public class MainApp {
 						obs_path = path + "\\supplemental\\" + mobName + "_GnssLog." + year + "o";
 
 						derived_csv_path = path + "\\" + mobName + "_derived.csv";
-						ArrayList<String[]> csvRes = GoogleDeciApp.posEstimate(true, true, false, false, false, false,
+						ArrayList<String[]> csvRes = GoogleDeciApp.posEstimate(true, 5, false, false, false, false,
 								false, false, 6, new String[] { "G1C" }, 4, obs_path, null, obsvCodeList);
 						csvRes.stream().forEach(i -> i[0] = dayFile.getName() + "_" + mobName);
 						csvRes = GoogleData.predict(csvRes);
@@ -160,7 +160,7 @@ public class MainApp {
 
 	}
 
-	public static void posEstimate(boolean doWeightPlot, boolean doIonoPlot, boolean doPosErrPlot, boolean useCutOffAng,
+	public static void posEstimate(boolean doWeightPlot, boolean doIonoPlot, boolean doPosErrPlot, double cutOffAng,
 			boolean useSNX, boolean useSBAS, boolean useBias, boolean useIGS, boolean isDual, boolean useGIM,
 			boolean useRTKlib, boolean usePhase, int estimatorType, String[] obsvCode, int minSat) {
 		try {
@@ -303,7 +303,7 @@ public class MainApp {
 				ArrayList<Satellite> SV = null;
 				if (isDual) {
 					dualSV = DualFreq.process(obsvMsg, NavMsgs, obsvCode, useIGS, useBias, bias, orbit, clock, antenna,
-							tRX, weekNo, userECEF, time, useCutOffAng);
+							tRX, weekNo, userECEF, time, cutOffAng);
 					if (dualSV[0].size() < minSat && dualSV[1].size() < minSat) {
 						continue;
 					}
@@ -311,7 +311,7 @@ public class MainApp {
 				} else {
 					SV = SingleFreq.process(obsvMsg, NavMsgs, obsvCode[0], useIGS, useSBAS, doIonoPlot, useBias,
 							ionoCoeff, bias, orbit, clock, antenna, tRX, weekNo, time, sbas, userECEF, userLatLon,
-							ionoValueMap, useCutOffAng, tpf, frame);
+							ionoValueMap, cutOffAng, tpf, frame);
 					if (SV.size() < minSat) {
 						continue;
 					}
@@ -402,7 +402,7 @@ public class MainApp {
 
 				if (isDual) {
 					if (usePhase) {
-						CycleSlip cs = new CycleSlip(interval);
+						DFcycleSlip cs = new DFcycleSlip(interval);
 						cs.process(dualSVlist);
 					}
 					ErrMap.put("dual-EKF", new ArrayList<HashMap<String, double[]>>());
@@ -428,7 +428,7 @@ public class MainApp {
 
 			}
 			if (estimatorType == 5) {
-				CycleSlip cs = new CycleSlip(interval);
+				DFcycleSlip cs = new DFcycleSlip(interval);
 //				int svid = 1;
 //				for (ArrayList<Satellite>[] SV : dualSVlist) {
 //					SV[0] = SV[0].stream().filter(i -> i.getSVID() == svid)

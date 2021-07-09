@@ -26,7 +26,7 @@ public class DualFreq {
 	public static ArrayList<Satellite>[] process(ObservationMsg obsvMsg,
 			HashMap<Integer, ArrayList<NavigationMsg>> NavMsgs, String[] obsvCode, boolean useIGS, boolean useBias,
 			Bias bias, Orbit orbit, Clock clock, Antenna antenna, double tRX, long weekNo, double[] userECEF,
-			Calendar time, boolean useCutOffAng) {
+			Calendar time, double cutOffAng) {
 		ArrayList<Satellite>[] SV = new ArrayList[2];
 		SV[0] = new ArrayList<Satellite>();
 		SV[1] = new ArrayList<Satellite>();
@@ -178,9 +178,9 @@ public class DualFreq {
 
 			}
 		}
-		if (useCutOffAng) {
-			SV[0].removeIf(i -> i.getElevAzm()[0] < Math.toRadians(5));
-			SV[1].removeIf(i -> i.getElevAzm()[0] < Math.toRadians(5));
+		if (cutOffAng >= 0) {
+			SV[0].removeIf(i -> i.getElevAzm()[0] < Math.toRadians(cutOffAng));
+			SV[1].removeIf(i -> i.getElevAzm()[0] < Math.toRadians(cutOffAng));
 
 		}
 

@@ -19,7 +19,6 @@ import com.RINEX_parser.fileParser.Clock;
 import com.RINEX_parser.fileParser.Orbit;
 import com.RINEX_parser.fileParser.SBAS;
 import com.RINEX_parser.helper.ComputeEleAzm;
-import com.RINEX_parser.helper.ComputeIonoCorr;
 import com.RINEX_parser.helper.ComputeSatPos;
 import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.IonoValue;
@@ -39,8 +38,7 @@ public class SingleFreq {
 			HashMap<Integer, ArrayList<NavigationMsg>> NavMsgs, String obsvCode, boolean useIGS, boolean useSBAS,
 			boolean doIonoPlot, boolean useBias, IonoCoeff ionoCoeff, Bias bias, Orbit orbit, Clock clock,
 			Antenna antenna, double tRX, long weekNo, Calendar time, SBAS sbas, double[] userECEF, double[] userLatLon,
-			HashMap<Integer, ArrayList<IonoValue>> ionoValueMap, boolean useCutOffAng, TopocentricFrame tpf,
-			Frame frame) {
+			HashMap<Integer, ArrayList<IonoValue>> ionoValueMap, double cutOffAng, TopocentricFrame tpf, Frame frame) {
 		ArrayList<Satellite> SV = new ArrayList<Satellite>();
 		ArrayList<Observable> observables = obsvMsg.getObsvSat(obsvCode);
 		if (observables == null) {
@@ -175,23 +173,12 @@ public class SingleFreq {
 //				if (Math.abs(ele - EleAzm[0]) > 0.0001 || Math.abs(az - EleAzm[1]) > 0.0001) {
 //					System.err.println("Elevation and Azimuth are wrongly estimated");
 //				}
-				if (doIonoPlot) {
-
-					double freq = SV.get(0).getCarrier_frequency();
-
-					double ionoCorr = ComputeIonoCorr.computeIonoCorr(EleAzm[0], EleAzm[1], userLatLon[0],
-							userLatLon[1], tRX, ionoCoeff, freq, time);
-
-					ionoValueMap.computeIfAbsent(SVID, k -> new ArrayList<IonoValue>())
-							.add(new IonoValue(time.getTime(), ionoCorr, SVID));
-
-				}
 
 			}
 		}
 
-		if (useCutOffAng) {
-			SV.removeIf(i -> i.getElevAzm()[0] < Math.toRadians(15));
+		if (cutOffAng >= 0) {
+			SV.removeIf(i -> i.getElevAzm()[0] < Math.toRadians(cutOffAng));
 		}
 
 		return SV;

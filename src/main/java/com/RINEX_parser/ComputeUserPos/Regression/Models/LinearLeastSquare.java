@@ -266,7 +266,7 @@ public class LinearLeastSquare {
 		}
 
 		int SVcount = SV.size();
-		double freq = SV.get(0).getCarrier_frequency();
+
 		ArrayList<double[]> EleAzm = getEleAzm();
 		double[] PR = getPR();
 		double[] ionoCorr = new double[SVcount];
@@ -300,7 +300,7 @@ public class LinearLeastSquare {
 			double gcLat = LatLonUtil.gd2gc(refLatLon[0], refLatLon[2]);
 			for (int i = 0; i < SVcount; i++) {
 				double gimIonoCorr = ionex.computeIonoCorr(EleAzm.get(i)[0], EleAzm.get(i)[1], gcLat, refLatLon[1],
-						SV.get(i).gettRX(), freq, time);
+						SV.get(i).gettRX(), SV.get(i).getCarrier_frequency(), time);
 				ionoCorr[i] = gimIonoCorr;
 			}
 //			ionoCorrKlob = IntStream
@@ -314,9 +314,9 @@ public class LinearLeastSquare {
 				System.out.println("You have not provided IonoCoeff");
 				return null;
 			}
-			ionoCorr = IntStream
-					.range(0, SVcount).mapToDouble(x -> ComputeIonoCorr.computeIonoCorr(EleAzm.get(x)[0],
-							EleAzm.get(x)[1], refLatLon[0], refLatLon[1], SV.get(x).gettRX(), ionoCoeff, freq, time))
+			ionoCorr = IntStream.range(0, SVcount)
+					.mapToDouble(x -> ComputeIonoCorr.computeIonoCorr(EleAzm.get(x)[0], EleAzm.get(x)[1], refLatLon[0],
+							refLatLon[1], SV.get(x).gettRX(), ionoCoeff, SV.get(x).getCarrier_frequency(), time))
 					.toArray();
 		}
 		for (int i = 0; i < SVcount; i++) {

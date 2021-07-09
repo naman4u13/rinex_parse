@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 
+import com.RINEX_parser.constants.Constellation;
 import com.RINEX_parser.utility.StringUtil;
 
 public class Bias {
@@ -101,7 +102,7 @@ public class Bias {
 		char SSI = obsvCode.charAt(0);
 		// Observable/Observation code in RINEX format
 		String _obsvCode = 'C' + obsvCode.substring(1);
-		double ISC = 0;
+		Double ISC = 0.0;
 		if (SSI == 'G') {
 			int index = GPSindexMap.get(_obsvCode);
 			ISC = C1Wmap.get(PRN)[index];
@@ -109,15 +110,21 @@ public class Bias {
 		} else if (SSI == 'E') {
 			HashMap<String, HashMap<String, Double>> galileoMap = biasMap.get(SSI).get(PRN);
 			if (_obsvCode.equals("C5Q")) {
-				ISC = galileoMap.get("C1C").get("C5Q");
+				ISC = galileoMap.get("C1C").getOrDefault("C5Q", null);
 			} else if (_obsvCode.equals("C5X")) {
-				ISC = galileoMap.get("C1X").get("C5X");
+				ISC = galileoMap.get("C1X").getOrDefault("C5X", null);
 			}
 
 		} else if (SSI == 'C') {
+			double bds2FreqRatio = Math.pow(Constellation.frequency.get('C').get(2), 2)
+					/ Math.pow(Constellation.frequency.get('C').get(7), 2);
+			double bds3FreqRatio = Math.pow(Constellation.frequency.get('C').get(2), 2)
+					/ Math.pow(Constellation.frequency.get('C').get(6), 2);
 			HashMap<String, HashMap<String, Double>> beidouMap = biasMap.get(SSI).get(PRN);
-			if (_obsvCode.equals("C7I")) {
-				ISC = beidouMap.get("C2I").get("C7I");
+			if (beidouMap.get("C2I").containsKey("C7I")) {
+				ISC = -beidouMap.get("C2I").get("C7I") / (1 - bds2FreqRatio);
+			} else {
+				ISC = -beidouMap.get("C2I").getOrDefault("C6I", null) / (1 - bds3FreqRatio);
 			}
 		}
 		return ISC;

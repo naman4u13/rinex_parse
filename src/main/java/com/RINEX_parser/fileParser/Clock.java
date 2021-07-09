@@ -131,6 +131,7 @@ public class Clock {
 
 	}
 
+	@SuppressWarnings("unused")
 	public double[] getBias(double x, int SVID, String[] obsvCode, boolean applyDCB) {
 		double[] X = new double[2];
 		double[] Y = new double[2];
@@ -176,14 +177,10 @@ public class Clock {
 					}
 				}
 			} else if (SSI == 'C') {
-				double beidouFreqRatio = Math.pow(Constellation.frequency.get('C').get(2), 2)
-						/ Math.pow(Constellation.frequency.get('C').get(7), 2);
 
 				for (int i = 0; i < fN; i++) {
-					if (obsvCode[i] == "C2I") {
-						double ISC = -bias.getISC("C7I", SVID) / (1 - beidouFreqRatio);
-						clkBiases[i] = clkBias + ISC;
-					}
+					Double ISC = bias.getISC("C2I", SVID);
+					clkBiases[i] = clkBias + ISC;
 				}
 
 			}

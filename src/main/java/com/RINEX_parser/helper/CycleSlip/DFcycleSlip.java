@@ -1,4 +1,4 @@
-package com.RINEX_parser.helper;
+package com.RINEX_parser.helper.CycleSlip;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,14 +13,14 @@ import com.RINEX_parser.models.CycleSlip.MWfilter;
 import com.RINEX_parser.models.CycleSlip.Outlier;
 import com.RINEX_parser.utility.Combination;
 
-public class CycleSlip {
+public class DFcycleSlip {
 	// factor
 	private int nL;
 	private double threshold;
 	private int samplingRate;
 	private static final double SpeedofLight = 299792458;
 
-	public CycleSlip(int samplingRate) {
+	public DFcycleSlip(int samplingRate) {
 		this.samplingRate = 30;
 	}
 

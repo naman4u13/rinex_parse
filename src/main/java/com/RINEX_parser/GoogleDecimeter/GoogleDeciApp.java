@@ -39,7 +39,7 @@ import com.RINEX_parser.fileParser.Orbit;
 import com.RINEX_parser.fileParser.RTKlib;
 import com.RINEX_parser.fileParser.GoogleDecimeter.DerivedCSV;
 import com.RINEX_parser.fileParser.GoogleDecimeter.GroundTruth;
-import com.RINEX_parser.helper.CycleSlip;
+import com.RINEX_parser.helper.CycleSlip.DFcycleSlip;
 import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.IonoValue;
 import com.RINEX_parser.models.NavigationMsg;
@@ -56,7 +56,7 @@ public class GoogleDeciApp {
 	public static final long milliSecInWeek = 604800000;
 
 	@SuppressWarnings("unchecked")
-	public static ArrayList<String[]> posEstimate(boolean doPosErrPlot, boolean useCutOffAng, boolean useBias,
+	public static ArrayList<String[]> posEstimate(boolean doPosErrPlot, double cutOffAng, boolean useBias,
 			boolean useIGS, boolean isDual, boolean useGIM, boolean useRTKlib, boolean usePhase, int estimatorType,
 			String[] obsvCode, int minSat, String obs_path, String derived_csv_path, String[] obsvCodeList) {
 		try {
@@ -108,9 +108,9 @@ public class GoogleDeciApp {
 			int year2dig = year % 2000;
 			String ionex_path = base_url + year + "_" + day + "\\igsg" + day + "0." + year2dig + "i";
 
-			String RTKlib_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\RTKlib\\decimeter_samsung119.pos";
+			String RTKlib_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\RTKlib\\decimeter_5_samsung119.pos";
 
-			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\google\\2021-04-29-US-SJC-2\\test3";
+			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\google\\2021-04-29-US-SJC-2\\test2";
 			File output = new File(path + ".txt");
 			PrintStream stream;
 
@@ -127,7 +127,7 @@ public class GoogleDeciApp {
 			HashMap<Integer, ArrayList<NavigationMsg>> NavMsgs = null;
 			IonoCoeff ionoCoeff = null;
 			boolean useDerived = derived_csv_path != null;
-			Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path, useDerived);
+			Map<String, Object> NavMsgComp = NavigationRNX.rinex_nav_process(nav_path, useDerived || useIGS);
 
 			NavMsgs = (HashMap<Integer, ArrayList<NavigationMsg>>) NavMsgComp.getOrDefault("NavMsgs", null);
 			ionoCoeff = (IonoCoeff) NavMsgComp.get("ionoCoeff");
@@ -140,8 +140,6 @@ public class GoogleDeciApp {
 
 			// Note PVT algos will compute for Antenna Reference Point as it is independent
 			// of frequency
-
-			Frame frame = FramesFactory.getITRF(ITRFVersion.ITRF_2014, IERSConventions.IERS_2010, true);
 
 			if (useBias) {
 				bias = new Bias(bias_path);
@@ -187,21 +185,20 @@ public class GoogleDeciApp {
 				Calendar time = Time.getDate(tRX, weekNo, 0);
 				ArrayList<Satellite> SV = null;
 				if (useDerived) {
-
 					SV = com.RINEX_parser.GoogleDecimeter.SingleFreq.process(obsvMsg, ionoCoeff, tRX,
-							new double[] { 0, 0, 0 }, false, derivedMap, time, obsvCodeList, weekNo, false, false, null,
-							null, null, null);
+							new double[] { 0, 0, 0 }, -5, derivedMap, time, obsvCodeList, weekNo, false, null, null,
+							null);
 
 				} else {
 					SV = SingleFreq.process(obsvMsg, NavMsgs, obsvCode[0], false, false, false, useBias, ionoCoeff,
 							bias, orbit, clock, antenna, tRX, weekNo, time, null, new double[] { 0, 0, 0 }, null,
-							ionoValueMap, false, null, frame);
+							ionoValueMap, -5, null, null);
 				}
 				if (SV.size() < minSat) {
 					System.err.println("visible satellite count is below threshold");
 					continue;
 				}
-				LS ls = new LS(SV, rxPCO[0], ionoCoeff, time, null, geoid);
+				LS ls = new LS(SV, rxPCO[0], ionoCoeff, time, ionex, geoid);
 				double[] userECEF = null;
 				try {
 					userECEF = ls.getEstECEF();
@@ -214,18 +211,19 @@ public class GoogleDeciApp {
 				SV = null;
 				ArrayList<Satellite>[] dualSV = null;
 				if (useDerived) {
+
 					SV = com.RINEX_parser.GoogleDecimeter.SingleFreq.process(obsvMsg, ionoCoeff, tRX, userECEF,
-							useCutOffAng, derivedMap, time, obsvCodeList, weekNo, useIGS, useBias, bias, orbit, clock,
-							antenna);
+							cutOffAng, derivedMap, time, obsvCodeList, weekNo, useIGS, orbit, clock, antenna);
 					if (SV.size() < minSat) {
 						System.err.println("visible satellite count is below threshold");
 						continue;
 					}
+					SVlist.add(SV);
 
 				} else {
 					if (isDual) {
 						dualSV = DualFreq.process(obsvMsg, NavMsgs, obsvCode, useIGS, useBias, bias, orbit, clock,
-								antenna, tRX, weekNo, userECEF, time, useCutOffAng);
+								antenna, tRX, weekNo, userECEF, time, cutOffAng);
 						if (dualSV[0].size() < minSat && dualSV[1].size() < minSat) {
 
 							System.err.println("visible satellite count is below threshold");
@@ -235,7 +233,7 @@ public class GoogleDeciApp {
 					} else {
 						SV = SingleFreq.process(obsvMsg, NavMsgs, obsvCode[0], useIGS, false, false, useBias, ionoCoeff,
 								bias, orbit, clock, antenna, tRX, weekNo, time, null, userECEF, userLatLon,
-								ionoValueMap, useCutOffAng, null, frame);
+								ionoValueMap, cutOffAng, null, null);
 						if (SV.size() < minSat) {
 							System.err.println("visible satellite count is below threshold");
 							continue;
@@ -263,7 +261,6 @@ public class GoogleDeciApp {
 						ErrMap.computeIfAbsent("LS", k -> new ArrayList<HashMap<String, Double>>())
 								.add(estimateError(Map.of("Simple", ls.getEstECEF(), "IonoCorr ", ls.getIonoCorrECEF(),
 										"TropoCorr", ls.getTropoCorrECEF()), trueUserLLH, time));
-						System.out.println();
 
 					}
 
@@ -349,7 +346,7 @@ public class GoogleDeciApp {
 
 //				if (isDual) {
 //					if (usePhase) {
-//						CycleSlip cs = new CycleSlip(interval);
+//						DFcycleSlip cs = new DFcycleSlip(interval);
 //						cs.process(dualSVlist);
 //					}
 //					ErrMap.put("dual-EKF", new ArrayList<HashMap<String, double[]>>());
@@ -376,7 +373,7 @@ public class GoogleDeciApp {
 
 			}
 			if (estimatorType == 5) {
-				CycleSlip cs = new CycleSlip(interval);
+				DFcycleSlip cs = new DFcycleSlip(interval);
 //				int svid = 1;
 //				for (ArrayList<Satellite>[] SV : dualSVlist) {
 //					SV[0] = SV[0].stream().filter(i -> i.getSVID() == svid)

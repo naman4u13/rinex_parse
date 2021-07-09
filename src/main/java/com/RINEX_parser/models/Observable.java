@@ -12,6 +12,7 @@ public class Observable {
 	private double pseudoRangeRate;
 	private double cycle;
 	private boolean isLocked;
+	private char SSI;
 
 	public int getSVID() {
 		return SVID;
@@ -21,8 +22,9 @@ public class Observable {
 		return pseudorange;
 	}
 
-	public Observable(String SVID, String pseudorange, String CNo, String doppler, String phase,
+	public Observable(char SSI, String SVID, String pseudorange, String CNo, String doppler, String phase,
 			String carrier_frequency) {
+		this.SSI = SSI;
 		this.SVID = Integer.parseInt(SVID.replaceAll("[A-Z]", ""));
 		this.pseudorange = pseudorange != null ? Double.parseDouble(pseudorange) : 0;
 		this.CNo = CNo != null ? Double.parseDouble(CNo) : 0;
@@ -32,10 +34,12 @@ public class Observable {
 		this.carrier_wavelength = SPEED_OF_LIGHT / this.carrier_frequency;
 		this.pseudoRangeRate = -this.doppler * this.carrier_wavelength;
 		this.isLocked = false;
+
 	}
 
-	public Observable(int SVID, double pseudorange, double CNo, double doppler, double phase,
+	public Observable(char SSI, int SVID, double pseudorange, double CNo, double doppler, double phase,
 			double carrier_frequency) {
+		this.SSI = SSI;
 		this.SVID = SVID;
 		this.pseudorange = pseudorange;
 		this.CNo = CNo;
@@ -48,6 +52,7 @@ public class Observable {
 	}
 
 	public Observable(Observable satModel) {
+		this.SSI = satModel.getSSI();
 		this.SVID = satModel.getSVID();
 		this.pseudorange = satModel.getPseudorange();
 		this.CNo = satModel.getCNo();
@@ -115,5 +120,9 @@ public class Observable {
 
 	public void setLocked(boolean isLocked) {
 		this.isLocked = isLocked;
+	}
+
+	public char getSSI() {
+		return SSI;
 	}
 }
