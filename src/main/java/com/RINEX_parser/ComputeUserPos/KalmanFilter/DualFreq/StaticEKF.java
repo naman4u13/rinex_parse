@@ -314,7 +314,7 @@ public class StaticEKF {
 
 		int SVcount = SV[0].size();
 
-		kfObj.configurePPP(deltaT, SV);
+		kfObj.configurePPP(deltaT, SVcount, true);
 		kfObj.predict();
 
 		SimpleMatrix x = kfObj.getState();

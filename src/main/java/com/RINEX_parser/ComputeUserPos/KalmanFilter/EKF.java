@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.ejml.dense.row.MatrixFeatures_DDRM;
@@ -14,6 +15,9 @@ import org.orekit.models.earth.Geoid;
 import com.RINEX_parser.ComputeUserPos.KalmanFilter.Models.KFconfig;
 import com.RINEX_parser.ComputeUserPos.Regression.WLS;
 import com.RINEX_parser.fileParser.IONEX;
+import com.RINEX_parser.helper.ComputeEleAzm;
+import com.RINEX_parser.helper.ComputeIonoCorr;
+import com.RINEX_parser.helper.ComputeTropoCorr;
 import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.Satellite;
 import com.RINEX_parser.utility.ECEFtoLatLon;
@@ -28,9 +32,9 @@ public class EKF {
 	private double[] trueUserECEF;
 
 	private static final double SpeedofLight = 299792458;
-	private double obsNoiseVar;
+	private double prObsNoiseVar;
 	private ArrayList<Calendar> timeList;
-
+	private double cpObsNoiseVar;
 	// For Tropo Corr PR, as Orekit Geoid requires LLH
 	private double[] refLatLon;
 	private SatUtil satUtil;
@@ -72,26 +76,130 @@ public class EKF {
 		P[4][4] = 1e13;
 		System.out.println("Intial Estimate Error Covariance - " + IntStream.range(0, P.length)
 				.mapToObj(i -> String.valueOf(P[i][i])).reduce("", (i, j) -> i + " " + j));
-		obsNoiseVar = 9;
+		prObsNoiseVar = 9;
 		kfObj.setState(x, P);
-		return iterate(true, null);
+		return iterateSPP(true, null);
 
 	}
 
-	public ArrayList<double[]> computeDynamic(ArrayList<double[]> trueLLHlist) {
+	public ArrayList<double[]> computeDynamicSPP(ArrayList<double[]> trueLLHlist) {
 		WLS wls = new WLS(SVlist.get(0), PCO, ionoCoeff, timeList.get(0), ionex, geoid);
 		double[] refECEF = wls.getTropoCorrECEF();
 		double[][] x = new double[][] { { refECEF[0] }, { refECEF[1] }, { refECEF[2] }, { 0.1 } };
 		double[][] P = new double[4][4];
 		IntStream.range(0, 3).forEach(i -> P[i][i] = 100);
 		P[3][3] = 9e10;
-		obsNoiseVar = 49;
+		prObsNoiseVar = 49;
+
 		kfObj.setState(x, P);
-		return iterate(false, trueLLHlist);
+		return iterateSPP(false, trueLLHlist);
 
 	}
 
-	public ArrayList<double[]> iterate(boolean isStatic, ArrayList<double[]> trueLLHlist) {
+	public ArrayList<double[]> computeDynamicPPP(ArrayList<double[]> trueLLHlist) {
+		WLS wls = new WLS(SVlist.get(0), PCO, ionoCoeff, timeList.get(0), ionex, geoid);
+		double[] refECEF = wls.getTropoCorrECEF();
+		double[][] x = new double[][] { { refECEF[0] }, { refECEF[1] }, { refECEF[2] }, { 0 }, { 0 } };
+		double[][] P = new double[5][5];
+		IntStream.range(0, 3).forEach(i -> P[i][i] = 1000);
+		P[3][3] = 9e10;
+		P[4][4] = 0.25;
+		prObsNoiseVar = 49;
+		cpObsNoiseVar = 49e-4;
+		kfObj.setState(x, P);
+		return iteratePPP(false, trueLLHlist);
+
+	}
+
+	public ArrayList<double[]> iteratePPP(boolean isStatic, ArrayList<double[]> trueLLHlist) {
+		ArrayList<double[]> ecefList = new ArrayList<double[]>();
+
+		// In Seconds
+		double time = timeList.get(0).getTimeInMillis() / 1E3;
+		// Ambiguity State Map
+		HashMap<String, double[]> ambStateMap = new HashMap<String, double[]>();
+		for (int i = 1; i < SVlist.size(); i++) {
+
+			System.out.println("Step/Itr - " + i);
+			ArrayList<Satellite> SV = SVlist.get(i);
+			int SVcount = SV.size();
+			SimpleMatrix x = kfObj.getState();
+			SimpleMatrix P = kfObj.getCovariance();
+			SimpleMatrix _x = new SimpleMatrix(5 + SVcount, 1);
+			SimpleMatrix _P = new SimpleMatrix(5 + SVcount, 5 + SVcount);
+			for (int j = 0; j < 5; j++) {
+				_x.set(j, x.get(j));
+				_P.set(j, j, P.get(j, j));
+			}
+			for (int j = 0; j < SVcount; j++) {
+				Satellite sat = SV.get(j);
+				String svid = sat.getSSI() + "" + sat.getSVID();
+				double xVal = 0;
+				double pVal = 400;
+				if (ambStateMap.containsKey(svid) && sat.isLocked() == true) {
+					double[] xp = ambStateMap.get(svid);
+					xVal = xp[0];
+					pVal = xp[1];
+				} else {
+					// PR and CP prealignment
+
+					double PR = sat.getPseudorange();
+					double CP = sat.getCycle() * sat.getCarrier_wavelength();
+
+					xVal = CP - PR;
+
+				}
+				_x.set(5 + j, xVal);
+				_P.set(5 + j, 5 + j, pVal);
+				ambStateMap.put(svid, new double[] { xVal, pVal });
+			}
+			kfObj.setState(_x, _P);
+			double currentTime = timeList.get(i).getTimeInMillis() / 1E3;
+			double deltaT = (int) (currentTime - time);
+			if (isStatic) {
+				System.out.println("NOTHING HERE");
+			} else {
+				runFilterDynamicPPP(deltaT, SV, timeList.get(i));
+			}
+			x = kfObj.getState();
+			P = kfObj.getCovariance();
+			double[] estECEF = new double[] { x.get(0), x.get(1), x.get(2) };
+			ecefList.add(estECEF);
+			if (!MatrixFeatures_DDRM.isPositiveDefinite(P.getMatrix())) {
+
+				System.err.println("PositiveDefinite test Failed");
+				return null;
+			}
+			if (isStatic) {
+				double err = Math.sqrt(IntStream.range(0, 3).mapToDouble(j -> estECEF[j] - trueUserECEF[j])
+						.map(j -> j * j).reduce(0, (j, k) -> j + k));
+				System.out.println("postEstErr -" + P.toString());
+
+				System.out.println("Pos Error - " + err);
+
+				double TraceOfP = P.trace();
+				System.out.println(" Trace of ErrEstCov - " + TraceOfP);
+
+			} else {
+				for (int j = 0; j < SVcount; j++) {
+					String svid = SV.get(j).getSSI() + "" + SV.get(j).getSVID();
+					System.out.println(svid + "  -  " + x.get(5 + j));
+				}
+				double[] estLLH = ECEFtoLatLon.ecef2lla(estECEF);
+				double err = LatLonUtil.getHaversineDistance(trueLLHlist.get(i), estLLH);
+				System.out.println("Pos Error - " + err);
+			}
+			time = currentTime;
+
+		}
+//		chartPack("Position Error", path + "_err.PNG", errList, timeList, 100);
+//		chartPack("Error Covariance", path + "_cov.PNG", errCovList, timeList, 100);
+
+		System.out.println(kfObj.getState().toString());
+		return ecefList;
+	}
+
+	public ArrayList<double[]> iterateSPP(boolean isStatic, ArrayList<double[]> trueLLHlist) {
 		ArrayList<double[]> ecefList = new ArrayList<double[]>();
 		ArrayList<Double> errList = new ArrayList<Double>();
 		ArrayList<Double> errCovList = new ArrayList<Double>();
@@ -106,7 +214,7 @@ public class EKF {
 			if (isStatic) {
 				runFilterStatic(deltaT, SV, timeList.get(i));
 			} else {
-				runFilterDynamic(deltaT, SV, timeList.get(i));
+				runFilterDynamicSPP(deltaT, SV, timeList.get(i));
 			}
 			SimpleMatrix x = kfObj.getState();
 			SimpleMatrix P = kfObj.getCovariance();
@@ -171,12 +279,12 @@ public class EKF {
 				i -> ze[i][0] = Math.sqrt(IntStream.range(0, 3).mapToDouble(j -> estECEF[j] - SV.get(i).getECI()[j])
 						.map(j -> j * j).reduce(0, (j, k) -> j + k)) + (estECEF[3]));
 		double[][] R = new double[SVcount][SVcount];// Weight.computeCovMat(SV);
-		IntStream.range(0, SVcount).forEach(i -> R[i][i] = obsNoiseVar);
+		IntStream.range(0, SVcount).forEach(i -> R[i][i] = prObsNoiseVar);
 		kfObj.update(z, R, ze, H);
 
 	}
 
-	public void runFilterDynamic(double deltaT, ArrayList<Satellite> SV, Calendar time) {
+	public void runFilterDynamicSPP(double deltaT, ArrayList<Satellite> SV, Calendar time) {
 
 		int SVcount = SV.size();
 
@@ -209,7 +317,83 @@ public class EKF {
 				i -> ze[i][0] = Math.sqrt(IntStream.range(0, 3).mapToDouble(j -> estECEF[j] - SV.get(i).getECI()[j])
 						.map(j -> j * j).reduce(0, (j, k) -> j + k)) + rxClkOff);
 		double[][] R = new double[SVcount][SVcount];
-		IntStream.range(0, SVcount).forEach(i -> R[i][i] = obsNoiseVar);
+		IntStream.range(0, SVcount).forEach(i -> R[i][i] = prObsNoiseVar);
+		kfObj.update(z, R, ze, H);
+
+	}
+
+	public void runFilterDynamicPPP(double deltaT, ArrayList<Satellite> SV, Calendar time) {
+
+		int SVcount = SV.size();
+
+		kfObj.configurePPP(deltaT, SVcount, false);
+		kfObj.predict();
+
+		SimpleMatrix x = kfObj.getState();
+		double[] estECEF = new double[] { x.get(0) + PCO[0], x.get(1) + PCO[1], x.get(2) + PCO[2] };
+		double estRxClkOff = x.get(3);// In Meters - Multiplied by c
+		double resTropo = x.get(4);
+		double[] ambiguity = IntStream.range(0, SVcount).mapToDouble(i -> x.get(5 + i)).toArray();
+		double[] estLatLon = ECEFtoLatLon.ecef2lla(estECEF);
+		WLS wls = new WLS(SV, PCO, ionoCoeff, time, ionex, geoid);
+		double[] refECEF = wls.getTropoCorrECEF();
+		double[] refLatLon = ECEFtoLatLon.ecef2lla(refECEF);
+		ComputeTropoCorr tropo = new ComputeTropoCorr(refLatLon, time, geoid);
+		ComputeTropoCorr estTropo = new ComputeTropoCorr(estLatLon, time, geoid);
+		double[][] z = new double[2 * SVcount][1];
+		double[][] ze = new double[2 * SVcount][1];
+		ArrayList<double[]> EleAzm = (ArrayList<double[]>) SV.stream().map(i -> i.getElevAzm())
+				.collect(Collectors.toList());
+		double[][] H = new double[2 * SVcount][5 + SVcount];
+		double[][] R = new double[2 * SVcount][2 * SVcount];
+		for (int i = 0; i < SVcount; i++) {
+			Satellite sat = SV.get(i);
+			double[] satECI = sat.getECI();
+			double tropoCorr = tropo.getSlantDelay(EleAzm.get(i)[0]);
+
+			double ionoCorr = 0;
+			if (ionex != null) {
+				ionoCorr = ionex.computeIonoCorr(EleAzm.get(i)[0], EleAzm.get(i)[1], refLatLon[0], refLatLon[1],
+						sat.gettRX(), sat.getCarrier_frequency(), time);
+
+			} else {
+				ionoCorr = ComputeIonoCorr.computeIonoCorr(EleAzm.get(i)[0], EleAzm.get(i)[1], refLatLon[0],
+						refLatLon[1], sat.gettRX(), ionoCoeff, sat.getCarrier_frequency(), time);
+				System.err.println("ERROR - Using Klobuchlar model in SF PPP dyanmic kalman computation");
+			}
+			double E = ComputeEleAzm.computeEleAzm(estECEF, satECI)[0];
+			double M_wet = estTropo.getM_wet(E);
+
+			if (sat.getCycle() == 0 || sat.getPseudorange() == 0 || sat.getCarrier_wavelength() == 0) {
+				System.err.println("ERROR - NULL CP OR PR is being used in SF PPP dyanmic kalman computation");
+			}
+
+			double corrPR = sat.getPseudorange() + (sat.getSatClkOff() * SpeedofLight) - tropoCorr - ionoCorr;
+			double corrCP = (sat.getCycle() * sat.getCarrier_wavelength()) + (sat.getSatClkOff() * SpeedofLight)
+					- tropoCorr + ionoCorr;
+
+			double[] unitLOS = SatUtil.getUnitLOS(satECI, estECEF);
+
+			for (int j = i * 2; j <= (i * 2) + 1; j++) {
+				final int _j = j;
+				IntStream.range(0, 3).forEach(k -> H[_j][k] = -unitLOS[k]);
+				H[j][3] = 1;
+				H[j][4] = M_wet;
+			}
+			H[(i * 2) + 1][5 + i] = 1;
+			z[2 * i][0] = corrPR;
+			z[(2 * i) + 1][0] = corrCP;
+			double approxPR = Math.sqrt(IntStream.range(0, 3).mapToDouble(j -> estECEF[j] - satECI[j]).map(j -> j * j)
+					.reduce(0, (j, k) -> j + k)) + estRxClkOff + (M_wet * resTropo);
+			double approxCP = approxPR + ambiguity[i];
+
+			ze[2 * i][0] = approxPR;
+			ze[(2 * i) + 1][0] = approxCP;
+			R[2 * i][2 * i] = prObsNoiseVar;
+			R[(2 * i) + 1][(2 * i) + 1] = cpObsNoiseVar;
+			System.out.print("");
+		}
+
 		kfObj.update(z, R, ze, H);
 
 	}
@@ -266,7 +450,7 @@ public class EKF {
 				i -> ze[i][0] = Math.sqrt(IntStream.range(0, 3).mapToDouble(j -> estECEF[j] - SV.get(i).getECI()[j])
 						.map(j -> j * j).reduce(0, (j, k) -> j + k)) + (estECEF[3]));
 		double[][] R = new double[SVcount][SVcount];// Weight.computeCovMat(SV);
-		IntStream.range(0, SVcount).forEach(i -> R[i][i] = obsNoiseVar);
+		IntStream.range(0, SVcount).forEach(i -> R[i][i] = prObsNoiseVar);
 		double[][] satECI = new double[SVcount][];
 		IntStream.range(0, SVcount).forEach(i -> satECI[i] = SV.get(i).getECI());
 		kfObj.update(z, R, ze, satECI, PCO);

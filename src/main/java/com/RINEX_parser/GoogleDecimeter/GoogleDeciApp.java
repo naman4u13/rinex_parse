@@ -39,7 +39,7 @@ import com.RINEX_parser.fileParser.Orbit;
 import com.RINEX_parser.fileParser.RTKlib;
 import com.RINEX_parser.fileParser.GoogleDecimeter.DerivedCSV;
 import com.RINEX_parser.fileParser.GoogleDecimeter.GroundTruth;
-import com.RINEX_parser.helper.CycleSlip.DFcycleSlip;
+import com.RINEX_parser.helper.CycleSlip.SFcycleSlip;
 import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.IonoValue;
 import com.RINEX_parser.models.NavigationMsg;
@@ -123,7 +123,6 @@ public class GoogleDeciApp {
 
 			Geoid geoid = buildGeoid();
 
-			int fN = obsvCode.length;
 			HashMap<Integer, ArrayList<NavigationMsg>> NavMsgs = null;
 			IonoCoeff ionoCoeff = null;
 			boolean useDerived = derived_csv_path != null;
@@ -344,26 +343,15 @@ public class GoogleDeciApp {
 
 			if (estimatorType == 4) {
 
-//				if (isDual) {
-//					if (usePhase) {
-//						DFcycleSlip cs = new DFcycleSlip(interval);
-//						cs.process(dualSVlist);
-//					}
-//					ErrMap.put("dual-EKF", new ArrayList<HashMap<String, double[]>>());
-//					WLS wls = new WLS(dualSVlist.get(0)[0], rxPCO[0], ionoCoeff, timeList.get(0), ionex, geoid);
-//					com.RINEX_parser.ComputeUserPos.KalmanFilter.DualFreq.StaticEKF dualStaticEkf = new com.RINEX_parser.ComputeUserPos.KalmanFilter.DualFreq.StaticEKF(
-//							dualSVlist, rxPCO, wls.getTropoCorrECEF(), userECEF, geoid, timeList, usePhase);
-//					ArrayList<double[]> estECEFList = dualStaticEkf.compute();
-//					for (int i = 0; i < dualSVlist.size() - 1; i++) {
-//						double[] estECEF = estECEFList.get(i);
-//						ErrMap.get("dual-EKF")
-//								.add(estimateError(Map.of("TropoCorr", estECEF), userECEF, timeList.get(i)));
-//
-//					}
-//				} else {
 				ErrMap.put("EKF", new ArrayList<HashMap<String, Double>>());
 				EKF dynamicEkf = new EKF(SVlist, rxPCO[0], null, ionoCoeff, ionex, geoid, timeList);
-				ArrayList<double[]> estECEFList = dynamicEkf.computeDynamic(trueLLHlist);
+				ArrayList<double[]> estECEFList = null;
+				if (usePhase) {
+					SFcycleSlip.process(SVlist, 1);
+					estECEFList = dynamicEkf.computeDynamicPPP(trueLLHlist);
+				} else {
+					estECEFList = dynamicEkf.computeDynamicSPP(trueLLHlist);
+				}
 				for (int i = 0; i < SVlist.size() - 1; i++) {
 
 					double[] estECEF = estECEFList.get(i);
@@ -373,7 +361,7 @@ public class GoogleDeciApp {
 
 			}
 			if (estimatorType == 5) {
-				DFcycleSlip cs = new DFcycleSlip(interval);
+
 //				int svid = 1;
 //				for (ArrayList<Satellite>[] SV : dualSVlist) {
 //					SV[0] = SV[0].stream().filter(i -> i.getSVID() == svid)
@@ -383,12 +371,19 @@ public class GoogleDeciApp {
 //				}
 //				dualSVlist = dualSVlist.stream().filter(i -> i[0].size() > 0)
 //						.collect(Collectors.toCollection(ArrayList::new));
-				HashMap<Integer, int[]> csMap = cs.process(dualSVlist);
+				SFcycleSlip.process(SVlist, 1);
+				HashMap<String, ArrayList<Double>> csMap = new HashMap<String, ArrayList<Double>>();
+				for (int i = 0; i < SVlist.size(); i++) {
+					for (int j = 0; j < SVlist.get(i).size(); j++) {
+						Satellite sat = SVlist.get(i).get(j);
+						double val = sat.isLocked() ? 1 : 0;
+						csMap.computeIfAbsent(sat.getSSI() + "" + sat.getSVID(), k -> new ArrayList<Double>()).add(val);
+					}
+				}
 
-				for (int SVID : csMap.keySet()) {
-					int[] data = csMap.get(SVID);
-					GraphPlotter chart = new GraphPlotter("Cycle Slip - " + SVID, "Cycle Slip - " + SVID, data,
-							timeList, SVID);
+				for (String SVID : csMap.keySet()) {
+					ArrayList<Double> data = csMap.get(SVID);
+					GraphPlotter chart = new GraphPlotter("Cycle Slip - " + SVID, "Cycle Slip - " + SVID, data, SVID);
 
 					chart.pack();
 					RefineryUtilities.positionFrameRandomly(chart);

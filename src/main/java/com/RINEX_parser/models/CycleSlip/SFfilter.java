@@ -10,10 +10,12 @@ public class SFfilter {
 	private double meanSq = 0;
 	private int n;
 	private List<LinearCombo> dList = null;
+	private double s0Sq;
 
 	public SFfilter(int samplingRate) {
 		dList = new ArrayList<LinearCombo>();
 		n = 300 / samplingRate;
+		s0Sq = Math.pow(3, 2);
 	}
 
 	public void update(double d, double t) {
@@ -34,9 +36,25 @@ public class SFfilter {
 		dList.add(new LinearCombo(d, t));
 	}
 
-	public double getSigma() {
-		double sigma = Math.sqrt(meanSq - Math.pow(mean, 2));
-		return sigma;
+	public double getSigmaSq() {
+		double sigmaSq = meanSq - Math.pow(mean, 2);
+		double len = dList.size();
+		sigmaSq = (((len - 1) / len) * sigmaSq) + ((1 / len) * s0Sq);
+		return sigmaSq;
+
+	}
+
+	public SFfilter reset(int samplingRate, int minAL_SF) {
+
+		SFfilter tempSFfilter = new SFfilter(samplingRate);
+		if (dList.size() == minAL_SF) {
+			for (int i = 1; i < minAL_SF; i++) {
+				LinearCombo obj = dList.get(i);
+				tempSFfilter.update(obj.lc(), obj.t());
+			}
+		}
+
+		return tempSFfilter;
 
 	}
 

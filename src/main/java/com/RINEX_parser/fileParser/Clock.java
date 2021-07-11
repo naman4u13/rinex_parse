@@ -34,7 +34,7 @@ public class Clock {
 			String[] header = input.next().split("\r\n|\r|\n");
 			int recLen = 60;
 			int[] recFormat = new int[] { 3, 5, 26, 6, 19 };
-			boolean rnx304 = false;
+
 			if (header[0].split("\\s")[0].trim().equals("3.04")) {
 				recLen = 65;
 				recFormat = new int[] { 3, 10, 27, 5, 19 };

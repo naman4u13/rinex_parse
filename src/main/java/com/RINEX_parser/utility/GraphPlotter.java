@@ -20,6 +20,9 @@ import org.jfree.chart.ui.ApplicationFrame;
 import org.jfree.data.time.Second;
 import org.jfree.data.time.TimePeriodValues;
 import org.jfree.data.time.TimePeriodValuesCollection;
+import org.jfree.data.xy.XYDataset;
+import org.jfree.data.xy.XYSeries;
+import org.jfree.data.xy.XYSeriesCollection;
 
 import com.RINEX_parser.models.IonoValue;
 
@@ -40,13 +43,13 @@ public class GraphPlotter extends ApplicationFrame {
 
 	}
 
-	public GraphPlotter(String applicationTitle, String chartTitle, HashMap<Integer, int[]> data,
-			ArrayList<Calendar> timeList) {
+	public GraphPlotter(String applicationTitle, String chartTitle, int[] data, ArrayList<Calendar> timeList,
+			String SVID) {
 		super(applicationTitle);
 		// TODO Auto-generated constructor stub
 
 		final JFreeChart chart = ChartFactory.createTimeSeriesChart(chartTitle, "Time of the Day", "Cycle Slips",
-				createDatasetCS(timeList, data), true, true, false);
+				createDatasetCS(timeList, data, SVID), true, true, false);
 
 		final ChartPanel chartPanel = new ChartPanel(chart);
 		chartPanel.setPreferredSize(new java.awt.Dimension(560, 370));
@@ -56,14 +59,12 @@ public class GraphPlotter extends ApplicationFrame {
 
 	}
 
-	public GraphPlotter(String applicationTitle, String chartTitle, int[] data, ArrayList<Calendar> timeList,
-			int SVID) {
+	public GraphPlotter(String applicationTitle, String chartTitle, ArrayList<Double> data, String SVID) {
 		super(applicationTitle);
 		// TODO Auto-generated constructor stub
 
-		final JFreeChart chart = ChartFactory.createTimeSeriesChart(chartTitle, "Time of the Day", "Cycle Slips",
-				createDatasetCS(timeList, data, SVID), true, true, false);
-
+		final JFreeChart chart = ChartFactory.createXYLineChart(chartTitle, "X-axis", "Cycle Slip",
+				createDatasetCS(data, SVID));
 		final ChartPanel chartPanel = new ChartPanel(chart);
 		chartPanel.setPreferredSize(new java.awt.Dimension(560, 370));
 		chartPanel.setMouseZoomable(true, false);
@@ -131,27 +132,10 @@ public class GraphPlotter extends ApplicationFrame {
 
 	}
 
-	private TimePeriodValuesCollection createDatasetCS(ArrayList<Calendar> timeList, HashMap<Integer, int[]> data) {
-		TimePeriodValuesCollection coll = new TimePeriodValuesCollection();
-		for (int SVID : data.keySet()) {
-			TimePeriodValues series = new TimePeriodValues(String.valueOf(SVID));
-			ArrayList<Integer> list = (ArrayList<Integer>) Arrays.stream(data.get(SVID)).boxed()
-					.collect(Collectors.toList());
-			for (int i = 0; i < list.size(); i++) {
-
-				series.add(new Second(timeList.get(i).getTime()), list.get(i));
-			}
-
-			coll.addSeries(series);
-		}
-		return coll;
-
-	}
-
-	private TimePeriodValuesCollection createDatasetCS(ArrayList<Calendar> timeList, int[] data, int SVID) {
+	private TimePeriodValuesCollection createDatasetCS(ArrayList<Calendar> timeList, int[] data, String SVID) {
 		TimePeriodValuesCollection coll = new TimePeriodValuesCollection();
 
-		TimePeriodValues series = new TimePeriodValues(String.valueOf(SVID));
+		TimePeriodValues series = new TimePeriodValues(SVID);
 		ArrayList<Integer> list = (ArrayList<Integer>) Arrays.stream(data).boxed().collect(Collectors.toList());
 		for (int i = 0; i < list.size(); i++) {
 
@@ -161,6 +145,17 @@ public class GraphPlotter extends ApplicationFrame {
 		coll.addSeries(series);
 
 		return coll;
+
+	}
+
+	private XYDataset createDatasetCS(ArrayList<Double> data, String SVID) {
+		final XYSeries cs = new XYSeries(SVID);
+		for (int i = 0; i < data.size(); i++) {
+			cs.add(i, data.get(i));
+		}
+		final XYSeriesCollection dataset = new XYSeriesCollection();
+		dataset.addSeries(cs);
+		return dataset;
 
 	}
 

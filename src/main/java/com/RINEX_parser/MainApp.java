@@ -80,17 +80,16 @@ public class MainApp {
 
 		case 2:
 			/*
-			 * posEstimate(boolean doPosErrPlot, double cutOffAng, boolean, boolean useIGS,
-			 * boolean isDual, boolean useGIM, boolean useRTKlib, boolean usePhase, int
-			 * estimatorType, String[] obsvCode, int minSat, String obs_path, String
-			 * derived_csv_path,String[] obsvCodeList)
-			 * 
+			 * posEstimate(boolean doPosErrPlot, double cutOffAng, boolean useBias, boolean
+			 * useIGS, boolean isDual, boolean useGIM, boolean useRTKlib, boolean usePhase,
+			 * int estimatorType, String[] obsvCode, int minSat, String obs_path, String
+			 * derived_csv_path, String[] obsvCodeList)
 			 */
 
-			String[] obsvCodeList = new String[] { "G1C", "E1C", "C2I" };
+			String[] obsvCodeList = new String[] { "G1C" };
 			String obs_path = "E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2021-04-29-US-SJC-2\\SamsungS20Ultra\\supplemental\\SamsungS20Ultra_GnssLog.21o";
 			String derived_csv_path = "E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2021-04-29-US-SJC-2\\SamsungS20Ultra\\SamsungS20Ultra_derived.csv";
-			GoogleDeciApp.posEstimate(true, 5, false, false, false, false, false, false, 3, new String[] { "G1C" }, 4,
+			GoogleDeciApp.posEstimate(true, 5, false, false, false, true, false, true, 4, new String[] { "G1C" }, 5,
 					obs_path, derived_csv_path, obsvCodeList);
 			break;
 		case 3:
@@ -443,7 +442,7 @@ public class MainApp {
 				for (int SVID : csMap.keySet()) {
 					int[] data = csMap.get(SVID);
 					GraphPlotter chart = new GraphPlotter("Cycle Slip - " + SVID, "Cycle Slip - " + SVID, data,
-							timeList, SVID);
+							timeList, String.valueOf(SVID));
 
 					chart.pack();
 					RefineryUtilities.positionFrameRandomly(chart);

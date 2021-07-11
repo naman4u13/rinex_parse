@@ -1,9 +1,6 @@
 package com.RINEX_parser.ComputeUserPos.KalmanFilter.Models;
 
-import java.util.ArrayList;
 import java.util.stream.IntStream;
-
-import com.RINEX_parser.models.Satellite;
 
 public class KFconfig extends KF {
 
@@ -34,27 +31,28 @@ public class KFconfig extends KF {
 		double[][] F = new double[4][4];
 		double[][] Q = new double[4][4];
 		IntStream.range(0, 3).forEach(i -> {
-			Q[i][i] = 1e8/c2;
+			Q[i][i] = 1e8 / c2;
 			F[i][i] = 1;
 		});
-		Q[3][3] = 9e10/c2;
+		Q[3][3] = 9e10 / c2;
 		F[3][3] = 1;
 		super.configure(F, Q);
 	}
 
-	public void configurePPP(double deltaT, ArrayList<Satellite>[] SV) {
+	public void configurePPP(double deltaT, int SVcount, boolean isStatic) {
 
-		int SVcount = SV[0].size();
 		int n = SVcount + 5;// Rcvr pos(3), clk off(1),Residual wet tropo(1), Ambiguity
 							// params(satCount)
 		double[][] F = new double[n][n];
 		double[][] Q = new double[n][n];
 		Q[3][3] = 9e10 / c2;
-
 		Q[4][4] = (0.0001 / c2) * (deltaT / (60 * 60));
-
 		IntStream.range(0, n).forEach(x -> F[x][x] = 1);
-		F[3][3] = 0;
+		if (!isStatic) {
+
+			IntStream.range(0, 3).forEach(x -> Q[x][x] = 1e8 / c2);
+		}
+
 		super.configure(F, Q);
 	}
 }
