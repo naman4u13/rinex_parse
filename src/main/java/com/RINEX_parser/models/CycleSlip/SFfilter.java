@@ -15,7 +15,7 @@ public class SFfilter {
 	public SFfilter(int samplingRate) {
 		dList = new ArrayList<LinearCombo>();
 		n = 300 / samplingRate;
-		s0Sq = Math.pow(3, 2);
+		s0Sq = Math.pow(1, 2);
 	}
 
 	public void update(double d, double t) {
@@ -39,7 +39,13 @@ public class SFfilter {
 	public double getSigmaSq() {
 		double sigmaSq = meanSq - Math.pow(mean, 2);
 		double len = dList.size();
-		sigmaSq = (((len - 1) / len) * sigmaSq) + ((1 / len) * s0Sq);
+		if (len < n) {
+			sigmaSq = (((len - 1) / len) * sigmaSq) + ((1 / len) * s0Sq);
+		} else {
+			double _n = n;
+			sigmaSq = (((_n - 1) / _n) * sigmaSq) + ((1.0 / _n) * s0Sq);
+		}
+
 		return sigmaSq;
 
 	}

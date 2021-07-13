@@ -13,6 +13,7 @@ public class Observable {
 	private double cycle;
 	private boolean isLocked;
 	private char SSI;
+	private boolean LLI = true;
 
 	public int getSVID() {
 		return SVID;
@@ -26,29 +27,16 @@ public class Observable {
 			String carrier_frequency) {
 		this.SSI = SSI;
 		this.SVID = Integer.parseInt(SVID.replaceAll("[A-Z]", ""));
-		this.pseudorange = pseudorange != null ? Double.parseDouble(pseudorange) : 0;
-		this.CNo = CNo != null ? Double.parseDouble(CNo) : 0;
-		this.doppler = doppler != null ? Double.parseDouble(doppler) : 0;
-		this.cycle = phase != null ? Double.parseDouble(phase) : 0;
+		this.pseudorange = pseudorange != null ? Double.parseDouble(parseObs(pseudorange, true)) : 0;
+		this.CNo = CNo != null ? Double.parseDouble(parseObs(CNo)) : 0;
+		this.doppler = doppler != null ? Double.parseDouble(parseObs(doppler)) : 0;
+		this.cycle = phase != null ? Double.parseDouble(parseObs(phase)) : 0;
+
 		this.carrier_frequency = Double.parseDouble(carrier_frequency);
 		this.carrier_wavelength = SPEED_OF_LIGHT / this.carrier_frequency;
 		this.pseudoRangeRate = -this.doppler * this.carrier_wavelength;
 		this.isLocked = false;
 
-	}
-
-	public Observable(char SSI, int SVID, double pseudorange, double CNo, double doppler, double phase,
-			double carrier_frequency) {
-		this.SSI = SSI;
-		this.SVID = SVID;
-		this.pseudorange = pseudorange;
-		this.CNo = CNo;
-		this.doppler = doppler;
-		this.cycle = phase;
-		this.carrier_frequency = carrier_frequency;
-		this.carrier_wavelength = SPEED_OF_LIGHT / this.carrier_frequency;
-		this.pseudoRangeRate = -this.doppler * this.carrier_wavelength;
-		this.isLocked = false;
 	}
 
 	public Observable(Observable satModel) {
@@ -62,6 +50,7 @@ public class Observable {
 		this.carrier_wavelength = satModel.carrier_wavelength;
 		this.pseudoRangeRate = satModel.pseudoRangeRate;
 		this.isLocked = satModel.isLocked;
+		this.LLI = satModel.LLI();
 	}
 
 	@Override
@@ -125,4 +114,46 @@ public class Observable {
 	public char getSSI() {
 		return SSI;
 	}
+
+	// Observation data format is F14.3,I1,I1 last
+	public String parseObs(String data) {
+		return parseObs(data, false);
+	}
+
+	// Observation data format is F14.3,I1,I1 last
+	public String parseObs(String data, boolean setLLI) {
+
+		if (data != null) {
+			if (!data.isBlank()) {
+				String[] arr = data.split("\\.");
+
+				if (arr[1].length() > 3) {
+					data = arr[0] + "." + arr[1].substring(0, 3);
+					if (setLLI) {
+						double val = Double.parseDouble(String.valueOf(arr[1].charAt(3)));
+						if (val % 2 == 0) {
+							// is either 0,2,4,6 as bit 0 is not set
+							LLI = false;
+						}
+					}
+				} else {
+					data = arr[0] + "." + arr[1];
+
+				}
+
+			}
+
+		}
+		return data;
+
+	}
+
+	public boolean LLI() {
+		return LLI;
+	}
+
+	public void setCycle(double cycle) {
+		this.cycle = cycle;
+	}
+
 }

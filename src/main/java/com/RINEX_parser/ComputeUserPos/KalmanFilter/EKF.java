@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashMap;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.ejml.dense.row.MatrixFeatures_DDRM;
@@ -16,7 +15,6 @@ import com.RINEX_parser.ComputeUserPos.KalmanFilter.Models.KFconfig;
 import com.RINEX_parser.ComputeUserPos.Regression.WLS;
 import com.RINEX_parser.fileParser.IONEX;
 import com.RINEX_parser.helper.ComputeEleAzm;
-import com.RINEX_parser.helper.ComputeIonoCorr;
 import com.RINEX_parser.helper.ComputeTropoCorr;
 import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.Satellite;
@@ -96,10 +94,9 @@ public class EKF {
 
 	}
 
-	public ArrayList<double[]> computeDynamicPPP(ArrayList<double[]> trueLLHlist) {
-		WLS wls = new WLS(SVlist.get(0), PCO, ionoCoeff, timeList.get(0), ionex, geoid);
-		double[] refECEF = wls.getTropoCorrECEF();
-		double[][] x = new double[][] { { refECEF[0] }, { refECEF[1] }, { refECEF[2] }, { 0 }, { 0 } };
+	public ArrayList<double[]> computeDynamicPPP(ArrayList<double[]> trueLLHlist, double[] intialECEF) {
+
+		double[][] x = new double[][] { { intialECEF[0] }, { intialECEF[1] }, { intialECEF[2] }, { 0 }, { 0 } };
 		double[][] P = new double[5][5];
 		IntStream.range(0, 3).forEach(i -> P[i][i] = 1000);
 		P[3][3] = 9e10;
@@ -133,7 +130,7 @@ public class EKF {
 			}
 			for (int j = 0; j < SVcount; j++) {
 				Satellite sat = SV.get(j);
-				String svid = sat.getSSI() + "" + sat.getSVID();
+				String svid = String.valueOf(sat.getSSI()) + String.valueOf(sat.getSVID());
 				double xVal = 0;
 				double pVal = 400;
 				if (ambStateMap.containsKey(svid) && sat.isLocked() == true) {
@@ -147,11 +144,12 @@ public class EKF {
 					double CP = sat.getCycle() * sat.getCarrier_wavelength();
 
 					xVal = CP - PR;
+					System.out.println();
 
 				}
 				_x.set(5 + j, xVal);
 				_P.set(5 + j, 5 + j, pVal);
-				ambStateMap.put(svid, new double[] { xVal, pVal });
+
 			}
 			kfObj.setState(_x, _P);
 			double currentTime = timeList.get(i).getTimeInMillis() / 1E3;
@@ -163,8 +161,23 @@ public class EKF {
 			}
 			x = kfObj.getState();
 			P = kfObj.getCovariance();
+
 			double[] estECEF = new double[] { x.get(0), x.get(1), x.get(2) };
 			ecefList.add(estECEF);
+			for (int j = 0; j < SVcount; j++) {
+				Satellite sat = SV.get(j);
+				String svid = String.valueOf(sat.getSSI()) + String.valueOf(sat.getSVID());
+				if (sat.isLocked() == true) {
+					double xVal = x.get(5 + j);
+					double pVal = P.get(5 + j, 5 + j);
+					ambStateMap.put(svid, new double[] { xVal, pVal });
+				}
+//				} else {
+//					if (ambStateMap.containsKey(svid)) {
+//						ambStateMap.remove(svid);
+//					}
+//				}
+			}
 			if (!MatrixFeatures_DDRM.isPositiveDefinite(P.getMatrix())) {
 
 				System.err.println("PositiveDefinite test Failed");
@@ -182,7 +195,7 @@ public class EKF {
 
 			} else {
 				for (int j = 0; j < SVcount; j++) {
-					String svid = SV.get(j).getSSI() + "" + SV.get(j).getSVID();
+					String svid = String.valueOf(SV.get(j).getSSI()) + String.valueOf(SV.get(j).getSVID());
 					System.out.println(svid + "  -  " + x.get(5 + j));
 				}
 				double[] estLLH = ECEFtoLatLon.ecef2lla(estECEF);
@@ -335,42 +348,21 @@ public class EKF {
 		double resTropo = x.get(4);
 		double[] ambiguity = IntStream.range(0, SVcount).mapToDouble(i -> x.get(5 + i)).toArray();
 		double[] estLatLon = ECEFtoLatLon.ecef2lla(estECEF);
-		WLS wls = new WLS(SV, PCO, ionoCoeff, time, ionex, geoid);
-		double[] refECEF = wls.getTropoCorrECEF();
-		double[] refLatLon = ECEFtoLatLon.ecef2lla(refECEF);
-		ComputeTropoCorr tropo = new ComputeTropoCorr(refLatLon, time, geoid);
+
 		ComputeTropoCorr estTropo = new ComputeTropoCorr(estLatLon, time, geoid);
 		double[][] z = new double[2 * SVcount][1];
 		double[][] ze = new double[2 * SVcount][1];
-		ArrayList<double[]> EleAzm = (ArrayList<double[]>) SV.stream().map(i -> i.getElevAzm())
-				.collect(Collectors.toList());
 		double[][] H = new double[2 * SVcount][5 + SVcount];
 		double[][] R = new double[2 * SVcount][2 * SVcount];
 		for (int i = 0; i < SVcount; i++) {
 			Satellite sat = SV.get(i);
 			double[] satECI = sat.getECI();
-			double tropoCorr = tropo.getSlantDelay(EleAzm.get(i)[0]);
-
-			double ionoCorr = 0;
-			if (ionex != null) {
-				ionoCorr = ionex.computeIonoCorr(EleAzm.get(i)[0], EleAzm.get(i)[1], refLatLon[0], refLatLon[1],
-						sat.gettRX(), sat.getCarrier_frequency(), time);
-
-			} else {
-				ionoCorr = ComputeIonoCorr.computeIonoCorr(EleAzm.get(i)[0], EleAzm.get(i)[1], refLatLon[0],
-						refLatLon[1], sat.gettRX(), ionoCoeff, sat.getCarrier_frequency(), time);
-				System.err.println("ERROR - Using Klobuchlar model in SF PPP dyanmic kalman computation");
-			}
 			double E = ComputeEleAzm.computeEleAzm(estECEF, satECI)[0];
 			double M_wet = estTropo.getM_wet(E);
 
 			if (sat.getCycle() == 0 || sat.getPseudorange() == 0 || sat.getCarrier_wavelength() == 0) {
 				System.err.println("ERROR - NULL CP OR PR is being used in SF PPP dyanmic kalman computation");
 			}
-
-			double corrPR = sat.getPseudorange() + (sat.getSatClkOff() * SpeedofLight) - tropoCorr - ionoCorr;
-			double corrCP = (sat.getCycle() * sat.getCarrier_wavelength()) + (sat.getSatClkOff() * SpeedofLight)
-					- tropoCorr + ionoCorr;
 
 			double[] unitLOS = SatUtil.getUnitLOS(satECI, estECEF);
 
@@ -381,8 +373,8 @@ public class EKF {
 				H[j][4] = M_wet;
 			}
 			H[(i * 2) + 1][5 + i] = 1;
-			z[2 * i][0] = corrPR;
-			z[(2 * i) + 1][0] = corrCP;
+			z[2 * i][0] = sat.getPseudorange();
+			z[(2 * i) + 1][0] = sat.getCycle() * sat.getCarrier_wavelength();
 			double approxPR = Math.sqrt(IntStream.range(0, 3).mapToDouble(j -> estECEF[j] - satECI[j]).map(j -> j * j)
 					.reduce(0, (j, k) -> j + k)) + estRxClkOff + (M_wet * resTropo);
 			double approxCP = approxPR + ambiguity[i];

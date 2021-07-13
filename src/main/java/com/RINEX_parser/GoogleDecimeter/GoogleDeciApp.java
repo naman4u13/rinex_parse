@@ -49,6 +49,7 @@ import com.RINEX_parser.models.GoogleDecimeter.Derived;
 import com.RINEX_parser.utility.ECEFtoLatLon;
 import com.RINEX_parser.utility.GraphPlotter;
 import com.RINEX_parser.utility.LatLonUtil;
+import com.RINEX_parser.utility.SatUtil;
 import com.RINEX_parser.utility.Time;
 
 public class GoogleDeciApp {
@@ -110,7 +111,7 @@ public class GoogleDeciApp {
 
 			String RTKlib_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\RTKlib\\decimeter_5_samsung119.pos";
 
-			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\google\\2021-04-29-US-SJC-2\\test2";
+			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\google\\2021-04-29-US-SJC-2\\test";
 			File output = new File(path + ".txt");
 			PrintStream stream;
 
@@ -348,7 +349,10 @@ public class GoogleDeciApp {
 				ArrayList<double[]> estECEFList = null;
 				if (usePhase) {
 					SFcycleSlip.process(SVlist, 1);
-					estECEFList = dynamicEkf.computeDynamicPPP(trueLLHlist);
+					WLS wls = new WLS(SVlist.get(0), rxPCO[0], ionoCoeff, timeList.get(0), ionex, geoid);
+					double[] initialECEF = wls.getTropoCorrECEF();
+					SatUtil.correctPRCP(SVlist, rxPCO[0], ionoCoeff, ionex, geoid);
+					estECEFList = dynamicEkf.computeDynamicPPP(trueLLHlist, initialECEF);
 				} else {
 					estECEFList = dynamicEkf.computeDynamicSPP(trueLLHlist);
 				}
@@ -376,7 +380,7 @@ public class GoogleDeciApp {
 				for (int i = 0; i < SVlist.size(); i++) {
 					for (int j = 0; j < SVlist.get(i).size(); j++) {
 						Satellite sat = SVlist.get(i).get(j);
-						double val = sat.isLocked() ? 1 : 0;
+						double val = sat.LLI() ? 0 : 1;
 						csMap.computeIfAbsent(sat.getSSI() + "" + sat.getSVID(), k -> new ArrayList<Double>()).add(val);
 					}
 				}

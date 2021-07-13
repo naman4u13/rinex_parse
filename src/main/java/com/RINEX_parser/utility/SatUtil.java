@@ -8,12 +8,16 @@ import java.util.stream.IntStream;
 
 import org.orekit.models.earth.Geoid;
 
+import com.RINEX_parser.ComputeUserPos.Regression.WLS;
 import com.RINEX_parser.ComputeUserPos.Regression.Models.LinearLeastSquare;
 import com.RINEX_parser.fileParser.IONEX;
+import com.RINEX_parser.helper.ComputeIonoCorr;
+import com.RINEX_parser.helper.ComputeTropoCorr;
 import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.Satellite;
 
 public class SatUtil {
+	private static final double SpeedofLight = 299792458;
 
 	public static double[][] getUnitLOS(ArrayList<Satellite> SV, double[] userXYZ) {
 		int SVcount = SV.size();
@@ -56,6 +60,57 @@ public class SatUtil {
 		unitLOS = Arrays.stream(LOS).map(i -> i / GeometricRange).toArray();
 
 		return unitLOS;
+
+	}
+
+	// Remove Error from PR and CP
+	public static void correctPRCP(ArrayList<ArrayList<Satellite>> SVlist, double[] PCO, IonoCoeff ionoCoeff,
+			IONEX ionex, Geoid geoid) {
+		for (ArrayList<Satellite> SV : SVlist) {
+			Calendar time = SV.get(0).getTime();
+			WLS wls = new WLS(SV, PCO, ionoCoeff, time, ionex, geoid);
+			double[] refECEF = wls.getTropoCorrECEF();
+			double[] refLatLon = ECEFtoLatLon.ecef2lla(refECEF);
+			ComputeTropoCorr tropo = new ComputeTropoCorr(refLatLon, time, geoid);
+			HashMap<String, Double> map = new HashMap<String, Double>();
+			for (Satellite sat : SV) {
+				double[] EleAzm = sat.getElevAzm();
+				double tropoCorr = tropo.getSlantDelay(EleAzm[0]);
+
+				double ionoCorr = 0;
+				if (ionex != null) {
+					ionoCorr = ionex.computeIonoCorr(EleAzm[0], EleAzm[1], refLatLon[0], refLatLon[1], sat.gettRX(),
+							sat.getCarrier_frequency(), time);
+
+				} else {
+					ionoCorr = ComputeIonoCorr.computeIonoCorr(EleAzm[0], EleAzm[1], refLatLon[0], refLatLon[1],
+							sat.gettRX(), ionoCoeff, sat.getCarrier_frequency(), time);
+					System.err.println("ERROR - Using Klobuchlar model in SF PPP dyanmic kalman computation");
+				}
+				double corrPR = sat.getPseudorange() + (sat.getSatClkOff() * SpeedofLight) - tropoCorr - ionoCorr;
+				double corrCP = (sat.getCycle() * sat.getCarrier_wavelength()) + (sat.getSatClkOff() * SpeedofLight)
+						- tropoCorr + ionoCorr;
+				sat.setPseudorange(corrPR);
+
+				String svid = String.valueOf(sat.getSSI()) + String.valueOf(sat.getSVID());
+				if (sat.isLocked()) {
+					if (map.containsKey(svid)) {
+						corrCP = corrCP + map.get(svid);
+					} else {
+						double delta = corrPR - corrCP;
+						corrCP += delta;
+						map.put(svid, delta);
+					}
+
+				} else {
+					if (map.containsKey(svid)) {
+						map.remove(svid);
+					}
+				}
+				sat.setCycle(corrCP / sat.getCarrier_wavelength());
+
+			}
+		}
 
 	}
 

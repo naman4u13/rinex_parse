@@ -44,6 +44,7 @@ import com.RINEX_parser.fileParser.ObservationRNX;
 import com.RINEX_parser.fileParser.Orbit;
 import com.RINEX_parser.fileParser.RTKlib;
 import com.RINEX_parser.fileParser.SBAS;
+import com.RINEX_parser.fileParser.GoogleDecimeter.GNSSLog;
 import com.RINEX_parser.helper.CycleSlip.DFcycleSlip;
 import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.IonoValue;
@@ -74,7 +75,7 @@ public class MainApp {
 			 * useRTKlib, boolean usePhase, int estimatorType, String[] obsvCode, int
 			 * minSat)
 			 */
-			posEstimate(false, false, true, 5, true, false, true, true, false, true, false, false, 4,
+			posEstimate(false, false, true, 15, true, false, true, true, false, true, false, false, 4,
 					new String[] { "G1C", "G2X" }, 4);
 			break;
 
@@ -141,12 +142,8 @@ public class MainApp {
 
 		case 4:
 			try {
-				String orbit_path = "E:\\Study\\Google Decimeter Challenge\\input_files\\2021_119\\COD0MGXFIN_20211190000_01D_05M_ORB.SP3";
-				Orbit orbit = new Orbit(orbit_path);
-
-				String clock_path = "E:\\Study\\Google Decimeter Challenge\\input_files\\2021_119\\COD0MGXFIN_20211190000_01D_30S_CLK.CLK";
-				Clock clock = new Clock(clock_path, null);
-				System.err.println();
+				String path = "E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2021-04-29-US-SJC-2\\SamsungS20Ultra\\SamsungS20Ultra_GnssLog.txt";
+				GNSSLog.process(path);
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();

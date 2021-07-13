@@ -58,21 +58,6 @@ public class Satellite extends Observable {
 
 	}
 
-	public Satellite(char SSI, int SVID, double pseudorange, double CNo, double doppler, double phase,
-			double carrier_frequency, double[] eCEF, double satClkOff, double t, double tRX, double[] satVel,
-			double satClkDrift, double[] ECI, double[] ElevAzm, Calendar time) {
-		super(SSI, SVID, pseudorange, CNo, doppler, phase, carrier_frequency);
-		ECEF = eCEF;
-		this.satClkOff = satClkOff;
-		this.t = t;
-		this.tRX = tRX;
-		this.satVel = satVel;
-		this.satClkDrift = satClkDrift;
-		this.ECI = ECI;
-		this.time = time;
-		this.ElevAzm = ElevAzm;
-	}
-
 	public Satellite(Observable satModel, double[] eCEF, double satClkOff, double t, double tRX, double[] satVel,
 			double satClkDrift, double[] ECI, double[] ElevAzm, Calendar time) {
 		super(satModel);
