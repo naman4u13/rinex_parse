@@ -48,9 +48,14 @@ public class KF {
 		SimpleMatrix ze = new SimpleMatrix(_ze);
 		SimpleMatrix H = new SimpleMatrix(_H);
 		SimpleMatrix Ht = H.transpose();
-
-		// Kalman Gain
-		SimpleMatrix K = P.mult(Ht).mult(((H.mult(P).mult(Ht)).plus(R)).invert());
+		SimpleMatrix K = null;
+		try {
+			// Kalman Gain
+			K = P.mult(Ht).mult(((H.mult(P).mult(Ht)).plus(R)).invert());
+		} catch (Exception e) {
+			// TODO: handle exception
+			System.out.println();
+		}
 
 		// Posterior State Estimate
 		x = x.plus((K.mult(z.minus(ze))));

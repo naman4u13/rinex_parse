@@ -101,8 +101,8 @@ public class EKF {
 		IntStream.range(0, 3).forEach(i -> P[i][i] = 1000);
 		P[3][3] = 9e10;
 		P[4][4] = 0.25;
-		prObsNoiseVar = 49;
-		cpObsNoiseVar = 49e-4;
+		prObsNoiseVar = 1000;
+		cpObsNoiseVar = 0.1;
 		kfObj.setState(x, P);
 		return iteratePPP(false, trueLLHlist);
 
@@ -141,10 +141,9 @@ public class EKF {
 					// PR and CP prealignment
 
 					double PR = sat.getPseudorange();
-					double CP = sat.getCycle() * sat.getCarrier_wavelength();
+					double CP = sat.getCarrier_wavelength() * sat.getCycle();
 
 					xVal = CP - PR;
-					System.out.println();
 
 				}
 				_x.set(5 + j, xVal);
@@ -171,12 +170,12 @@ public class EKF {
 					double xVal = x.get(5 + j);
 					double pVal = P.get(5 + j, 5 + j);
 					ambStateMap.put(svid, new double[] { xVal, pVal });
+
+				} else {
+					if (ambStateMap.containsKey(svid)) {
+						ambStateMap.remove(svid);
+					}
 				}
-//				} else {
-//					if (ambStateMap.containsKey(svid)) {
-//						ambStateMap.remove(svid);
-//					}
-//				}
 			}
 			if (!MatrixFeatures_DDRM.isPositiveDefinite(P.getMatrix())) {
 
@@ -210,6 +209,7 @@ public class EKF {
 
 		System.out.println(kfObj.getState().toString());
 		return ecefList;
+
 	}
 
 	public ArrayList<double[]> iterateSPP(boolean isStatic, ArrayList<double[]> trueLLHlist) {
@@ -374,16 +374,16 @@ public class EKF {
 			}
 			H[(i * 2) + 1][5 + i] = 1;
 			z[2 * i][0] = sat.getPseudorange();
-			z[(2 * i) + 1][0] = sat.getCycle() * sat.getCarrier_wavelength();
+			z[(2 * i) + 1][0] = sat.getCarrier_wavelength() * sat.getCycle();
 			double approxPR = Math.sqrt(IntStream.range(0, 3).mapToDouble(j -> estECEF[j] - satECI[j]).map(j -> j * j)
 					.reduce(0, (j, k) -> j + k)) + estRxClkOff + (M_wet * resTropo);
 			double approxCP = approxPR + ambiguity[i];
 
 			ze[2 * i][0] = approxPR;
 			ze[(2 * i) + 1][0] = approxCP;
-			R[2 * i][2 * i] = prObsNoiseVar;
-			R[(2 * i) + 1][(2 * i) + 1] = cpObsNoiseVar;
-			System.out.print("");
+			R[2 * i][2 * i] = prObsNoiseVar;// Math.pow(sat.getPrUncM(), 2);
+			R[(2 * i) + 1][(2 * i) + 1] = cpObsNoiseVar;// Math.pow(sat.getGnssLog().getAdrUncM() * 100, 2);
+
 		}
 
 		kfObj.update(z, R, ze, H);

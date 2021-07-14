@@ -17,7 +17,7 @@ public class SFcycleSlip {
 		// Min arc length for SF CSD
 		int minAL_SF = 3;
 		int nT = 5;
-		double threshMax = 20;
+		double L1C1thresh = 20;
 		HashMap<String, SFfilter> sfMap = new HashMap<String, SFfilter>();
 		HashMap<String, int[]> res = new HashMap<String, int[]>();
 		for (int i = 0; i < SVlist.size(); i++) {
@@ -28,7 +28,9 @@ public class SFcycleSlip {
 				Satellite sat = SV.get(j);
 				String SVID = String.valueOf(sat.getSSI()) + String.valueOf(sat.getSVID());
 				// phase code diff
-				double d = (sat.getCycle() * sat.getCarrier_wavelength()) - sat.getPseudorange();
+				// double d = (sat.getCycle() * sat.getCarrier_wavelength()) -
+				// sat.getPseudorange();
+				double d = (sat.getCarrier_wavelength() * sat.getCycle()) - sat.getPseudorange();
 				SFfilter sfObj = sfMap.getOrDefault(SVID, null);
 				boolean isSlip = true;
 				if (sfObj == null) {
@@ -42,11 +44,12 @@ public class SFcycleSlip {
 					} else if (dList.size() >= minAL_SF) {
 
 						double calcThresh = nT * Math.sqrt(sfObj.getSigmaSq());
-						double thresh = Math.min(calcThresh, threshMax);
-						double diffAbs = Math.abs(d - sfObj.getMean());
 
+						double diffAbs = Math.abs(d - sfObj.getMean());
+						boolean L1C1check = Math.abs(d - dList.get(dList.size() - 1).lc()) > L1C1thresh;
 						isSlip = diffAbs > calcThresh;
-						isSlip = isSlip || sat.LLI();
+
+						isSlip = isSlip || sat.getGnssLog().LLI() || L1C1check;
 						if (isSlip) {
 							sfObj = sfObj.reset(samplingRate, minAL_SF);
 						}

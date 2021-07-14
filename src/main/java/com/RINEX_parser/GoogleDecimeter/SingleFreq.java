@@ -12,34 +12,34 @@ import com.RINEX_parser.fileParser.Antenna;
 import com.RINEX_parser.fileParser.Clock;
 import com.RINEX_parser.fileParser.Orbit;
 import com.RINEX_parser.helper.ComputeEleAzm;
-import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.Observable;
 import com.RINEX_parser.models.ObservationMsg;
 import com.RINEX_parser.models.Satellite;
+import com.RINEX_parser.models.GoogleDecimeter.AndroidObsv;
 import com.RINEX_parser.models.GoogleDecimeter.Derived;
 import com.RINEX_parser.utility.Vector;
 
 public class SingleFreq {
 	private final static double SpeedofLight = 299792458;
 
-	public static ArrayList<Satellite> process(ObservationMsg obsvMsg, IonoCoeff ionoCoeff, double tRX,
-			double[] userECEF, double cutOffAng, HashMap<Long, HashMap<String, HashMap<Integer, Derived>>> derivedMap,
-			Calendar time, String[] obsvCodeList, long weekNo, boolean useIGS, Orbit orbit, Clock clock,
-			Antenna antenna) {
+	public static ArrayList<Satellite> process(ObservationMsg obsvMsg, double tRX, double[] userECEF, double cutOffAng,
+			HashMap<Long, HashMap<String, HashMap<Integer, Derived>>> derivedMap,
+			HashMap<Long, HashMap<String, HashMap<Integer, AndroidObsv>>> gnssLogMap, Calendar time,
+			String[] obsvCodeList, long weekNo, boolean useIGS, Orbit orbit, Clock clock, Antenna antenna) {
 
 		SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/YYYY kk:mm:ss.SSS");
 		String errStr = sdf.format(time.getTime());
 		sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
 		ArrayList<Satellite> SV = new ArrayList<Satellite>();
 		long key = Math.round(tRX * 1e3);
-		HashMap<String, HashMap<Integer, Derived>> obsvMap = null;
-
+		HashMap<String, HashMap<Integer, Derived>> derObsvMap = null;
+		HashMap<String, HashMap<Integer, AndroidObsv>> logObsvMap = null;
 		if (derivedMap.containsKey(key)) {
-			obsvMap = derivedMap.get(key);
+			derObsvMap = derivedMap.get(key);
 		} else if (derivedMap.containsKey(key + 1)) {
-			obsvMap = derivedMap.get(key + 1);
+			derObsvMap = derivedMap.get(key + 1);
 		} else if (derivedMap.containsKey(key - 1)) {
-			obsvMap = derivedMap.get(key - 1);
+			derObsvMap = derivedMap.get(key - 1);
 		} else {
 
 			ArrayList<Observable> errObsv = null;
@@ -67,15 +67,27 @@ public class SingleFreq {
 			return SV;
 		}
 
+		if (gnssLogMap.containsKey(key)) {
+			logObsvMap = gnssLogMap.get(key);
+		} else if (derivedMap.containsKey(key + 1)) {
+			logObsvMap = gnssLogMap.get(key + 1);
+		} else if (derivedMap.containsKey(key - 1)) {
+			logObsvMap = gnssLogMap.get(key - 1);
+		} else {
+			System.err.println("Error in GNSS LOG file");
+			return null;
+		}
+
 		for (String obsvCode : obsvCodeList) {
 
-			if (!obsvMap.containsKey(obsvCode)) {
+			if (!derObsvMap.containsKey(obsvCode)) {
 
 				System.err.println("No data for obsvCode " + obsvCode + " in derived.csv at time = " + errStr);
 				continue;
 			}
 
-			HashMap<Integer, Derived> navMap = obsvMap.get(obsvCode);
+			HashMap<Integer, Derived> navMap = derObsvMap.get(obsvCode);
+			HashMap<Integer, AndroidObsv> gnssLog = logObsvMap.get(obsvCode);
 			ArrayList<Observable> observables = obsvMsg.getObsvSat(obsvCode);
 			if (observables == null) {
 
@@ -103,13 +115,13 @@ public class SingleFreq {
 				Satellite _sat = null;
 				Derived navData = navMap.get(svid);
 				if (useIGS) {
-					int SVID = sat.getSVID();
+
 					double tSV = tRX - (sat.getPseudorange() / SpeedofLight);
 
-					double satClkOff = clock.getBias(tSV, SVID, obsvCode, true);
+					double satClkOff = clock.getBias(tSV, svid, obsvCode, true);
 					// GPS System transmission time
 					double t = tSV - satClkOff;
-					double[][] satPV = orbit.getPV(t, SVID, polyOrder, SSI);
+					double[][] satPV = orbit.getPV(t, svid, polyOrder, SSI);
 					double[] satECEF = satPV[0];
 					double[] satVel = satPV[1];
 					double relativistic_error = -2 * (Vector.dotProd(satECEF, satVel)) / Math.pow(SpeedofLight, 2);
@@ -120,20 +132,31 @@ public class SingleFreq {
 //					double[] satPC_windup = antenna.getSatPC_windup(SVID, obsvCode, tRX, weekNo, satECEF, userECEF);
 //					IntStream.range(0, 3).forEach(j -> satECEF[j] = satPC_windup[j]);
 					double[] EleAzm = ComputeEleAzm.computeEleAzm(userECEF, satECEF);
-					sat.setPseudorange(sat.getPseudorange() - navData.getIsrbM());
+					sat.setPseudorange(navData.getRawPrM() - navData.getIsrbM());
+					sat.setPrUncM(navData.getRawPrUncM());
 					_sat = new Satellite(sat, satECEF, satClkOff, t, tRX, satVel, 0.0, null, EleAzm, time);
 
 				} else {
 					double[] satECEF = navData.getSatECEF();
 					double[] ElevAzm = ComputeEleAzm.computeEleAzm(userECEF, Arrays.copyOfRange(satECEF, 0, 3));
 					double t = (navData.gettSV() * 1e-9) - navData.getSatClkBias();
-
-					sat.setPseudorange(sat.getPseudorange() - navData.getIsrbM());
+					sat.setPseudorange(navData.getRawPrM() - navData.getIsrbM());
+					sat.setPrUncM(navData.getRawPrUncM());
 					// NOTE: satClkDrift require investigation
 					_sat = new Satellite(sat, satECEF, navData.getSatClkBias(), t, tRX, navData.getSatVel(),
 							navData.getSatClkDrift(), null, ElevAzm, time);
+
 				}
+				_sat.setGnssLog(gnssLog.get(svid));
+
+				if (_sat.getPrUncM() >= 150 || _sat.getGnssLog().getBiasUnc() >= 1e-3
+						|| _sat.getGnssLog().getAdrUncM() > 1.5) {
+
+					continue;
+				}
+
 				_sat.compECI();
+
 				SV.add(_sat);
 
 			}

@@ -1,30 +1,14 @@
 package com.RINEX_parser.models.GoogleDecimeter;
 
-import java.util.Arrays;
-import java.util.HashSet;
-
 public class AndroidObsv {
 
-	private static final HashSet<Integer> valid_state = new HashSet<Integer>(Arrays.asList(1, 8, 16, 9, 17, 24, 25));
 	private double biasUnc;
 	private int adrState;
 	private double adrM;
 	private double adrUncM;
 	private double multipathInd;
 	private long chipsetElapsedRealtimeNanos;
-	boolean LLI = true;
-
-	public AndroidObsv(double biasUnc, int adrState, double adrM, double adrUncM, double multipathInd,
-			long chipsetElapsedRealtimeNanos) {
-		super();
-		this.biasUnc = biasUnc;
-		this.adrState = adrState;
-		this.adrM = adrM;
-		this.adrUncM = adrUncM;
-		this.multipathInd = multipathInd;
-		this.chipsetElapsedRealtimeNanos = chipsetElapsedRealtimeNanos;
-		setLLI();
-	}
+	boolean LLI = false;
 
 	public AndroidObsv(String biasUnc, String adrState, String adrM, String adrUncM, String multipathInd,
 			String chipsetElapsedRealtimeNanos) {
@@ -63,7 +47,15 @@ public class AndroidObsv {
 	}
 
 	private void setLLI() {
-		this.LLI = (!valid_state.contains(this.adrState));
+		StringBuffer adrStateStr = new StringBuffer(Integer.toBinaryString(adrState)).reverse();
+		if (adrStateStr.charAt(0) != '1' || adrStateStr.charAt(1) == '1' || adrStateStr.charAt(2) == '1') {
+			this.LLI = true;
+		}
+
+	}
+
+	public boolean LLI() {
+		return LLI;
 	}
 
 }

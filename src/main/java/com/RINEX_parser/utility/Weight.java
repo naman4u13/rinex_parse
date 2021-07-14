@@ -32,10 +32,27 @@ public class Weight {
 
 	public static double[][] computeWeight(ArrayList<Satellite> SV) {
 
+		return computeWeight(SV, false);
+	}
+
+	public static double[][] computeWeight(ArrayList<Satellite> SV, boolean useAndroidParam) {
+
+		if (useAndroidParam) {
+			return computeWeightAndroid(SV);
+		}
 		int SVcount = SV.size();
 		double[][] weight = new double[SVcount][SVcount];
 		IntStream.range(0, SVcount).forEach(
 				i -> weight[i][i] = 1 / Weight.computeCoVariance(SV.get(i).getCNo(), SV.get(i).getElevAzm()[0]));
+		double[][] normWeight = Weight.normalize(weight);
+		return normWeight;
+	}
+
+	public static double[][] computeWeightAndroid(ArrayList<Satellite> SV) {
+
+		int SVcount = SV.size();
+		double[][] weight = new double[SVcount][SVcount];
+		IntStream.range(0, SVcount).forEach(i -> weight[i][i] = 1 / Math.pow(SV.get(i).getPrUncM(), 2));
 		double[][] normWeight = Weight.normalize(weight);
 		return normWeight;
 	}

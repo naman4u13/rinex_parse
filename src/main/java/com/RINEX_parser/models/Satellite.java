@@ -3,6 +3,8 @@ package com.RINEX_parser.models;
 import java.util.Arrays;
 import java.util.Calendar;
 
+import com.RINEX_parser.models.GoogleDecimeter.AndroidObsv;
+
 public class Satellite extends Observable {
 
 	private double[] ECEF;
@@ -20,6 +22,7 @@ public class Satellite extends Observable {
 	// Elevation and Azimuth Angle
 	private double[] ElevAzm;
 	private double phaseWindUp;
+	private AndroidObsv gnssLog;
 
 	public double[] getECEF() {
 		return ECEF;
@@ -141,6 +144,14 @@ public class Satellite extends Observable {
 
 	public void setPhaseWindUp(double phaseWindUp) {
 		this.phaseWindUp = phaseWindUp;
+	}
+
+	public AndroidObsv getGnssLog() {
+		return gnssLog;
+	}
+
+	public void setGnssLog(AndroidObsv gnssLog) {
+		this.gnssLog = gnssLog;
 	}
 
 }

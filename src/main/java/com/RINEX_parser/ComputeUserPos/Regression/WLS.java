@@ -19,7 +19,7 @@ public class WLS extends LinearLeastSquare {
 			HashMap<Integer, HashMap<Integer, Double>> sbasIVD, IONEX ionex, Geoid geoid) {
 		super(SV, PCO, ionoCoeff, time, sbasIVD, ionex, geoid);
 
-		setWeight(SV);
+		setWeight(SV, false);
 
 	}
 
@@ -57,9 +57,9 @@ public class WLS extends LinearLeastSquare {
 		return super.getEstECEF();
 	}
 
-	public void setWeight(ArrayList<Satellite> SV) {
+	public void setWeight(ArrayList<Satellite> SV, boolean useAndroidParam) {
 
-		super.setWeight(Weight.computeWeight(SV));
+		super.setWeight(Weight.computeWeight(SV, useAndroidParam));
 	}
 
 }

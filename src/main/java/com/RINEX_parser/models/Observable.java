@@ -14,6 +14,7 @@ public class Observable {
 	private boolean isLocked;
 	private char SSI;
 	private boolean LLI = true;
+	private double prUncM;
 
 	public int getSVID() {
 		return SVID;
@@ -51,6 +52,7 @@ public class Observable {
 		this.pseudoRangeRate = satModel.pseudoRangeRate;
 		this.isLocked = satModel.isLocked;
 		this.LLI = satModel.LLI();
+		this.prUncM = satModel.getPrUncM();
 	}
 
 	@Override
@@ -154,6 +156,14 @@ public class Observable {
 
 	public void setCycle(double cycle) {
 		this.cycle = cycle;
+	}
+
+	public double getPrUncM() {
+		return prUncM;
+	}
+
+	public void setPrUncM(double prUncM) {
+		this.prUncM = prUncM;
 	}
 
 }

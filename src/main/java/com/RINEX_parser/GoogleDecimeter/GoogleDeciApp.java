@@ -38,13 +38,16 @@ import com.RINEX_parser.fileParser.ObservationRNX;
 import com.RINEX_parser.fileParser.Orbit;
 import com.RINEX_parser.fileParser.RTKlib;
 import com.RINEX_parser.fileParser.GoogleDecimeter.DerivedCSV;
+import com.RINEX_parser.fileParser.GoogleDecimeter.GNSSLog;
 import com.RINEX_parser.fileParser.GoogleDecimeter.GroundTruth;
+import com.RINEX_parser.helper.CarrierSmoother;
 import com.RINEX_parser.helper.CycleSlip.SFcycleSlip;
 import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.IonoValue;
 import com.RINEX_parser.models.NavigationMsg;
 import com.RINEX_parser.models.ObservationMsg;
 import com.RINEX_parser.models.Satellite;
+import com.RINEX_parser.models.GoogleDecimeter.AndroidObsv;
 import com.RINEX_parser.models.GoogleDecimeter.Derived;
 import com.RINEX_parser.utility.ECEFtoLatLon;
 import com.RINEX_parser.utility.GraphPlotter;
@@ -59,7 +62,8 @@ public class GoogleDeciApp {
 	@SuppressWarnings("unchecked")
 	public static ArrayList<String[]> posEstimate(boolean doPosErrPlot, double cutOffAng, boolean useBias,
 			boolean useIGS, boolean isDual, boolean useGIM, boolean useRTKlib, boolean usePhase, int estimatorType,
-			String[] obsvCode, int minSat, String obs_path, String derived_csv_path, String[] obsvCodeList) {
+			String[] obsvCode, int minSat, String obs_path, String derived_csv_path, String gnss_log_path,
+			String[] obsvCodeList) {
 		try {
 			TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
 			HashMap<Integer, ArrayList<IonoValue>> ionoValueMap = new HashMap<Integer, ArrayList<IonoValue>>();
@@ -86,7 +90,7 @@ public class GoogleDeciApp {
 			ArrayList<ObservationMsg> ObsvMsgs = (ArrayList<ObservationMsg>) ObsvMsgComp.get("ObsvMsgs");
 			ArrayList<double[]> rxLLH = GroundTruth.processCSV(GTcsv);
 			double[][] rxPCO = new double[obsvCode.length][3];
-			int interval = (int) ObsvMsgComp.get("interval");
+
 			long week = ObsvMsgs.get(0).getWeekNo();
 			int year = Time.getDate(ObsvMsgs.get(0).getTRX(), week, 0).get(Calendar.YEAR);
 			int dayNo = Time.getDate(ObsvMsgs.get(0).getTRX(), week, 0).get(Calendar.DAY_OF_YEAR);
@@ -111,7 +115,7 @@ public class GoogleDeciApp {
 
 			String RTKlib_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\RTKlib\\decimeter_5_samsung119.pos";
 
-			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\google\\2021-04-29-US-SJC-2\\test";
+			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\google\\2021-04-29-US-SJC-2\\test3";
 			File output = new File(path + ".txt");
 			PrintStream stream;
 
@@ -133,8 +137,10 @@ public class GoogleDeciApp {
 			ionoCoeff = (IonoCoeff) NavMsgComp.get("ionoCoeff");
 
 			HashMap<Long, HashMap<String, HashMap<Integer, Derived>>> derivedMap = null;
+			HashMap<Long, HashMap<String, HashMap<Integer, AndroidObsv>>> gnssLogMap = null;
 			if (useDerived) {
 				derivedMap = DerivedCSV.processCSV(derived_csv_path);
+				gnssLogMap = GNSSLog.process(gnss_log_path);
 
 			}
 
@@ -185,9 +191,8 @@ public class GoogleDeciApp {
 				Calendar time = Time.getDate(tRX, weekNo, 0);
 				ArrayList<Satellite> SV = null;
 				if (useDerived) {
-					SV = com.RINEX_parser.GoogleDecimeter.SingleFreq.process(obsvMsg, ionoCoeff, tRX,
-							new double[] { 0, 0, 0 }, -5, derivedMap, time, obsvCodeList, weekNo, false, null, null,
-							null);
+					SV = com.RINEX_parser.GoogleDecimeter.SingleFreq.process(obsvMsg, tRX, new double[] { 0, 0, 0 }, -5,
+							derivedMap, gnssLogMap, time, obsvCodeList, weekNo, false, null, null, null);
 
 				} else {
 					SV = SingleFreq.process(obsvMsg, NavMsgs, obsvCode[0], false, false, false, useBias, ionoCoeff,
@@ -212,8 +217,8 @@ public class GoogleDeciApp {
 				ArrayList<Satellite>[] dualSV = null;
 				if (useDerived) {
 
-					SV = com.RINEX_parser.GoogleDecimeter.SingleFreq.process(obsvMsg, ionoCoeff, tRX, userECEF,
-							cutOffAng, derivedMap, time, obsvCodeList, weekNo, useIGS, orbit, clock, antenna);
+					SV = com.RINEX_parser.GoogleDecimeter.SingleFreq.process(obsvMsg, tRX, userECEF, cutOffAng,
+							derivedMap, gnssLogMap, time, obsvCodeList, weekNo, useIGS, orbit, clock, antenna);
 					if (SV.size() < minSat) {
 						System.err.println("visible satellite count is below threshold");
 						continue;
@@ -366,21 +371,12 @@ public class GoogleDeciApp {
 			}
 			if (estimatorType == 5) {
 
-//				int svid = 1;
-//				for (ArrayList<Satellite>[] SV : dualSVlist) {
-//					SV[0] = SV[0].stream().filter(i -> i.getSVID() == svid)
-//							.collect(Collectors.toCollection(ArrayList::new));
-//					SV[1] = SV[1].stream().filter(i -> i.getSVID() == svid)
-//							.collect(Collectors.toCollection(ArrayList::new));
-//				}
-//				dualSVlist = dualSVlist.stream().filter(i -> i[0].size() > 0)
-//						.collect(Collectors.toCollection(ArrayList::new));
 				SFcycleSlip.process(SVlist, 1);
 				HashMap<String, ArrayList<Double>> csMap = new HashMap<String, ArrayList<Double>>();
 				for (int i = 0; i < SVlist.size(); i++) {
 					for (int j = 0; j < SVlist.get(i).size(); j++) {
 						Satellite sat = SVlist.get(i).get(j);
-						double val = sat.LLI() ? 0 : 1;
+						double val = sat.isLocked() ? 1 : 0;
 						csMap.computeIfAbsent(sat.getSSI() + "" + sat.getSVID(), k -> new ArrayList<Double>()).add(val);
 					}
 				}
@@ -394,6 +390,12 @@ public class GoogleDeciApp {
 					chart.setVisible(true);
 				}
 
+			}
+			if (estimatorType == 7) {
+				SFcycleSlip.process(SVlist, 1);
+
+				SatUtil.correctPRCP(SVlist, rxPCO[0], ionoCoeff, ionex, geoid);
+				CarrierSmoother.process(SVlist, false);
 			}
 			if (useRTKlib) {
 

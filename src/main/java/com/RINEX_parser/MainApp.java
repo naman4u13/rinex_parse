@@ -84,14 +84,15 @@ public class MainApp {
 			 * posEstimate(boolean doPosErrPlot, double cutOffAng, boolean useBias, boolean
 			 * useIGS, boolean isDual, boolean useGIM, boolean useRTKlib, boolean usePhase,
 			 * int estimatorType, String[] obsvCode, int minSat, String obs_path, String
-			 * derived_csv_path, String[] obsvCodeList)
+			 * derived_csv_path, String gnss_log_path, String[] obsvCodeList)
 			 */
 
 			String[] obsvCodeList = new String[] { "G1C" };
 			String obs_path = "E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2021-04-29-US-SJC-2\\SamsungS20Ultra\\supplemental\\SamsungS20Ultra_GnssLog.21o";
 			String derived_csv_path = "E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2021-04-29-US-SJC-2\\SamsungS20Ultra\\SamsungS20Ultra_derived.csv";
-			GoogleDeciApp.posEstimate(true, 5, false, false, false, true, false, true, 4, new String[] { "G1C" }, 5,
-					obs_path, derived_csv_path, obsvCodeList);
+			String gnss_log_path = "E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2021-04-29-US-SJC-2\\SamsungS20Ultra\\SamsungS20Ultra_GnssLog.txt";
+			GoogleDeciApp.posEstimate(true, 5, false, false, false, true, false, true, 7, new String[] { "G1C" }, 4,
+					obs_path, derived_csv_path, gnss_log_path, obsvCodeList);
 			break;
 		case 3:
 //			File output = new File("E:\\Study\\Google Decimeter Challenge\\decimeter\\errReport2.txt");
@@ -124,8 +125,10 @@ public class MainApp {
 						obs_path = path + "\\supplemental\\" + mobName + "_GnssLog." + year + "o";
 
 						derived_csv_path = path + "\\" + mobName + "_derived.csv";
+						gnss_log_path = path + "\\" + mobName + "_GnssLog.txt";
 						ArrayList<String[]> csvRes = GoogleDeciApp.posEstimate(true, 5, false, false, false, false,
-								false, false, 6, new String[] { "G1C" }, 4, obs_path, null, obsvCodeList);
+								false, false, 6, new String[] { "G1C" }, 4, obs_path, null, gnss_log_path,
+								obsvCodeList);
 						csvRes.stream().forEach(i -> i[0] = dayFile.getName() + "_" + mobName);
 						csvRes = GoogleData.predict(csvRes);
 						// GoogleData.filter(csvRes);

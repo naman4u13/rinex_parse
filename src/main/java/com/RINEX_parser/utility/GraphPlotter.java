@@ -73,6 +73,21 @@ public class GraphPlotter extends ApplicationFrame {
 
 	}
 
+	public GraphPlotter(String applicationTitle, String chartTitle, ArrayList<Double> prData, ArrayList<Double> cpData,
+			String SVID) {
+		super(applicationTitle);
+		// TODO Auto-generated constructor stub
+
+		final JFreeChart chart = ChartFactory.createXYLineChart(chartTitle, "X-axis", "PR-CP compare",
+				createDatasetPRCP(prData, cpData, SVID));
+		final ChartPanel chartPanel = new ChartPanel(chart);
+		chartPanel.setPreferredSize(new java.awt.Dimension(560, 370));
+		chartPanel.setMouseZoomable(true, false);
+
+		setContentPane(chartPanel);
+
+	}
+
 	public GraphPlotter(String applicationTitle, String chartTitle, ArrayList<Calendar> timeList,
 			HashMap<String, ArrayList<Double>> ErrMap, long max, String path) {
 		super(applicationTitle);
@@ -155,6 +170,20 @@ public class GraphPlotter extends ApplicationFrame {
 		}
 		final XYSeriesCollection dataset = new XYSeriesCollection();
 		dataset.addSeries(cs);
+		return dataset;
+
+	}
+
+	private XYDataset createDatasetPRCP(ArrayList<Double> prData, ArrayList<Double> cpData, String SVID) {
+		final XYSeries pr = new XYSeries("PR");
+		final XYSeries cp = new XYSeries("CP");
+		for (int i = 0; i < prData.size(); i++) {
+			pr.add(i, prData.get(i));
+			cp.add(i, cpData.get(i));
+		}
+		final XYSeriesCollection dataset = new XYSeriesCollection();
+		dataset.addSeries(pr);
+		dataset.addSeries(cp);
 		return dataset;
 
 	}
