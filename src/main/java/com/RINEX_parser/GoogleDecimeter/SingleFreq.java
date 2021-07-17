@@ -149,11 +149,11 @@ public class SingleFreq {
 				}
 				_sat.setGnssLog(gnssLog.get(svid));
 
-				if (_sat.getPrUncM() >= 150 || _sat.getGnssLog().getBiasUnc() >= 1e-3
-						|| _sat.getGnssLog().getAdrUncM() > 1.5) {
-
-					continue;
-				}
+//				if (_sat.getPrUncM() >= 150 || _sat.getGnssLog().getBiasUnc() >= 1e-3
+//						|| _sat.getGnssLog().getAdrUncM() > 1.5) {
+//
+//					continue;
+//				}
 
 				_sat.compECI();
 

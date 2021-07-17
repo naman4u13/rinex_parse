@@ -16,7 +16,7 @@ import com.RINEX_parser.models.ObservationMsg;
 public class ObservationRNX {
 
 	public static HashMap<String, Object> rinex_obsv_process(String path, boolean useSNX, String sinex_path,
-			String[] obsvCode, boolean usePhase) throws Exception {
+			String[] obsvCode, boolean phaseReq, boolean dopplerReq) throws Exception {
 		File file = new File(path);
 		ArrayList<ObservationMsg> ObsvMsgs = new ArrayList<ObservationMsg>();
 		Map<String, Object> ARP_PCO = null;
@@ -123,7 +123,9 @@ public class ObservationRNX {
 								: null;
 						String CNo = type_index.containsKey('S' + str) ? obsvs[type_index.get('S' + str)] : null;
 						String phase = type_index.containsKey('L' + str) ? obsvs[type_index.get('L' + str)] : null;
-						if ((pseudorange == null || CNo == null) || (phase == null && usePhase)) {
+						String doppler = type_index.containsKey('D' + str) ? obsvs[type_index.get('D' + str)] : null;
+						if ((pseudorange == null || CNo == null) || (phase == null && phaseReq)
+								|| (doppler == null && dopplerReq)) {
 							SV.computeIfAbsent(SSI,
 									k -> new HashMap<Integer, HashMap<Character, ArrayList<Observable>>>())
 									.computeIfAbsent(freqID, k -> new HashMap<Character, ArrayList<Observable>>())
@@ -131,8 +133,6 @@ public class ObservationRNX {
 							continue;
 
 						}
-
-						String doppler = type_index.containsKey('D' + str) ? obsvs[type_index.get('D' + str)] : null;
 
 						SV.computeIfAbsent(SSI, k -> new HashMap<Integer, HashMap<Character, ArrayList<Observable>>>())
 								.computeIfAbsent(freqID, k -> new HashMap<Character, ArrayList<Observable>>())

@@ -87,11 +87,11 @@ public class MainApp {
 			 * derived_csv_path, String gnss_log_path, String[] obsvCodeList)
 			 */
 
-			String[] obsvCodeList = new String[] { "G1C" };
+			String[] obsvCodeList = new String[] { "G1C", "E1C", "C2I" };
 			String obs_path = "E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2021-04-29-US-SJC-2\\SamsungS20Ultra\\supplemental\\SamsungS20Ultra_GnssLog.21o";
 			String derived_csv_path = "E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2021-04-29-US-SJC-2\\SamsungS20Ultra\\SamsungS20Ultra_derived.csv";
 			String gnss_log_path = "E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2021-04-29-US-SJC-2\\SamsungS20Ultra\\SamsungS20Ultra_GnssLog.txt";
-			GoogleDeciApp.posEstimate(true, 5, false, false, false, true, false, true, 7, new String[] { "G1C" }, 4,
+			GoogleDeciApp.posEstimate(true, 5, false, false, false, true, false, false, 8, new String[] { "G1C" }, 4,
 					obs_path, derived_csv_path, gnss_log_path, obsvCodeList);
 			break;
 		case 3:
@@ -227,7 +227,7 @@ public class MainApp {
 			IonoCoeff ionoCoeff = (IonoCoeff) NavMsgComp.get("ionoCoeff");
 			TimeCorrection timeCorr = (TimeCorrection) NavMsgComp.getOrDefault("timeCorr", null);
 			HashMap<String, Object> ObsvMsgComp = ObservationRNX.rinex_obsv_process(obs_path, useSNX, sinex_path,
-					obsvCode, usePhase);
+					obsvCode, usePhase, false);
 			@SuppressWarnings("unchecked")
 			ArrayList<ObservationMsg> ObsvMsgs = (ArrayList<ObservationMsg>) ObsvMsgComp.get("ObsvMsgs");
 			double[] rxARP = (double[]) ObsvMsgComp.get("ARP");

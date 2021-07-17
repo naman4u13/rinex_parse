@@ -41,6 +41,7 @@ import com.RINEX_parser.fileParser.GoogleDecimeter.DerivedCSV;
 import com.RINEX_parser.fileParser.GoogleDecimeter.GNSSLog;
 import com.RINEX_parser.fileParser.GoogleDecimeter.GroundTruth;
 import com.RINEX_parser.helper.CarrierSmoother;
+import com.RINEX_parser.helper.RangeEdit;
 import com.RINEX_parser.helper.CycleSlip.SFcycleSlip;
 import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.IonoValue;
@@ -52,7 +53,6 @@ import com.RINEX_parser.models.GoogleDecimeter.Derived;
 import com.RINEX_parser.utility.ECEFtoLatLon;
 import com.RINEX_parser.utility.GraphPlotter;
 import com.RINEX_parser.utility.LatLonUtil;
-import com.RINEX_parser.utility.SatUtil;
 import com.RINEX_parser.utility.Time;
 
 public class GoogleDeciApp {
@@ -85,7 +85,7 @@ public class GoogleDeciApp {
 			String GTcsv = "E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2021-04-29-US-SJC-2\\SamsungS20Ultra\\ground_truth.csv";
 
 			HashMap<String, Object> ObsvMsgComp = ObservationRNX.rinex_obsv_process(obs_path, false, "", obsvCode,
-					usePhase);
+					usePhase, false);
 			@SuppressWarnings("unchecked")
 			ArrayList<ObservationMsg> ObsvMsgs = (ArrayList<ObservationMsg>) ObsvMsgComp.get("ObsvMsgs");
 			ArrayList<double[]> rxLLH = GroundTruth.processCSV(GTcsv);
@@ -115,7 +115,7 @@ public class GoogleDeciApp {
 
 			String RTKlib_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\RTKlib\\decimeter_5_samsung119.pos";
 
-			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\google\\2021-04-29-US-SJC-2\\test3";
+			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\google\\2021-04-29-US-SJC-2\\test6";
 			File output = new File(path + ".txt");
 			PrintStream stream;
 
@@ -356,7 +356,8 @@ public class GoogleDeciApp {
 					SFcycleSlip.process(SVlist, 1);
 					WLS wls = new WLS(SVlist.get(0), rxPCO[0], ionoCoeff, timeList.get(0), ionex, geoid);
 					double[] initialECEF = wls.getTropoCorrECEF();
-					SatUtil.correctPRCP(SVlist, rxPCO[0], ionoCoeff, ionex, geoid);
+					RangeEdit.RemoveErr(SVlist, rxPCO[0], ionoCoeff, ionex, geoid, false);
+					RangeEdit.alignPhase(SVlist);
 					estECEFList = dynamicEkf.computeDynamicPPP(trueLLHlist, initialECEF);
 				} else {
 					estECEFList = dynamicEkf.computeDynamicSPP(trueLLHlist);
@@ -394,8 +395,29 @@ public class GoogleDeciApp {
 			if (estimatorType == 7) {
 				SFcycleSlip.process(SVlist, 1);
 
-				SatUtil.correctPRCP(SVlist, rxPCO[0], ionoCoeff, ionex, geoid);
+				RangeEdit.RemoveErr(SVlist, rxPCO[0], ionoCoeff, ionex, geoid, false);
+				RangeEdit.alignPhase(SVlist);
 				CarrierSmoother.process(SVlist, false);
+			}
+			if (estimatorType == 8) {
+				RangeEdit.RemoveErr(SVlist, rxPCO[0], ionoCoeff, ionex, geoid, true);
+
+				if (timeList.size() != SVlist.size()) {
+					System.err.println("List size does not match");
+					return null;
+				}
+				for (int i = 0; i < SVlist.size(); i++) {
+					Calendar time = timeList.get(i);
+					ArrayList<Satellite> SV = SVlist.get(i);
+					double[] PR = SV.stream().mapToDouble(j -> j.getPseudorange()).toArray();
+					WLS wls = new WLS(SV, rxPCO[0], ionoCoeff, time, ionex, geoid);
+					LS ls = new LS(SV, rxPCO[0], ionoCoeff, time, ionex, geoid);
+					ErrMap.computeIfAbsent("WLS DopplerSmoothed", k -> new ArrayList<HashMap<String, Double>>())
+							.add(estimateError(Map.of("TropoCorr", wls.getEstECEF(PR)), trueLLHlist.get(i), time));
+					ErrMap.computeIfAbsent("LS DopplerSmoothed", k -> new ArrayList<HashMap<String, Double>>())
+							.add(estimateError(Map.of("TropoCorr", ls.getEstECEF(PR)), trueLLHlist.get(i), time));
+
+				}
 			}
 			if (useRTKlib) {
 

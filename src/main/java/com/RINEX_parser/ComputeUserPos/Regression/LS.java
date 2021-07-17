@@ -40,6 +40,13 @@ public class LS extends LinearLeastSquare {
 
 	}
 
+	public double[] getEstECEF(double[] PR) {
+		estimate(PR);
+
+		return super.getEstECEF();
+
+	}
+
 	public double[] getIonoCorrECEF() {
 
 		estimate(getIonoCorrPR());
