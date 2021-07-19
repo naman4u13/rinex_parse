@@ -75,7 +75,7 @@ public class MainApp {
 			 * useRTKlib, boolean usePhase, int estimatorType, String[] obsvCode, int
 			 * minSat)
 			 */
-			posEstimate(false, false, true, 15, true, false, true, true, false, true, false, false, 4,
+			posEstimate(false, false, true, 15, true, false, true, true, false, true, false, false, 3,
 					new String[] { "G1C", "G2X" }, 4);
 			break;
 
@@ -88,10 +88,13 @@ public class MainApp {
 			 */
 
 			String[] obsvCodeList = new String[] { "G1C", "E1C", "C2I" };
-			String obs_path = "E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2021-04-29-US-SJC-2\\SamsungS20Ultra\\supplemental\\SamsungS20Ultra_GnssLog.21o";
-			String derived_csv_path = "E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2021-04-29-US-SJC-2\\SamsungS20Ultra\\SamsungS20Ultra_derived.csv";
-			String gnss_log_path = "E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2021-04-29-US-SJC-2\\SamsungS20Ultra\\SamsungS20Ultra_GnssLog.txt";
-			GoogleDeciApp.posEstimate(true, 5, false, false, false, true, false, false, 8, new String[] { "G1C" }, 4,
+			String basePath = "E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2021-04-26-US-SVL-1\\Pixel5";
+			String[] strList = basePath.split("\\\\");
+			String MobName = strList[strList.length - 1];
+			String obs_path = basePath + "\\supplemental\\" + MobName + "_GnssLog.21o";
+			String derived_csv_path = basePath + "\\" + MobName + "_derived.csv";
+			String gnss_log_path = basePath + "\\" + MobName + "_GnssLog.txt";
+			GoogleDeciApp.posEstimate(true, 5, false, false, false, false, false, false, 8, new String[] { "G1C" }, 4,
 					obs_path, derived_csv_path, gnss_log_path, obsvCodeList);
 			break;
 		case 3:

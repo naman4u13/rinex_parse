@@ -1,96 +1,101 @@
 package com.RINEX_parser.helper;
 
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.HashMap;
 
-import org.orekit.models.earth.Geoid;
-
-import com.RINEX_parser.ComputeUserPos.Regression.WLS;
-import com.RINEX_parser.fileParser.IONEX;
-import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.Satellite;
-import com.RINEX_parser.utility.ECEFtoLatLon;
-import com.RINEX_parser.utility.LatLonUtil;
+import com.RINEX_parser.utility.Interpolator;
 
 public class RangeEdit {
 	private static final double SpeedofLight = 299792458;
 
-	public static void RemoveErr(ArrayList<ArrayList<Satellite>> SVlist, double[] PCO, IonoCoeff ionoCoeff, IONEX ionex,
-			Geoid geoid, boolean doDopplerSmooth) {
+	public static void RemoveErr(ArrayList<ArrayList<Satellite>> SVlist, boolean doDopplerSmooth) {
 
-		HashMap<String, ArrayList<Object[]>> satMap = new HashMap<String, ArrayList<Object[]>>();
+		HashMap<String, ArrayList<Satellite>> satMap = new HashMap<String, ArrayList<Satellite>>();
+
 		for (ArrayList<Satellite> SV : SVlist) {
-			Calendar time = SV.get(0).getTime();
-			WLS wls = new WLS(SV, PCO, ionoCoeff, time, ionex, geoid);
-			double[] refECEF = wls.getTropoCorrECEF();
-			double[] refLatLon = ECEFtoLatLon.ecef2lla(refECEF);
-			ComputeTropoCorr tropo = new ComputeTropoCorr(refLatLon, time, geoid);
 
 			for (Satellite sat : SV) {
-				double[] EleAzm = sat.getElevAzm();
-				double tropoErr = tropo.getSlantDelay(EleAzm[0]);
-
-				double ionoErr = 0;
-
-				if (ionex != null) {
-					double gcLat = LatLonUtil.gd2gc(refLatLon[0], refLatLon[2]);
-					ionoErr = ionex.computeIonoCorr(EleAzm[0], EleAzm[1], gcLat, refLatLon[1], sat.gettRX(),
-							sat.getCarrier_frequency(), time);
-
-				} else {
-					ionoErr = ComputeIonoCorr.computeIonoCorr(EleAzm[0], EleAzm[1], refLatLon[0], refLatLon[1],
-							sat.gettRX(), ionoCoeff, sat.getCarrier_frequency(), time);
-					System.err.println("ERROR - Using Klobuchlar model in SF PPP dyanmic kalman computation");
+				if (!(sat.hasIonoErr() && sat.hasTropoErr())) {
+					System.err.println("Satellite does not have errors");
+					return;
 				}
+
+				double ionoErr = sat.getIonoErr();
+				double tropoErr = sat.getTropoErr();
+
 				double corrPR = sat.getPseudorange() + (sat.getSatClkOff() * SpeedofLight) - tropoErr - ionoErr;
-				double corrCP = (sat.getCarrier_wavelength() * sat.getCycle()) + (sat.getSatClkOff() * SpeedofLight)
-						- tropoErr + ionoErr;
+				double corrCP = (sat.getPhase()) + (sat.getSatClkOff() * SpeedofLight) - tropoErr + ionoErr;
 				sat.setPseudorange(corrPR);
-				sat.setCycle(corrCP / sat.getCarrier_wavelength());
+				sat.setPhase(corrCP);
 				if (doDopplerSmooth) {
 					String svid = String.valueOf(sat.getSSI()) + String.valueOf(sat.getSVID());
-					Object[] data = new Object[] { sat, (sat.getSatClkOff() * SpeedofLight) - tropoErr + ionoErr };
-					satMap.computeIfAbsent(svid, k -> new ArrayList<Object[]>()).add(data);
+
+					satMap.computeIfAbsent(svid, k -> new ArrayList<Satellite>()).add(sat);
 				}
 
 			}
 		}
+
 		if (doDopplerSmooth) {
+			dopplerCorrect(satMap);
 			for (String svid : satMap.keySet()) {
-				ArrayList<Object[]> satDataList = satMap.get(svid);
+				ArrayList<Satellite> satList = satMap.get(svid);
 
 				int index = 0;
-				double t0 = ((Satellite) satDataList.get(index)[0]).gettRX();
+				double t0 = satList.get(index).gettRX();
 				double dR = 0;
 				ArrayList<Double> PRindex = new ArrayList<Double>();
-				PRindex.add(((Satellite) satDataList.get(index)[0]).getPseudorange());
+				PRindex.add(satList.get(index).getPseudorange());
 				ArrayList<Double> dRlist = new ArrayList<Double>();
-				for (int i = 1; i < satDataList.size(); i++) {
+				int n = satList.size();
+				for (int i = 1; i < n; i++) {
 
-					Satellite sat2 = (Satellite) satDataList.get(i)[0];
-					Satellite sat1 = (Satellite) satDataList.get(i - 1)[0];
+					Satellite sat2 = satList.get(i);
+					Satellite sat1 = satList.get(i - 1);
 					double t2 = sat2.gettRX();
 					double t1 = sat1.gettRX();
-					if (t2 - t0 > 50 || (t2 - t1) > 1.1) {
+					if (t2 - t0 > 20 || (t2 - t1) > 1.1 || !sat2.isDopplerValid()) {
 
 						double PR = PRindex.stream().mapToDouble(j -> j).average().orElse(0.0);
-						((Satellite) satDataList.get(index)[0]).setPseudorange(PR);
+						satList.get(index).setPseudorange(PR);
 						for (int j = index + 1; j < i; j++) {
 
-							((Satellite) satDataList.get(j)[0]).setPseudorange(PR + dRlist.get(j - index - 1));
-
+							satList.get(j).setPseudorange(PR + dRlist.get(j - index - 1));
 						}
 						dR = 0;
-						index = i;
-						t0 = ((Satellite) satDataList.get(index)[0]).gettRX();
 						PRindex = new ArrayList<Double>();
-						PRindex.add(((Satellite) satDataList.get(index)[0]).getPseudorange());
 						dRlist = new ArrayList<Double>();
+						if (!sat2.isDopplerValid()) {
+
+							while (!satList.get(i).isDopplerValid()) {
+								if (i + 1 >= n) {
+									break;
+								} else {
+									i++;
+									continue;
+								}
+							}
+							if (i + 1 >= n) {
+								index = i;
+								if (i == n - 1) {
+									PRindex.add(satList.get(index).getPseudorange());
+								}
+								continue;
+							}
+
+						}
+						index = i;
+						t0 = satList.get(index).gettRX();
+
+						PRindex.add(satList.get(index).getPseudorange());
+
 						continue;
 					}
-					double dCorr = (double) satDataList.get(i)[1] - (double) satDataList.get(i - 1)[1];
-					double dr = -sat1.getCarrier_wavelength() * (sat1.getDoppler() + sat2.getDoppler()) * (t2 - t1) / 2;
+					double corr1 = (sat1.getSatClkOff() * SpeedofLight) - sat1.getTropoErr() + sat1.getIonoErr();
+					double corr2 = (sat2.getSatClkOff() * SpeedofLight) - sat2.getTropoErr() + sat2.getIonoErr();
+					double dCorr = corr2 - corr1;
+					double dr = (sat1.getPseudoRangeRate() + sat2.getPseudoRangeRate()) * (t2 - t1) / 2;
 					dr += dCorr;
 					dR += dr;
 					dRlist.add(dR);
@@ -98,10 +103,14 @@ public class RangeEdit {
 					PRindex.add(sat2.getPseudorange() - dR);
 				}
 				double PR = PRindex.stream().mapToDouble(j -> j).average().orElse(0.0);
-				((Satellite) satDataList.get(index)[0]).setPseudorange(PR);
-				for (int j = index + 1; j < satDataList.size(); j++) {
+				if (PR == 0) {
+					System.err.println("PR in doppler smoothing is assigned wrong");
+					return;
+				}
+				satList.get(index).setPseudorange(PR);
+				for (int j = index + 1; j < n; j++) {
 
-					((Satellite) satDataList.get(j)[0]).setPseudorange(PR + dRlist.get(j - index - 1));
+					satList.get(j).setPseudorange(PR + dRlist.get(j - index - 1));
 
 				}
 
@@ -116,7 +125,7 @@ public class RangeEdit {
 			for (Satellite sat : SV) {
 				String svid = String.valueOf(sat.getSSI()) + String.valueOf(sat.getSVID());
 				double PR = sat.getPseudorange();
-				double CP = sat.getCarrier_wavelength() * sat.getCycle();
+				double CP = sat.getPhase();
 				if (sat.isLocked()) {
 					if (map.containsKey(svid)) {
 						CP = CP + map.get(svid);
@@ -131,10 +140,81 @@ public class RangeEdit {
 						map.remove(svid);
 					}
 				}
-				sat.setCycle(CP / sat.getCarrier_wavelength());
+				sat.setPhase(CP);
 
 			}
 		}
+	}
+
+	private static void dopplerCorrect(HashMap<String, ArrayList<Satellite>> satMap) {
+		HashMap<String, ArrayList<Double>> resMap = new HashMap<String, ArrayList<Double>>();
+		double thresh = 1e5;
+		for (String svid : satMap.keySet()) {
+			ArrayList<Satellite> satList = satMap.get(svid);
+			double[] prRate = satList.stream().mapToDouble(i -> i.getPseudoRangeRate()).toArray();
+			int n = satList.size();
+			// Not enough satellites
+			if (n < 11) {
+				continue;
+			}
+			for (int i = 0; i < n; i++) {
+				double[] X = new double[10];
+				double[] Y = new double[10];
+				int start = 0;
+				int end = 0;
+				double x = satList.get(i).gettRX();
+				if (i >= 5 && i <= n - 6) {
+
+					start = i - 5;
+					end = i + 6;
+
+				} else if (i < 5) {
+					start = 0;
+					end = 11;
+
+				} else {
+					start = n - 11;
+					end = n;
+
+				}
+				int index = 0;
+				for (int j = start; j < end; j++) {
+					if (j == i) {
+						continue;
+					}
+					try {
+						X[index] = satList.get(j).gettRX();
+					} catch (Exception e) {
+						// TODO: handle exception
+						System.err.println();
+					}
+					Y[index] = prRate[j];
+					index++;
+				}
+				double y = Interpolator.lagrange(X, Y, x, false)[0];
+				// resMap.computeIfAbsent(svid, k -> new ArrayList<Double>()).add(Math.abs(y -
+				// prRate[i]));
+				if (Math.abs(y - prRate[i]) > thresh) {
+					satList.get(i).setDopplerValid(false);
+
+				}
+			}
+		}
+
+//		for (String SVID : resMap.keySet()) {
+//			GraphPlotter chart = new GraphPlotter(" Res" + SVID, "Res - " + SVID, resMap.get(SVID), SVID);
+//			chart.pack();
+//			RefineryUtilities.positionFrameRandomly(chart);
+//			chart.setVisible(true);
+//		}
+	}
+
+	private static void dopplerSmoothHatch(HashMap<String, ArrayList<Satellite>> satMap) {
+		for (String svid : satMap.keySet()) {
+			ArrayList<Satellite> satList = satMap.get(svid);
+
+		}
+
 	}
 
 }

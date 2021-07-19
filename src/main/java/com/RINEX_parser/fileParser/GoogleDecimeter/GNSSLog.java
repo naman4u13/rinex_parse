@@ -48,12 +48,13 @@ public class GNSSLog {
 					int svid = Integer.parseInt(data[11]);
 
 					int freq = (int) (Double.parseDouble(data[22]));
-					if (freq >= 1598062500 && freq <= 1608750000) {
+					if (freq >= 1598062460 && freq <= 1608750000) {
 						freq = (int) 1602e6;
 					}
 
 					String freqID = freqMap.get(freq);
 					String channel = freqID.equals("1") ? "C" : freqID.equals("2") ? "I" : "X";
+
 					String ssi = SSIMap.get(constellationType);
 					if (ssi.equals("J")) {
 						svid = qzssMap.get(svid);
@@ -61,9 +62,15 @@ public class GNSSLog {
 					String obsvCode = ssi + freqID + channel;
 					double nanosSinceGpsEpoch = (timeNanos + timeOffNanos - (fullBiasNanos + biasNanos));
 					long tRX = Math.round((nanosSinceGpsEpoch % nanosInWeek) / 1e6);
+					String chipsetElapsedRealtimeNanos = "0";
+					if (data.length > 30) {
+						chipsetElapsedRealtimeNanos = data[36];
+					}
+
 					map.computeIfAbsent(tRX, k -> new HashMap<String, HashMap<Integer, AndroidObsv>>())
 							.computeIfAbsent(obsvCode, k -> new HashMap<Integer, AndroidObsv>())
-							.put(svid, new AndroidObsv(data[7], data[19], data[20], data[21], data[26], data[36]));
+							.put(svid, new AndroidObsv(data[7], data[19], data[20], data[21], data[26],
+									chipsetElapsedRealtimeNanos, data[18]));
 
 				}
 			}

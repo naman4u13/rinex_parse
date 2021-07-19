@@ -8,10 +8,11 @@ public class AndroidObsv {
 	private double adrUncM;
 	private double multipathInd;
 	private long chipsetElapsedRealtimeNanos;
+	private double prRateUncMps;
 	boolean LLI = false;
 
 	public AndroidObsv(String biasUnc, String adrState, String adrM, String adrUncM, String multipathInd,
-			String chipsetElapsedRealtimeNanos) {
+			String chipsetElapsedRealtimeNanos, String prRateUncMps) {
 		super();
 		this.biasUnc = Double.parseDouble(biasUnc) / 1e9;
 		this.adrState = Integer.parseInt(adrState);
@@ -19,6 +20,7 @@ public class AndroidObsv {
 		this.adrUncM = Double.parseDouble(adrUncM);
 		this.multipathInd = Integer.parseInt(multipathInd);
 		this.chipsetElapsedRealtimeNanos = Long.parseLong(chipsetElapsedRealtimeNanos);
+		this.prRateUncMps = Double.parseDouble(prRateUncMps);
 		setLLI();
 	}
 
@@ -47,7 +49,10 @@ public class AndroidObsv {
 	}
 
 	private void setLLI() {
-		StringBuffer adrStateStr = new StringBuffer(Integer.toBinaryString(adrState)).reverse();
+
+		StringBuffer adrStateStr = new StringBuffer(
+				String.format("%" + 8 + "s", Integer.toBinaryString(adrState)).replaceAll(" ", "0")).reverse();
+
 		if (adrStateStr.charAt(0) != '1' || adrStateStr.charAt(1) == '1' || adrStateStr.charAt(2) == '1') {
 			this.LLI = true;
 		}
@@ -56,6 +61,10 @@ public class AndroidObsv {
 
 	public boolean LLI() {
 		return LLI;
+	}
+
+	public double getPrRateUncMps() {
+		return prRateUncMps;
 	}
 
 }

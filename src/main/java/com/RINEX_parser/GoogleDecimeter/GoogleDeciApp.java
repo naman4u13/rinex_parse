@@ -40,8 +40,9 @@ import com.RINEX_parser.fileParser.RTKlib;
 import com.RINEX_parser.fileParser.GoogleDecimeter.DerivedCSV;
 import com.RINEX_parser.fileParser.GoogleDecimeter.GNSSLog;
 import com.RINEX_parser.fileParser.GoogleDecimeter.GroundTruth;
-import com.RINEX_parser.helper.CarrierSmoother;
+import com.RINEX_parser.helper.Analyzer;
 import com.RINEX_parser.helper.RangeEdit;
+import com.RINEX_parser.helper.CycleSlip.DopplerAidedCS;
 import com.RINEX_parser.helper.CycleSlip.SFcycleSlip;
 import com.RINEX_parser.models.IonoCoeff;
 import com.RINEX_parser.models.IonoValue;
@@ -53,6 +54,7 @@ import com.RINEX_parser.models.GoogleDecimeter.Derived;
 import com.RINEX_parser.utility.ECEFtoLatLon;
 import com.RINEX_parser.utility.GraphPlotter;
 import com.RINEX_parser.utility.LatLonUtil;
+import com.RINEX_parser.utility.SatUtil;
 import com.RINEX_parser.utility.Time;
 
 public class GoogleDeciApp {
@@ -82,14 +84,17 @@ public class GoogleDeciApp {
 			IONEX ionex = null;
 			RTKlib rtkLib = null;
 
-			String GTcsv = "E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2021-04-29-US-SJC-2\\SamsungS20Ultra\\ground_truth.csv";
+			String GTcsv = "E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2021-04-26-US-SVL-1\\Pixel5\\ground_truth.csv";
 
 			HashMap<String, Object> ObsvMsgComp = ObservationRNX.rinex_obsv_process(obs_path, false, "", obsvCode,
-					usePhase, false);
+					usePhase, true);
 			@SuppressWarnings("unchecked")
 			ArrayList<ObservationMsg> ObsvMsgs = (ArrayList<ObservationMsg>) ObsvMsgComp.get("ObsvMsgs");
 			ArrayList<double[]> rxLLH = GroundTruth.processCSV(GTcsv);
 			double[][] rxPCO = new double[obsvCode.length][3];
+
+			String[] strList = obs_path.split("\\\\");
+			String mobName = strList[strList.length - 3];
 
 			long week = ObsvMsgs.get(0).getWeekNo();
 			int year = Time.getDate(ObsvMsgs.get(0).getTRX(), week, 0).get(Calendar.YEAR);
@@ -115,7 +120,7 @@ public class GoogleDeciApp {
 
 			String RTKlib_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\RTKlib\\decimeter_5_samsung119.pos";
 
-			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\google\\2021-04-29-US-SJC-2\\test6";
+			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\google\\2021-04-29-US-MTV-1\\test_doppler4";
 			File output = new File(path + ".txt");
 			PrintStream stream;
 
@@ -343,10 +348,11 @@ public class GoogleDeciApp {
 				trueLLHlist.add(trueUserLLH);
 
 			}
+			SatUtil.computeErr(SVlist, geoid, ionoCoeff, ionex, rxPCO[0]);
 			if (estimatorType == 6) {
 				return csvRes;
 			}
-
+			// EKF
 			if (estimatorType == 4) {
 
 				ErrMap.put("EKF", new ArrayList<HashMap<String, Double>>());
@@ -356,7 +362,8 @@ public class GoogleDeciApp {
 					SFcycleSlip.process(SVlist, 1);
 					WLS wls = new WLS(SVlist.get(0), rxPCO[0], ionoCoeff, timeList.get(0), ionex, geoid);
 					double[] initialECEF = wls.getTropoCorrECEF();
-					RangeEdit.RemoveErr(SVlist, rxPCO[0], ionoCoeff, ionex, geoid, false);
+
+					RangeEdit.RemoveErr(SVlist, false);
 					RangeEdit.alignPhase(SVlist);
 					estECEFList = dynamicEkf.computeDynamicPPP(trueLLHlist, initialECEF);
 				} else {
@@ -370,9 +377,12 @@ public class GoogleDeciApp {
 				}
 
 			}
+			// CS graphs
 			if (estimatorType == 5) {
 
-				SFcycleSlip.process(SVlist, 1);
+				// SFcycleSlip.process(SVlist, 1);
+
+				HashMap<String, ArrayList<Double>> deltaMap = DopplerAidedCS.process(SVlist);
 				HashMap<String, ArrayList<Double>> csMap = new HashMap<String, ArrayList<Double>>();
 				for (int i = 0; i < SVlist.size(); i++) {
 					for (int j = 0; j < SVlist.get(i).size(); j++) {
@@ -392,15 +402,18 @@ public class GoogleDeciApp {
 				}
 
 			}
-			if (estimatorType == 7) {
-				SFcycleSlip.process(SVlist, 1);
 
-				RangeEdit.RemoveErr(SVlist, rxPCO[0], ionoCoeff, ionex, geoid, false);
-				RangeEdit.alignPhase(SVlist);
-				CarrierSmoother.process(SVlist, false);
+			if (estimatorType == 7) {
+//				SFcycleSlip.process(SVlist, 1);
+//
+//				RangeEdit.RemoveErr(SVlist, false);
+//				RangeEdit.alignPhase(SVlist);
+				Analyzer.android(SVlist, mobName);
 			}
+			// Doppler Smoothing
 			if (estimatorType == 8) {
-				RangeEdit.RemoveErr(SVlist, rxPCO[0], ionoCoeff, ionex, geoid, true);
+//165543.00022680665
+				RangeEdit.RemoveErr(SVlist, true);
 
 				if (timeList.size() != SVlist.size()) {
 					System.err.println("List size does not match");

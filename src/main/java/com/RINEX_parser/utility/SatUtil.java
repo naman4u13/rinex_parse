@@ -8,6 +8,7 @@ import java.util.stream.IntStream;
 
 import org.orekit.models.earth.Geoid;
 
+import com.RINEX_parser.ComputeUserPos.Regression.WLS;
 import com.RINEX_parser.ComputeUserPos.Regression.Models.LinearLeastSquare;
 import com.RINEX_parser.fileParser.IONEX;
 import com.RINEX_parser.models.IonoCoeff;
@@ -58,6 +59,16 @@ public class SatUtil {
 
 		return unitLOS;
 
+	}
+
+	public static void computeErr(ArrayList<ArrayList<Satellite>> SVlist, Geoid geoid, IonoCoeff ionoCoeff, IONEX ionex,
+			double[] PCO) {
+		// Inefficient method
+		for (ArrayList<Satellite> SV : SVlist) {
+			Calendar time = SV.get(0).getTime();
+			WLS wls = new WLS(SV, PCO, ionoCoeff, time, ionex, geoid);
+			wls.getTropoCorrECEF();
+		}
 	}
 
 	private double[] sPCO;

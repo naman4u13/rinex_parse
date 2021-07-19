@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.Calendar;
 
 import com.RINEX_parser.models.GoogleDecimeter.AndroidObsv;
+import com.RINEX_parser.models.GoogleDecimeter.Derived;
 
 public class Satellite extends Observable {
 
@@ -23,6 +24,12 @@ public class Satellite extends Observable {
 	private double[] ElevAzm;
 	private double phaseWindUp;
 	private AndroidObsv gnssLog;
+	private double ionoErr;
+	private double tropoErr;
+	private boolean hasIonoErr = false;
+	private boolean hasTropoErr = false;
+	private Derived derived;
+	private boolean isDopplerValid = true;
 
 	public double[] getECEF() {
 		return ECEF;
@@ -152,6 +159,48 @@ public class Satellite extends Observable {
 
 	public void setGnssLog(AndroidObsv gnssLog) {
 		this.gnssLog = gnssLog;
+	}
+
+	public double getIonoErr() {
+		return ionoErr;
+	}
+
+	public void setIonoErr(double ionoErr) {
+		this.ionoErr = ionoErr;
+		this.hasIonoErr = true;
+	}
+
+	public double getTropoErr() {
+		return tropoErr;
+	}
+
+	public void setTropoErr(double tropoErr) {
+		this.tropoErr = tropoErr;
+		this.hasTropoErr = true;
+	}
+
+	public boolean hasIonoErr() {
+		return hasIonoErr;
+	}
+
+	public boolean hasTropoErr() {
+		return hasTropoErr;
+	}
+
+	public Derived getDerived() {
+		return derived;
+	}
+
+	public void setDerived(Derived derived) {
+		this.derived = derived;
+	}
+
+	public boolean isDopplerValid() {
+		return isDopplerValid;
+	}
+
+	public void setDopplerValid(boolean isDopplerValid) {
+		this.isDopplerValid = isDopplerValid;
 	}
 
 }

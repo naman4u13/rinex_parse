@@ -49,7 +49,7 @@ public class SFcycleSlip {
 						boolean L1C1check = Math.abs(d - dList.get(dList.size() - 1).lc()) > L1C1thresh;
 						isSlip = diffAbs > calcThresh;
 
-						isSlip = isSlip || sat.getGnssLog().LLI() || L1C1check;
+						isSlip = isSlip || L1C1check;
 						if (isSlip) {
 							sfObj = sfObj.reset(samplingRate, minAL_SF);
 						}

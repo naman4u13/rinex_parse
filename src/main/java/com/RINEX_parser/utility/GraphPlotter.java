@@ -63,7 +63,7 @@ public class GraphPlotter extends ApplicationFrame {
 		super(applicationTitle);
 		// TODO Auto-generated constructor stub
 
-		final JFreeChart chart = ChartFactory.createXYLineChart(chartTitle, "X-axis", "Cycle Slip",
+		final JFreeChart chart = ChartFactory.createXYLineChart(chartTitle, "X-axis", chartTitle,
 				createDatasetCS(data, SVID));
 		final ChartPanel chartPanel = new ChartPanel(chart);
 		chartPanel.setPreferredSize(new java.awt.Dimension(560, 370));

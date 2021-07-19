@@ -15,6 +15,7 @@ public class Observable {
 	private char SSI;
 	private boolean LLI = true;
 	private double prUncM;
+	private double phase;
 
 	public int getSVID() {
 		return SVID;
@@ -24,17 +25,18 @@ public class Observable {
 		return pseudorange;
 	}
 
-	public Observable(char SSI, String SVID, String pseudorange, String CNo, String doppler, String phase,
+	public Observable(char SSI, String SVID, String pseudorange, String CNo, String doppler, String cycle,
 			String carrier_frequency) {
 		this.SSI = SSI;
 		this.SVID = Integer.parseInt(SVID.replaceAll("[A-Z]", ""));
 		this.pseudorange = pseudorange != null ? Double.parseDouble(parseObs(pseudorange, true)) : 0;
 		this.CNo = CNo != null ? Double.parseDouble(parseObs(CNo)) : 0;
 		this.doppler = doppler != null ? Double.parseDouble(parseObs(doppler)) : 0;
-		this.cycle = phase != null ? Double.parseDouble(parseObs(phase)) : 0;
+		this.cycle = cycle != null ? Double.parseDouble(parseObs(cycle)) : 0;
 
 		this.carrier_frequency = Double.parseDouble(carrier_frequency);
 		this.carrier_wavelength = SPEED_OF_LIGHT / this.carrier_frequency;
+		this.phase = this.cycle * this.carrier_wavelength;
 		this.pseudoRangeRate = -this.doppler * this.carrier_wavelength;
 		this.isLocked = false;
 
@@ -49,6 +51,7 @@ public class Observable {
 		this.cycle = satModel.cycle;
 		this.carrier_frequency = satModel.carrier_frequency;
 		this.carrier_wavelength = satModel.carrier_wavelength;
+		this.phase = satModel.phase;
 		this.pseudoRangeRate = satModel.pseudoRangeRate;
 		this.isLocked = satModel.isLocked;
 		this.LLI = satModel.LLI();
@@ -164,6 +167,14 @@ public class Observable {
 
 	public void setPrUncM(double prUncM) {
 		this.prUncM = prUncM;
+	}
+
+	public double getPhase() {
+		return phase;
+	}
+
+	public void setPhase(double phase) {
+		this.phase = phase;
 	}
 
 }

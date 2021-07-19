@@ -269,7 +269,7 @@ public class LinearLeastSquare {
 
 		ArrayList<double[]> EleAzm = getEleAzm();
 		double[] PR = getPR();
-		double[] ionoCorr = new double[SVcount];
+		double[] ionoErr = new double[SVcount];
 		double[] ionoCorrKlob = new double[SVcount];
 		double[][] Weight = new double[SVcount][SVcount];
 		IntStream.range(0, SVcount).forEach(i -> Weight[i][i] = 1);
@@ -285,8 +285,8 @@ public class LinearLeastSquare {
 				double sbasIonoCorr = sbasIC.computeIonoCorr(EleAzm.get(i)[0], EleAzm.get(i)[1], refLatLon[0],
 						refLatLon[1], sbasIVD);
 				if (sbasIC.getIonoFlag() == Flag.VIABLE) {
-					ionoCorrKlob[i] = ionoCorr[i];
-					ionoCorr[i] = sbasIonoCorr;
+					ionoCorrKlob[i] = ionoErr[i];
+					ionoErr[i] = sbasIonoCorr;
 					ionoCorrSBAS[i] = sbasIonoCorr;
 				}
 			}
@@ -301,7 +301,7 @@ public class LinearLeastSquare {
 			for (int i = 0; i < SVcount; i++) {
 				double gimIonoCorr = ionex.computeIonoCorr(EleAzm.get(i)[0], EleAzm.get(i)[1], gcLat, refLatLon[1],
 						SV.get(i).gettRX(), SV.get(i).getCarrier_frequency(), time);
-				ionoCorr[i] = gimIonoCorr;
+				ionoErr[i] = gimIonoCorr;
 			}
 //			ionoCorrKlob = IntStream
 //					.range(0, SVcount).mapToDouble(x -> ComputeIonoCorr.computeIonoCorr(EleAzm.get(x)[0],
@@ -314,13 +314,14 @@ public class LinearLeastSquare {
 				System.out.println("You have not provided IonoCoeff");
 				return null;
 			}
-			ionoCorr = IntStream.range(0, SVcount)
+			ionoErr = IntStream.range(0, SVcount)
 					.mapToDouble(x -> ComputeIonoCorr.computeIonoCorr(EleAzm.get(x)[0], EleAzm.get(x)[1], refLatLon[0],
 							refLatLon[1], SV.get(x).gettRX(), ionoCoeff, SV.get(x).getCarrier_frequency(), time))
 					.toArray();
 		}
 		for (int i = 0; i < SVcount; i++) {
-			PR[i] -= ionoCorr[i];
+			SV.get(i).setIonoErr(ionoErr[i]);
+			PR[i] -= ionoErr[i];
 		}
 		this.ionoCorrPR = PR;
 		return PR;
@@ -351,14 +352,15 @@ public class LinearLeastSquare {
 		ArrayList<double[]> EleAzm = getEleAzm();
 
 		ComputeTropoCorr tropo = new ComputeTropoCorr(refLatLon, time, geoid);
-		double[] tropoCorr = IntStream.range(0, SV.size()).mapToDouble(x -> tropo.getSlantDelay(EleAzm.get(x)[0]))
+		double[] tropoErr = IntStream.range(0, SV.size()).mapToDouble(x -> tropo.getSlantDelay(EleAzm.get(x)[0]))
 				.toArray();
 //		System.out.println("TROPO corrections");
 //		IntStream.range(0, tropoCorr.length)
 //				.forEach(i -> System.out.print("GPS" + SV.get(i).getSVID() + " - " + tropoCorr[i] + " "));
 //
 //		System.out.println("");
-		this.tropoCorrPR = IntStream.range(0, PR.length).mapToDouble(x -> PR[x] - tropoCorr[x]).toArray();
+		IntStream.range(0, SV.size()).forEach(i -> SV.get(i).setTropoErr(tropoErr[i]));
+		this.tropoCorrPR = IntStream.range(0, PR.length).mapToDouble(x -> PR[x] - tropoErr[x]).toArray();
 		return this.tropoCorrPR;
 
 	}
