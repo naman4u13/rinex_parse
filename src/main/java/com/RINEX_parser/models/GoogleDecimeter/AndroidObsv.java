@@ -9,10 +9,11 @@ public class AndroidObsv {
 	private double multipathInd;
 	private long chipsetElapsedRealtimeNanos;
 	private double prRateUncMps;
+	private int hardClkDiscCount;
 	boolean LLI = false;
 
 	public AndroidObsv(String biasUnc, String adrState, String adrM, String adrUncM, String multipathInd,
-			String chipsetElapsedRealtimeNanos, String prRateUncMps) {
+			String chipsetElapsedRealtimeNanos, String prRateUncMps, String HardClkDiscCount) {
 		super();
 		this.biasUnc = Double.parseDouble(biasUnc) / 1e9;
 		this.adrState = Integer.parseInt(adrState);
@@ -21,6 +22,7 @@ public class AndroidObsv {
 		this.multipathInd = Integer.parseInt(multipathInd);
 		this.chipsetElapsedRealtimeNanos = Long.parseLong(chipsetElapsedRealtimeNanos);
 		this.prRateUncMps = Double.parseDouble(prRateUncMps);
+		this.hardClkDiscCount = Integer.parseInt(HardClkDiscCount);
 		setLLI();
 	}
 
@@ -65,6 +67,10 @@ public class AndroidObsv {
 
 	public double getPrRateUncMps() {
 		return prRateUncMps;
+	}
+
+	public int getHardClkDiscCount() {
+		return hardClkDiscCount;
 	}
 
 }

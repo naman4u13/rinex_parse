@@ -28,9 +28,8 @@ public class SFcycleSlip {
 				Satellite sat = SV.get(j);
 				String SVID = String.valueOf(sat.getSSI()) + String.valueOf(sat.getSVID());
 				// phase code diff
-				// double d = (sat.getCycle() * sat.getCarrier_wavelength()) -
-				// sat.getPseudorange();
-				double d = (sat.getCarrier_wavelength() * sat.getCycle()) - sat.getPseudorange();
+
+				double d = sat.getPhase() - sat.getPseudorange();
 				SFfilter sfObj = sfMap.getOrDefault(SVID, null);
 				boolean isSlip = true;
 				if (sfObj == null) {

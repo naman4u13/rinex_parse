@@ -125,6 +125,10 @@ public class Orbit {
 			IGSOrbit orbit = IGSOrbitList.get(i);
 			X[index] = orbit.getTime();
 			double[] satECEF = orbit.getSatECEF().get(SSI).get(SVID);
+			if (satECEF == null) {
+				return null;
+			}
+
 			IntStream.range(0, 3).forEach(j -> Y[j][index] = satECEF[j]);
 
 		}

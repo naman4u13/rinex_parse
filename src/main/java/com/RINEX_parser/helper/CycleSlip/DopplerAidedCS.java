@@ -9,7 +9,7 @@ public class DopplerAidedCS {
 
 	public static HashMap<String, ArrayList<Double>> process(ArrayList<ArrayList<Satellite>> SVlist) {
 
-		double n = 3;
+		double n = 6;
 		HashMap<String, ArrayList<Satellite>> satMap = new HashMap<String, ArrayList<Satellite>>();
 		for (ArrayList<Satellite> SV : SVlist) {
 			for (Satellite sat : SV) {

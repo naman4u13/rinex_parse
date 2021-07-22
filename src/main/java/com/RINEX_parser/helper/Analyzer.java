@@ -56,6 +56,8 @@ public class Analyzer {
 		HashMap<String, ArrayList<Double>> prRateMap = new HashMap<String, ArrayList<Double>>();
 		HashMap<String, ArrayList<Double>> adrMap = new HashMap<String, ArrayList<Double>>();
 		HashMap<String, ArrayList<Double>> prMap = new HashMap<String, ArrayList<Double>>();
+		HashMap<String, ArrayList<Double>> hardClkDiscCountMap = new HashMap<String, ArrayList<Double>>();
+		HashMap<String, ArrayList<Satellite>> satMap = new HashMap<String, ArrayList<Satellite>>();
 		for (ArrayList<Satellite> SV : SVlist) {
 
 			for (Satellite sat : SV) {
@@ -68,19 +70,25 @@ public class Analyzer {
 				prRateMap.computeIfAbsent(svid, k -> new ArrayList<Double>()).add(sat.getPseudoRangeRate());
 				adrMap.computeIfAbsent(svid, k -> new ArrayList<Double>()).add(sat.getPhase());
 				prMap.computeIfAbsent(svid, k -> new ArrayList<Double>()).add(sat.getPseudorange());
+				hardClkDiscCountMap.computeIfAbsent(svid, k -> new ArrayList<Double>())
+						.add((double) sat.getGnssLog().getHardClkDiscCount());
+				satMap.computeIfAbsent(svid, k -> new ArrayList<Satellite>()).add(sat);
 			}
 		}
-		for (String SVID : prUncMap.keySet()) {
-			GraphPlotter[] chartList = new GraphPlotter[7];
-			chartList[0] = new GraphPlotter(mobName + " PseudorangeUnc", "PseudorangeUnc - " + SVID, prUncMap.get(SVID),
-					SVID);
-			chartList[1] = new GraphPlotter(mobName + " PseudorangeRateUnc", "PseudorangeRateUnc - " + SVID,
-					prRateUncMap.get(SVID), SVID);
-			chartList[2] = new GraphPlotter(mobName + " BiasUnc", "BiasUnc - " + SVID, biasUncMap.get(SVID), SVID);
-			chartList[3] = new GraphPlotter(mobName + " ADRUnc", "ADRUnc - " + SVID, adrUncMap.get(SVID), SVID);
-			chartList[4] = new GraphPlotter(mobName + " PRrate", "PRrate - " + SVID, prRateMap.get(SVID), SVID);
-			chartList[5] = new GraphPlotter(mobName + " ADR", "ADR - " + SVID, adrMap.get(SVID), SVID);
-			chartList[6] = new GraphPlotter(mobName + " PR", "PR - " + SVID, prMap.get(SVID), SVID);
+		for (String svid : prUncMap.keySet()) {
+
+			GraphPlotter[] chartList = new GraphPlotter[8];
+			chartList[0] = new GraphPlotter(mobName + " PseudorangeUnc", "PseudorangeUnc - " + svid, prUncMap.get(svid),
+					svid);
+			chartList[1] = new GraphPlotter(mobName + " PseudorangeRateUnc", "PseudorangeRateUnc - " + svid,
+					prRateUncMap.get(svid), svid);
+			chartList[2] = new GraphPlotter(mobName + " BiasUnc", "BiasUnc - " + svid, biasUncMap.get(svid), svid);
+			chartList[3] = new GraphPlotter(mobName + " ADRUnc", "ADRUnc - " + svid, adrUncMap.get(svid), svid);
+			chartList[4] = new GraphPlotter(mobName + " PRrate", "PRrate - " + svid, prRateMap.get(svid), svid);
+			chartList[5] = new GraphPlotter(mobName + " ADR", "ADR - " + svid, adrMap.get(svid), svid);
+			chartList[6] = new GraphPlotter(mobName + " PR", "PR - " + svid, prMap.get(svid), svid);
+			chartList[7] = new GraphPlotter(mobName + " HardClkDiscCount", "HardClkDiscCount - " + svid,
+					hardClkDiscCountMap.get(svid), svid);
 			for (GraphPlotter chart : chartList) {
 				chart.pack();
 				RefineryUtilities.positionFrameRandomly(chart);

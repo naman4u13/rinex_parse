@@ -122,6 +122,10 @@ public class SingleFreq {
 					// GPS System transmission time
 					double t = tSV - satClkOff;
 					double[][] satPV = orbit.getPV(t, svid, polyOrder, SSI);
+					if (satPV == null) {
+						System.err.println(SSI + "" + svid + " MGEX data absent");
+						continue;
+					}
 					double[] satECEF = satPV[0];
 					double[] satVel = satPV[1];
 					double relativistic_error = -2 * (Vector.dotProd(satECEF, satVel)) / Math.pow(SpeedofLight, 2);

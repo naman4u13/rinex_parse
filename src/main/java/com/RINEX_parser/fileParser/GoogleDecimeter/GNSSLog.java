@@ -63,14 +63,16 @@ public class GNSSLog {
 					double nanosSinceGpsEpoch = (timeNanos + timeOffNanos - (fullBiasNanos + biasNanos));
 					long tRX = Math.round((nanosSinceGpsEpoch % nanosInWeek) / 1e6);
 					String chipsetElapsedRealtimeNanos = "0";
-					if (data.length > 30) {
+					if (data.length == 37) {
+
 						chipsetElapsedRealtimeNanos = data[36];
+
 					}
 
 					map.computeIfAbsent(tRX, k -> new HashMap<String, HashMap<Integer, AndroidObsv>>())
 							.computeIfAbsent(obsvCode, k -> new HashMap<Integer, AndroidObsv>())
 							.put(svid, new AndroidObsv(data[7], data[19], data[20], data[21], data[26],
-									chipsetElapsedRealtimeNanos, data[18]));
+									chipsetElapsedRealtimeNanos, data[18], data[10]));
 
 				}
 			}

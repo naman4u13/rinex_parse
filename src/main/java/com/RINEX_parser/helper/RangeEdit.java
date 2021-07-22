@@ -9,7 +9,8 @@ import com.RINEX_parser.utility.Interpolator;
 public class RangeEdit {
 	private static final double SpeedofLight = 299792458;
 
-	public static void RemoveErr(ArrayList<ArrayList<Satellite>> SVlist, boolean doDopplerSmooth) {
+	public static void RemoveErr(ArrayList<ArrayList<Satellite>> SVlist, boolean doDopplerSmooth,
+			boolean doCarrierSmooth) {
 
 		HashMap<String, ArrayList<Satellite>> satMap = new HashMap<String, ArrayList<Satellite>>();
 
@@ -28,13 +29,18 @@ public class RangeEdit {
 				double corrCP = (sat.getPhase()) + (sat.getSatClkOff() * SpeedofLight) - tropoErr + ionoErr;
 				sat.setPseudorange(corrPR);
 				sat.setPhase(corrCP);
-				if (doDopplerSmooth) {
+				if (doDopplerSmooth || doCarrierSmooth) {
 					String svid = String.valueOf(sat.getSSI()) + String.valueOf(sat.getSVID());
 
 					satMap.computeIfAbsent(svid, k -> new ArrayList<Satellite>()).add(sat);
 				}
 
 			}
+		}
+
+		if (doDopplerSmooth && doCarrierSmooth) {
+			System.err.println("FATAL ERROR: both doppler and carrier smoothing cannot be enabled");
+			return;
 		}
 
 		if (doDopplerSmooth) {
@@ -105,6 +111,82 @@ public class RangeEdit {
 				double PR = PRindex.stream().mapToDouble(j -> j).average().orElse(0.0);
 				if (PR == 0) {
 					System.err.println("PR in doppler smoothing is assigned wrong");
+					return;
+				}
+				satList.get(index).setPseudorange(PR);
+				for (int j = index + 1; j < n; j++) {
+
+					satList.get(j).setPseudorange(PR + dRlist.get(j - index - 1));
+
+				}
+
+			}
+		}
+		if (doCarrierSmooth) {
+
+			for (String svid : satMap.keySet()) {
+				ArrayList<Satellite> satList = satMap.get(svid);
+
+				int index = 0;
+				double t0 = satList.get(index).gettRX();
+				double dR = 0;
+				ArrayList<Double> PRindex = new ArrayList<Double>();
+				PRindex.add(satList.get(index).getPseudorange());
+				ArrayList<Double> dRlist = new ArrayList<Double>();
+				int n = satList.size();
+				for (int i = 1; i < n; i++) {
+
+					Satellite sat2 = satList.get(i);
+					Satellite sat1 = satList.get(i - 1);
+					double t = sat2.gettRX();
+
+					if (t - t0 > 500 || !sat2.isLocked()) {
+
+						double PR = PRindex.stream().mapToDouble(j -> j).average().orElse(0.0);
+						satList.get(index).setPseudorange(PR);
+						for (int j = index + 1; j < i; j++) {
+
+							satList.get(j).setPseudorange(PR + dRlist.get(j - index - 1));
+						}
+						dR = 0;
+						PRindex = new ArrayList<Double>();
+						dRlist = new ArrayList<Double>();
+						if (!sat2.isLocked()) {
+
+							while (!satList.get(i).isLocked()) {
+								if (i + 1 >= n) {
+									break;
+								} else {
+									i++;
+									continue;
+								}
+							}
+							if (i + 1 >= n) {
+								index = i;
+								if (i == n - 1) {
+									PRindex.add(satList.get(index).getPseudorange());
+								}
+								continue;
+							}
+
+						}
+						index = i;
+						t0 = satList.get(index).gettRX();
+
+						PRindex.add(satList.get(index).getPseudorange());
+
+						continue;
+					}
+
+					double dr = sat2.getPhase() - sat1.getPhase();
+					dR += dr;
+					dRlist.add(dR);
+
+					PRindex.add(sat2.getPseudorange() - dR);
+				}
+				double PR = PRindex.stream().mapToDouble(j -> j).average().orElse(0.0);
+				if (PR == 0) {
+					System.err.println("PR in Carrier smoothing is assigned wrong");
 					return;
 				}
 				satList.get(index).setPseudorange(PR);

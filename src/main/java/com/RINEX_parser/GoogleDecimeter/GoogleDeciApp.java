@@ -84,7 +84,7 @@ public class GoogleDeciApp {
 			IONEX ionex = null;
 			RTKlib rtkLib = null;
 
-			String GTcsv = "E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2021-04-26-US-SVL-1\\Pixel5\\ground_truth.csv";
+			String GTcsv = "E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2021-04-29-US-SJC-2\\SamsungS20Ultra\\ground_truth.csv";
 
 			HashMap<String, Object> ObsvMsgComp = ObservationRNX.rinex_obsv_process(obs_path, false, "", obsvCode,
 					usePhase, true);
@@ -95,7 +95,7 @@ public class GoogleDeciApp {
 
 			String[] strList = obs_path.split("\\\\");
 			String mobName = strList[strList.length - 3];
-
+			String date = strList[strList.length - 4];
 			long week = ObsvMsgs.get(0).getWeekNo();
 			int year = Time.getDate(ObsvMsgs.get(0).getTRX(), week, 0).get(Calendar.YEAR);
 			int dayNo = Time.getDate(ObsvMsgs.get(0).getTRX(), week, 0).get(Calendar.DAY_OF_YEAR);
@@ -120,8 +120,10 @@ public class GoogleDeciApp {
 
 			String RTKlib_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\RTKlib\\decimeter_5_samsung119.pos";
 
-			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\google\\2021-04-29-US-MTV-1\\test_doppler4";
+			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\google\\result\\" + mobName + "_" + date + "\\"
+					+ "test";
 			File output = new File(path + ".txt");
+
 			PrintStream stream;
 
 			try {
@@ -175,8 +177,8 @@ public class GoogleDeciApp {
 				ErrMap.put("RTKlib", new ArrayList<HashMap<String, Double>>());
 
 			}
-
-			for (int i = 0; i < ObsvMsgs.size(); i++) {
+			int gtIndex = 0;
+			for (int i = 0; i < ObsvMsgs.size() && i < rxLLH.size(); i++) {
 
 				ObservationMsg obsvMsg = ObsvMsgs.get(i);
 				double tRX = obsvMsg.getTRX();
@@ -184,13 +186,15 @@ public class GoogleDeciApp {
 				long weekNo = obsvMsg.getWeekNo();
 				double[] trueUserLLH = null;
 				if (estimatorType != 6) {
-					if (Math.round(tRX * 1000) != (rxLLH.get(i)[0] * 1000) || weekNo != rxLLH.get(i)[1]) {
+					if (Math.round(tRX * 1000) != (rxLLH.get(gtIndex)[0] * 1000) || weekNo != rxLLH.get(gtIndex)[1]) {
 
 						System.err.println("FATAL ERROR - GT timestamp does not match");
-						return null;
+
+						continue;
 
 					}
-					trueUserLLH = new double[] { rxLLH.get(i)[2], rxLLH.get(i)[3], rxLLH.get(i)[4] };
+					trueUserLLH = new double[] { rxLLH.get(gtIndex)[2], rxLLH.get(gtIndex)[3], rxLLH.get(gtIndex)[4] };
+					gtIndex++;
 				}
 
 				Calendar time = Time.getDate(tRX, weekNo, 0);
@@ -363,7 +367,7 @@ public class GoogleDeciApp {
 					WLS wls = new WLS(SVlist.get(0), rxPCO[0], ionoCoeff, timeList.get(0), ionex, geoid);
 					double[] initialECEF = wls.getTropoCorrECEF();
 
-					RangeEdit.RemoveErr(SVlist, false);
+					RangeEdit.RemoveErr(SVlist, false, false);
 					RangeEdit.alignPhase(SVlist);
 					estECEFList = dynamicEkf.computeDynamicPPP(trueLLHlist, initialECEF);
 				} else {
@@ -391,15 +395,32 @@ public class GoogleDeciApp {
 						csMap.computeIfAbsent(sat.getSSI() + "" + sat.getSVID(), k -> new ArrayList<Double>()).add(val);
 					}
 				}
-
-				for (String SVID : csMap.keySet()) {
-					ArrayList<Double> data = csMap.get(SVID);
+				ArrayList<Double> deltaList = new ArrayList<Double>();
+				for (String SVID : deltaMap.keySet()) {
+					ArrayList<Double> data = deltaMap.get(SVID);
+					deltaList.addAll(data);
 					GraphPlotter chart = new GraphPlotter("Cycle Slip - " + SVID, "Cycle Slip - " + SVID, data, SVID);
 
 					chart.pack();
 					RefineryUtilities.positionFrameRandomly(chart);
 					chart.setVisible(true);
 				}
+				Collections.sort(deltaList);
+				int n = deltaList.size();
+				double median = 0;
+				if (deltaList.size() % 2 == 0)
+					median = (deltaList.get(n / 2) + deltaList.get((n / 2) - 1)) / 2;
+				else
+					median = deltaList.get(n / 2);
+
+				double Q1 = deltaList.get((int) (n / 4.0));
+				double Q3 = deltaList.get((int) (3.0 * n / 4.0));
+				GraphPlotter chart = new GraphPlotter("DopplerPhaseVariation ", "DPV", deltaList,
+						"size - " + n + "  median - " + median + "  Q1 - " + Q1 + "  Q3 - " + Q3);
+				System.out.println("size - " + n + "  median - " + median + "  Q1 - " + Q1 + "  Q3 - " + Q3);
+				chart.pack();
+				RefineryUtilities.positionFrameRandomly(chart);
+				chart.setVisible(true);
 
 			}
 
@@ -411,10 +432,15 @@ public class GoogleDeciApp {
 				Analyzer.android(SVlist, mobName);
 			}
 			// Doppler Smoothing
-			if (estimatorType == 8) {
-//165543.00022680665
-				RangeEdit.RemoveErr(SVlist, true);
+			if (estimatorType == 8 || estimatorType == 9) {
 
+				if (estimatorType == 8) {
+					RangeEdit.RemoveErr(SVlist, true, false);
+				}
+				if (estimatorType == 9) {
+					DopplerAidedCS.process(SVlist);
+					RangeEdit.RemoveErr(SVlist, false, true);
+				}
 				if (timeList.size() != SVlist.size()) {
 					System.err.println("List size does not match");
 					return null;
@@ -470,7 +496,10 @@ public class GoogleDeciApp {
 				String minLL = "LL - ";
 				String rmsLL = "LL - ";
 				String maeLL = "LL - ";
+				String q50 = "LL - ";
+				String q95 = "LL - ";
 
+				String q = "LL - ";
 				for (String subKey : llErrMap.keySet()) {
 
 					ArrayList<Double> llErrList = llErrMap.get(subKey);
@@ -481,8 +510,15 @@ public class GoogleDeciApp {
 					rmsLL += RMS(llErrList) + " ";
 
 					maeLL += MAE(llErrList) + " ";
-
 					GraphErrMap.put(key + " " + subKey + " LL off", llErrList);
+					ArrayList<Double> sortedllErrList = new ArrayList<Double>(llErrList);
+					Collections.sort(sortedllErrList);
+					int n = sortedllErrList.size();
+					double _q50 = sortedllErrList.get((int) (n / 2.0));
+					double _q95 = sortedllErrList.get((int) (95 * n / 100.0));
+					q50 += _q50 + " ";
+					q95 += _q95 + " ";
+					q += (_q50 + _q95 / 2) + " ";
 
 				}
 				System.out.println("\n" + key);
@@ -493,6 +529,12 @@ public class GoogleDeciApp {
 				System.out.println(rmsLL);
 				System.out.println("MAE - ");
 				System.out.println(maeLL);
+				System.out.println("Q50 - ");
+				System.out.println(q50);
+				System.out.println("Q95 - ");
+				System.out.println(q95);
+				System.out.println("Q - ");
+				System.out.println(q);
 
 			}
 
