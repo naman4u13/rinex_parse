@@ -37,14 +37,14 @@ public class Analyzer {
 			}
 		}
 
-		for (String svid : prMap.keySet()) {
-			GraphPlotter chart = new GraphPlotter("PR-CP - " + svid, "PR-CP - " + svid, prMap.get(svid),
-					cpMap.get(svid), svid);
-
-			chart.pack();
-			RefineryUtilities.positionFrameRandomly(chart);
-			chart.setVisible(true);
-		}
+//		for (String svid : prMap.keySet()) {
+//			GraphPlotter chart = new GraphPlotter("PR-CP - " + svid, "PR-CP - " + svid, prMap.get(svid),
+//					cpMap.get(svid), svid);
+//
+//			chart.pack();
+//			RefineryUtilities.positionFrameRandomly(chart);
+//			chart.setVisible(true);
+//		}
 
 	}
 

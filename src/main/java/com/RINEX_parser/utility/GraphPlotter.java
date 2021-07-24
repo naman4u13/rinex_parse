@@ -73,13 +73,14 @@ public class GraphPlotter extends ApplicationFrame {
 
 	}
 
-	public GraphPlotter(String applicationTitle, String chartTitle, ArrayList<Double> prData, ArrayList<Double> cpData,
-			String SVID) {
+	public GraphPlotter(String applicationTitle, String chartTitle, ArrayList<Double> data,
+			ArrayList<Calendar> timeList, String SVID) {
 		super(applicationTitle);
 		// TODO Auto-generated constructor stub
 
-		final JFreeChart chart = ChartFactory.createXYLineChart(chartTitle, "X-axis", "PR-CP compare",
-				createDatasetPRCP(prData, cpData, SVID));
+		final JFreeChart chart = ChartFactory.createTimeSeriesChart(chartTitle, "Time of the Day", "Error",
+				createDatasetError(timeList, data, SVID), true, true, false);
+
 		final ChartPanel chartPanel = new ChartPanel(chart);
 		chartPanel.setPreferredSize(new java.awt.Dimension(560, 370));
 		chartPanel.setMouseZoomable(true, false);
@@ -87,6 +88,21 @@ public class GraphPlotter extends ApplicationFrame {
 		setContentPane(chartPanel);
 
 	}
+
+//	public GraphPlotter(String applicationTitle, String chartTitle, ArrayList<Double> prData, ArrayList<Double> cpData,
+//			String SVID) {
+//		super(applicationTitle);
+//		// TODO Auto-generated constructor stub
+//
+//		final JFreeChart chart = ChartFactory.createXYLineChart(chartTitle, "X-axis", "PR-CP compare",
+//				createDatasetPRCP(prData, cpData, SVID));
+//		final ChartPanel chartPanel = new ChartPanel(chart);
+//		chartPanel.setPreferredSize(new java.awt.Dimension(560, 370));
+//		chartPanel.setMouseZoomable(true, false);
+//
+//		setContentPane(chartPanel);
+//
+//	}
 
 	public GraphPlotter(String applicationTitle, String chartTitle, ArrayList<Calendar> timeList,
 			HashMap<String, ArrayList<Double>> ErrMap, long max, String path) {
@@ -203,6 +219,23 @@ public class GraphPlotter extends ApplicationFrame {
 
 			coll.addSeries(series);
 		}
+		return coll;
+	}
+
+	private TimePeriodValuesCollection createDatasetError(ArrayList<Calendar> timeList, ArrayList<Double> data,
+			String svid) {
+		TimePeriodValuesCollection coll = new TimePeriodValuesCollection();
+
+		TimePeriodValues series = new TimePeriodValues(svid);
+
+		for (int i = 0; i < data.size(); i++) {
+
+			series.add(new Second(timeList.get(i).getTime(), TimeZone.getTimeZone("UTC"), Locale.UK), data.get(i));
+
+		}
+
+		coll.addSeries(series);
+
 		return coll;
 	}
 }

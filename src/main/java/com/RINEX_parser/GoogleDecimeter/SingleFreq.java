@@ -23,7 +23,7 @@ public class SingleFreq {
 	private final static double SpeedofLight = 299792458;
 
 	public static ArrayList<Satellite> process(ObservationMsg obsvMsg, double tRX, double[] userECEF, double cutOffAng,
-			HashMap<Long, HashMap<String, HashMap<Integer, Derived>>> derivedMap,
+			double snrMask, HashMap<Long, HashMap<String, HashMap<Integer, Derived>>> derivedMap,
 			HashMap<Long, HashMap<String, HashMap<Integer, AndroidObsv>>> gnssLogMap, Calendar time,
 			String[] obsvCodeList, long weekNo, boolean useIGS, Orbit orbit, Clock clock, Antenna antenna) {
 
@@ -168,6 +168,9 @@ public class SingleFreq {
 
 		if (cutOffAng >= 0) {
 			SV.removeIf(i -> i.getElevAzm()[0] < Math.toRadians(cutOffAng));
+		}
+		if (snrMask >= 0) {
+			SV.removeIf(i -> i.getCNo() < snrMask);
 		}
 
 		return SV;

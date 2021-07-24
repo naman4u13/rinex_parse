@@ -41,7 +41,6 @@ import com.RINEX_parser.fileParser.GoogleDecimeter.DerivedCSV;
 import com.RINEX_parser.fileParser.GoogleDecimeter.GNSSLog;
 import com.RINEX_parser.fileParser.GoogleDecimeter.GroundTruth;
 import com.RINEX_parser.helper.Analyzer;
-import com.RINEX_parser.helper.RAIM;
 import com.RINEX_parser.helper.RangeEdit;
 import com.RINEX_parser.helper.CycleSlip.DopplerAidedCS;
 import com.RINEX_parser.helper.CycleSlip.SFcycleSlip;
@@ -63,10 +62,10 @@ public class GoogleDeciApp {
 	public static final long milliSecInWeek = 604800000;
 
 	@SuppressWarnings("unchecked")
-	public static ArrayList<String[]> posEstimate(boolean doPosErrPlot, double cutOffAng, boolean useBias,
-			boolean useIGS, boolean isDual, boolean useGIM, boolean useRTKlib, boolean usePhase, int estimatorType,
-			String[] obsvCode, int minSat, String obs_path, String derived_csv_path, String gnss_log_path,
-			String[] obsvCodeList) {
+	public static ArrayList<String[]> posEstimate(boolean doPosErrPlot, double cutOffAng, double snrMask,
+			boolean useBias, boolean useIGS, boolean isDual, boolean useGIM, boolean useRTKlib, boolean usePhase,
+			int estimatorType, String[] obsvCode, int minSat, String obs_path, String derived_csv_path,
+			String gnss_log_path, String[] obsvCodeList) {
 		try {
 			TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
 			HashMap<Integer, ArrayList<IonoValue>> ionoValueMap = new HashMap<Integer, ArrayList<IonoValue>>();
@@ -122,7 +121,7 @@ public class GoogleDeciApp {
 			String RTKlib_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\RTKlib\\decimeter_5_samsung119.pos";
 
 			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\google\\result\\" + mobName + "_" + date + "\\"
-					+ "test2";
+					+ "test3";
 			File output = new File(path + ".txt");
 
 			PrintStream stream;
@@ -201,8 +200,8 @@ public class GoogleDeciApp {
 				Calendar time = Time.getDate(tRX, weekNo, 0);
 				ArrayList<Satellite> SV = null;
 				if (useDerived) {
-					SV = com.RINEX_parser.GoogleDecimeter.SingleFreq.process(obsvMsg, tRX, new double[] { 0, 0, 0 }, -5,
-							derivedMap, gnssLogMap, time, obsvCodeList, weekNo, false, null, null, null);
+					SV = com.RINEX_parser.GoogleDecimeter.SingleFreq.process(obsvMsg, tRX, new double[] { 0, 0, 0 }, -1,
+							-1, derivedMap, gnssLogMap, time, obsvCodeList, weekNo, false, null, null, null);
 
 				} else {
 					SV = SingleFreq.process(obsvMsg, NavMsgs, obsvCode[0], false, false, false, useBias, ionoCoeff,
@@ -215,47 +214,23 @@ public class GoogleDeciApp {
 				}
 				LS ls = new LS(SV, rxPCO[0], ionoCoeff, time, ionex, geoid);
 				double[] userECEF = null;
-				double rxClkOff = 0;
+
 				try {
 					userECEF = ls.getEstECEF();
-					rxClkOff = ls.getRcvrClkOff();
+
 				} catch (org.ejml.data.SingularMatrixException e) {
 					System.err.println("Matrix Singularity Error occured");
 					continue;
 				}
-//				int outInd = RAIM.process2(userECEF, rxClkOff, SV);
-//				if (outInd > -1) {
-//					if (SV.size() < minSat) {
-//						System.err.println("visible satellite count is below threshold");
-//						continue;
-//					}
-//					ls = new LS(SV, rxPCO[0], ionoCoeff, time, ionex, geoid);
-//					double[] temp = new double[] { userECEF[0], userECEF[1], userECEF[2] };
-//					userECEF = null;
-//
-//					try {
-//						double[] tempLL1 = ECEFtoLatLon.ecef2lla(temp);
-//						double err1 = LatLonUtil.getHaversineDistance(tempLL1, trueUserLLH);
-//						userECEF = ls.getEstECEF();
-//						double[] tempLL2 = ECEFtoLatLon.ecef2lla(userECEF);
-//						double err2 = LatLonUtil.getHaversineDistance(tempLL2, trueUserLLH);
-//						System.err.println();
-//
-//					} catch (org.ejml.data.SingularMatrixException e) {
-//						System.err.println("Matrix Singularity Error occured");
-//						continue;
-//					}
-//				}
+
 				double[] userLatLon = ECEFtoLatLon.ecef2lla(userECEF);
 				SV = null;
 				ArrayList<Satellite>[] dualSV = null;
 				if (useDerived) {
 
-					SV = com.RINEX_parser.GoogleDecimeter.SingleFreq.process(obsvMsg, tRX, userECEF, cutOffAng,
+					SV = com.RINEX_parser.GoogleDecimeter.SingleFreq.process(obsvMsg, tRX, userECEF, cutOffAng, snrMask,
 							derivedMap, gnssLogMap, time, obsvCodeList, weekNo, useIGS, orbit, clock, antenna);
-					ls = new LS(SV, rxPCO[0], ionoCoeff, time, ionex, geoid);
-					ls.getTropoCorrECEF();
-					RAIM.process(userECEF, rxClkOff, SV);
+
 					if (SV.size() < minSat) {
 						System.err.println("visible satellite count is below threshold");
 						continue;
@@ -461,14 +436,21 @@ public class GoogleDeciApp {
 				Analyzer.android(SVlist, mobName);
 			}
 			// Doppler Smoothing
-			if (estimatorType == 8 || estimatorType == 9) {
+			if (estimatorType == 8 || estimatorType == 9 || estimatorType == 10) {
 
 				if (estimatorType == 8) {
 					RangeEdit.RemoveErr(SVlist, true, false);
 				}
 				if (estimatorType == 9) {
+
+					RangeEdit.outlierRemove(SVlist, minSat, timeList);
 					DopplerAidedCS.process(SVlist);
 					RangeEdit.RemoveErr(SVlist, false, true);
+				}
+				if (estimatorType == 10) {
+
+					RangeEdit.outlierRemove(SVlist, minSat, timeList);
+					RangeEdit.RemoveErr(SVlist, false, false);
 				}
 				if (timeList.size() != SVlist.size()) {
 					System.err.println("List size does not match");
@@ -487,6 +469,7 @@ public class GoogleDeciApp {
 
 				}
 			}
+
 			if (useRTKlib) {
 
 				String posMode = rtkLib.getPosMode();

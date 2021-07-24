@@ -30,6 +30,7 @@ public class Satellite extends Observable {
 	private boolean hasTropoErr = false;
 	private Derived derived;
 	private boolean isDopplerValid = true;
+	private boolean isOutlier = false;
 
 	public double[] getECEF() {
 		return ECEF;
@@ -201,6 +202,14 @@ public class Satellite extends Observable {
 
 	public void setDopplerValid(boolean isDopplerValid) {
 		this.isDopplerValid = isDopplerValid;
+	}
+
+	public boolean isOutlier() {
+		return isOutlier;
+	}
+
+	public void setOutlier(boolean isOutlier) {
+		this.isOutlier = isOutlier;
 	}
 
 }

@@ -122,38 +122,4 @@ public class RAIM {
 
 	}
 
-	public static void process3(double[] rxECEF, double rxClkOff, ArrayList<Satellite> SV) {
-		int n = SV.size();
-		double[] y = new double[n];
-		double[][] x = new double[n][4];
-		for (int i = 0; i < n; i++) {
-			Satellite sat = SV.get(i);
-			double z = sat.getPseudorange() + (SpeedofLight * sat.getSatClkOff()) - sat.getIonoErr()
-					- sat.getTropoErr();
-			double z_hat = Math.sqrt(IntStream.range(0, 3).mapToDouble(j -> sat.getECI()[j] - rxECEF[j]).map(j -> j * j)
-					.reduce(0, (j, k) -> j + k)) + (SpeedofLight * rxClkOff);
-			final int _i = i;
-			IntStream.range(0, 3).forEach(j -> x[_i][j] = -(sat.getECI()[j] - rxECEF[j]) / z_hat);
-			x[i][3] = 1;
-			y[i] = z - z_hat;
-		}
-//		org.openimaj.ml.regression.LinearRegression lr = new org.openimaj.ml.regression.LinearRegression();
-//		DistanceComparatorResidual<double[][], double[], <double[], double[]>> dcr;
-
-//		RANSAC<double[], double[], LinearRegression> ransac;
-//		new RANSAC<double[], double[], LinearRegression>(new LinearRegression(),
-//				new DistanceComparatorResidual<>(DoubleFVComparison.EUCLIDEAN), new ThresholdDistanceCheck(30), 100,
-//				new RANSAC.BestFitStoppingCondition(), true);
-	}
-
-	public static void process4(ArrayList<Satellite> SV) {
-
-		int n = SV.size();
-		boolean outPresent = true;
-		while (outPresent) {
-
-		}
-
-	}
-
 }

@@ -94,8 +94,8 @@ public class MainApp {
 			String obs_path = basePath + "\\supplemental\\" + MobName + "_GnssLog.21o";
 			String derived_csv_path = basePath + "\\" + MobName + "_derived.csv";
 			String gnss_log_path = basePath + "\\" + MobName + "_GnssLog.txt";
-			GoogleDeciApp.posEstimate(true, 5, false, false, false, false, false, true, 3, new String[] { "G1C" }, 4,
-					obs_path, derived_csv_path, gnss_log_path, obsvCodeList);
+			GoogleDeciApp.posEstimate(true, 5, -1, false, false, false, false, false, true, 9, new String[] { "G1C" },
+					4, obs_path, derived_csv_path, gnss_log_path, obsvCodeList);
 			break;
 		case 3:
 //			File output = new File("E:\\Study\\Google Decimeter Challenge\\decimeter\\errReport2.txt");
@@ -129,7 +129,7 @@ public class MainApp {
 
 						derived_csv_path = path + "\\" + mobName + "_derived.csv";
 						gnss_log_path = path + "\\" + mobName + "_GnssLog.txt";
-						ArrayList<String[]> csvRes = GoogleDeciApp.posEstimate(true, 5, false, false, false, false,
+						ArrayList<String[]> csvRes = GoogleDeciApp.posEstimate(true, 5, 30, false, false, false, false,
 								false, false, 6, new String[] { "G1C" }, 4, obs_path, null, gnss_log_path,
 								obsvCodeList);
 						csvRes.stream().forEach(i -> i[0] = dayFile.getName() + "_" + mobName);
