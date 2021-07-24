@@ -41,6 +41,7 @@ import com.RINEX_parser.fileParser.GoogleDecimeter.DerivedCSV;
 import com.RINEX_parser.fileParser.GoogleDecimeter.GNSSLog;
 import com.RINEX_parser.fileParser.GoogleDecimeter.GroundTruth;
 import com.RINEX_parser.helper.Analyzer;
+import com.RINEX_parser.helper.RAIM;
 import com.RINEX_parser.helper.RangeEdit;
 import com.RINEX_parser.helper.CycleSlip.DopplerAidedCS;
 import com.RINEX_parser.helper.CycleSlip.SFcycleSlip;
@@ -121,7 +122,7 @@ public class GoogleDeciApp {
 			String RTKlib_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\RTKlib\\decimeter_5_samsung119.pos";
 
 			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\google\\result\\" + mobName + "_" + date + "\\"
-					+ "test";
+					+ "test2";
 			File output = new File(path + ".txt");
 
 			PrintStream stream;
@@ -214,13 +215,37 @@ public class GoogleDeciApp {
 				}
 				LS ls = new LS(SV, rxPCO[0], ionoCoeff, time, ionex, geoid);
 				double[] userECEF = null;
+				double rxClkOff = 0;
 				try {
 					userECEF = ls.getEstECEF();
+					rxClkOff = ls.getRcvrClkOff();
 				} catch (org.ejml.data.SingularMatrixException e) {
 					System.err.println("Matrix Singularity Error occured");
 					continue;
 				}
-
+//				int outInd = RAIM.process2(userECEF, rxClkOff, SV);
+//				if (outInd > -1) {
+//					if (SV.size() < minSat) {
+//						System.err.println("visible satellite count is below threshold");
+//						continue;
+//					}
+//					ls = new LS(SV, rxPCO[0], ionoCoeff, time, ionex, geoid);
+//					double[] temp = new double[] { userECEF[0], userECEF[1], userECEF[2] };
+//					userECEF = null;
+//
+//					try {
+//						double[] tempLL1 = ECEFtoLatLon.ecef2lla(temp);
+//						double err1 = LatLonUtil.getHaversineDistance(tempLL1, trueUserLLH);
+//						userECEF = ls.getEstECEF();
+//						double[] tempLL2 = ECEFtoLatLon.ecef2lla(userECEF);
+//						double err2 = LatLonUtil.getHaversineDistance(tempLL2, trueUserLLH);
+//						System.err.println();
+//
+//					} catch (org.ejml.data.SingularMatrixException e) {
+//						System.err.println("Matrix Singularity Error occured");
+//						continue;
+//					}
+//				}
 				double[] userLatLon = ECEFtoLatLon.ecef2lla(userECEF);
 				SV = null;
 				ArrayList<Satellite>[] dualSV = null;
@@ -228,6 +253,9 @@ public class GoogleDeciApp {
 
 					SV = com.RINEX_parser.GoogleDecimeter.SingleFreq.process(obsvMsg, tRX, userECEF, cutOffAng,
 							derivedMap, gnssLogMap, time, obsvCodeList, weekNo, useIGS, orbit, clock, antenna);
+					ls = new LS(SV, rxPCO[0], ionoCoeff, time, ionex, geoid);
+					ls.getTropoCorrECEF();
+					RAIM.process(userECEF, rxClkOff, SV);
 					if (SV.size() < minSat) {
 						System.err.println("visible satellite count is below threshold");
 						continue;
@@ -248,6 +276,7 @@ public class GoogleDeciApp {
 						SV = SingleFreq.process(obsvMsg, NavMsgs, obsvCode[0], useIGS, false, false, useBias, ionoCoeff,
 								bias, orbit, clock, antenna, tRX, weekNo, time, null, userECEF, userLatLon,
 								ionoValueMap, cutOffAng, null, null);
+
 						if (SV.size() < minSat) {
 							System.err.println("visible satellite count is below threshold");
 							continue;

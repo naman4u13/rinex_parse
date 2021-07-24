@@ -94,7 +94,7 @@ public class MainApp {
 			String obs_path = basePath + "\\supplemental\\" + MobName + "_GnssLog.21o";
 			String derived_csv_path = basePath + "\\" + MobName + "_derived.csv";
 			String gnss_log_path = basePath + "\\" + MobName + "_GnssLog.txt";
-			GoogleDeciApp.posEstimate(true, 5, false, false, false, false, false, true, 7, new String[] { "G1C" }, 4,
+			GoogleDeciApp.posEstimate(true, 5, false, false, false, false, false, true, 3, new String[] { "G1C" }, 4,
 					obs_path, derived_csv_path, gnss_log_path, obsvCodeList);
 			break;
 		case 3:
