@@ -291,7 +291,7 @@ public class RangeEdit {
 //		}
 	}
 
-	public static void outlierRemove(ArrayList<ArrayList<Satellite>> SVlist, int minSat, ArrayList<Calendar> timeList) {
+	public static void out(ArrayList<ArrayList<Satellite>> SVlist, int minSat, ArrayList<Calendar> timeList) {
 		HashMap<String, ArrayList<Satellite>> satMap = new HashMap<String, ArrayList<Satellite>>();
 
 		for (ArrayList<Satellite> SV : SVlist) {

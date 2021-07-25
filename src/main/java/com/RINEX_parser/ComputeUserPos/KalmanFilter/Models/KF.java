@@ -83,7 +83,7 @@ public class KF {
 
 			double[] estECEF = new double[] { x.get(0) + PCO[0], x.get(1) + PCO[1], x.get(2) + PCO[2], x.get(3) };
 			double[][] unitLOS = SatUtil.getUnitLOS(satECI, estECEF);
-			// H is the Jacobian matrix of partial derivatives Observation Model(h) of with
+			// H is the Jacobian matrix of partial derivatives Observation StateModel(h) of with
 			// respect to x
 			double[][] _H = new double[SVcount][5];
 			IntStream.range(0, SVcount).forEach(j -> {

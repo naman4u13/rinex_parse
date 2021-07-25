@@ -29,6 +29,7 @@ import com.RINEX_parser.SingleFreq;
 import com.RINEX_parser.ComputeUserPos.KalmanFilter.EKF;
 import com.RINEX_parser.ComputeUserPos.Regression.LS;
 import com.RINEX_parser.ComputeUserPos.Regression.WLS;
+import com.RINEX_parser.ComputeUserPos.Regression.RobustRegression.RobustFit;
 import com.RINEX_parser.fileParser.Antenna;
 import com.RINEX_parser.fileParser.Bias;
 import com.RINEX_parser.fileParser.Clock;
@@ -121,7 +122,7 @@ public class GoogleDeciApp {
 			String RTKlib_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\RTKlib\\decimeter_5_samsung119.pos";
 
 			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\google\\result\\" + mobName + "_" + date + "\\"
-					+ "test3";
+					+ "robust2";
 			File output = new File(path + ".txt");
 
 			PrintStream stream;
@@ -436,22 +437,17 @@ public class GoogleDeciApp {
 				Analyzer.android(SVlist, mobName);
 			}
 			// Doppler Smoothing
-			if (estimatorType == 8 || estimatorType == 9 || estimatorType == 10) {
+			if (estimatorType == 8 || estimatorType == 9) {
 
 				if (estimatorType == 8) {
 					RangeEdit.RemoveErr(SVlist, true, false);
 				}
 				if (estimatorType == 9) {
 
-					RangeEdit.outlierRemove(SVlist, minSat, timeList);
 					DopplerAidedCS.process(SVlist);
 					RangeEdit.RemoveErr(SVlist, false, true);
 				}
-				if (estimatorType == 10) {
 
-					RangeEdit.outlierRemove(SVlist, minSat, timeList);
-					RangeEdit.RemoveErr(SVlist, false, false);
-				}
 				if (timeList.size() != SVlist.size()) {
 					System.err.println("List size does not match");
 					return null;
@@ -462,10 +458,45 @@ public class GoogleDeciApp {
 					double[] PR = SV.stream().mapToDouble(j -> j.getPseudorange()).toArray();
 					WLS wls = new WLS(SV, rxPCO[0], ionoCoeff, time, ionex, geoid);
 					LS ls = new LS(SV, rxPCO[0], ionoCoeff, time, ionex, geoid);
-					ErrMap.computeIfAbsent("WLS DopplerSmoothed", k -> new ArrayList<HashMap<String, Double>>())
-							.add(estimateError(Map.of("TropoCorr", wls.getEstECEF(PR)), trueLLHlist.get(i), time));
 					ErrMap.computeIfAbsent("LS DopplerSmoothed", k -> new ArrayList<HashMap<String, Double>>())
 							.add(estimateError(Map.of("TropoCorr", ls.getEstECEF(PR)), trueLLHlist.get(i), time));
+
+					ErrMap.computeIfAbsent("WLS DopplerSmoothed", k -> new ArrayList<HashMap<String, Double>>())
+							.add(estimateError(Map.of("TropoCorr", wls.getEstECEF(PR)), trueLLHlist.get(i), time));
+
+				}
+			}
+			if (estimatorType == 10) {
+				RangeEdit.RemoveErr(SVlist, false, false);
+				for (int i = 0; i < SVlist.size(); i++) {
+					Calendar time = timeList.get(i);
+					ArrayList<Satellite> SV = SVlist.get(i);
+					ArrayList<Satellite> inlierSV = null;
+					try {
+						inlierSV = RobustFit.process(SV);
+						System.err.println(i);
+						if (i == 93) {
+							System.out.println();
+						}
+
+					} catch (Exception e) {
+						// TODO: handle exception
+						continue;
+					}
+					if (inlierSV.size() < minSat) {
+						System.err.println("inlier Satellite count is less than - " + minSat);
+						continue;
+					}
+
+					double[] PR = inlierSV.stream().mapToDouble(j -> j.getPseudorange()).toArray();
+					LS ls = new LS(inlierSV, rxPCO[0], ionoCoeff, time, ionex, geoid);
+					WLS wls = new WLS(inlierSV, rxPCO[0], ionoCoeff, time, ionex, geoid);
+
+					ErrMap.computeIfAbsent("LS Robust", k -> new ArrayList<HashMap<String, Double>>())
+							.add(estimateError(Map.of("TropoCorr", ls.getEstECEF(PR)), trueLLHlist.get(i), time));
+
+					ErrMap.computeIfAbsent("WLS Robust", k -> new ArrayList<HashMap<String, Double>>())
+							.add(estimateError(Map.of("TropoCorr", wls.getEstECEF(PR)), trueLLHlist.get(i), time));
 
 				}
 			}

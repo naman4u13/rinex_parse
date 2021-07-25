@@ -134,12 +134,7 @@ public class LinearLeastSquare {
 						(i, j) -> i + j));
 
 			}
-//			double[] temp = new double[] { 5084655.1841, 2670323.9736, -2768479.6949 };
-//			double err = Math.sqrt(IntStream.range(0, 3).mapToDouble(i -> Math.pow(temp[i] - estECEF[i], 2)).reduce(0,
-//					(i, j) -> i + j));
-//			if (this.getClass() == WLS.class && err > 14) {
-//				System.out.println();
-//			}
+
 			return;
 		}
 		System.err.println("Satellite count is less than 4, can't compute user position");

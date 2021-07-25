@@ -273,7 +273,7 @@ public class EKF {
 		SimpleMatrix x = kfObj.getState();
 		double[] estECEF = new double[] { x.get(0) + PCO[0], x.get(1) + PCO[1], x.get(2) + PCO[2], x.get(3) };
 		double[][] unitLOS = SatUtil.getUnitLOS(SV, estECEF);
-		// H is the Jacobian matrix of partial derivatives Observation Model(h) of with
+		// H is the Jacobian matrix of partial derivatives Observation StateModel(h) of with
 		// respect to x
 		double[][] H = new double[SVcount][5];
 		IntStream.range(0, SVcount).forEach(i -> {
@@ -308,7 +308,7 @@ public class EKF {
 		double[] estECEF = new double[] { x.get(0) + PCO[0], x.get(1) + PCO[1], x.get(2) + PCO[2] };
 		double rxClkOff = x.get(3);// in meters
 		double[][] unitLOS = SatUtil.getUnitLOS(SV, estECEF);
-		// H is the Jacobian matrix of partial derivatives Observation Model(h) of with
+		// H is the Jacobian matrix of partial derivatives Observation StateModel(h) of with
 		// respect to x
 		double[][] H = new double[SVcount][4];
 		IntStream.range(0, SVcount).forEach(i -> {
