@@ -16,6 +16,10 @@ public class StateModel {
 		return b;
 	}
 
+	public double[] getXYZB() {
+		return new double[] { xyz[0], xyz[1], xyz[2], b };
+	}
+
 	public void setXYZ(double[] xyz) {
 		int n = xyz.length;
 		this.xyz = Arrays.copyOf(xyz, n);

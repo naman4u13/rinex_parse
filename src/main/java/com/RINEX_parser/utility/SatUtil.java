@@ -61,14 +61,18 @@ public class SatUtil {
 
 	}
 
-	public static void computeErr(ArrayList<ArrayList<Satellite>> SVlist, Geoid geoid, IonoCoeff ionoCoeff, IONEX ionex,
-			double[] PCO) {
+	public static ArrayList<double[]> computeErr(ArrayList<ArrayList<Satellite>> SVlist, Geoid geoid,
+			IonoCoeff ionoCoeff, IONEX ionex, double[] PCO) {
 		// Inefficient method
+		ArrayList<double[]> rxList = new ArrayList<double[]>();
 		for (ArrayList<Satellite> SV : SVlist) {
 			Calendar time = SV.get(0).getTime();
 			WLS wls = new WLS(SV, PCO, ionoCoeff, time, ionex, geoid);
-			wls.getTropoCorrECEF();
+			double[] ecef = wls.getTropoCorrECEF();
+			double clkOff = wls.getRcvrClkOff();
+			rxList.add(new double[] { ecef[0], ecef[1], ecef[2], clkOff });
 		}
+		return rxList;
 	}
 
 	private double[] sPCO;

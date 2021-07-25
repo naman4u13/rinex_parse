@@ -87,7 +87,7 @@ public class MainApp {
 			 * derived_csv_path, String gnss_log_path, String[] obsvCodeList)
 			 */
 
-			String[] obsvCodeList = new String[] { "G1C" };
+			String[] obsvCodeList = new String[] { "G1C", "E1C", "C2I" };
 			String basePath = "E:\\Study\\Google Decimeter Challenge\\decimeter\\train\\2021-04-29-US-SJC-2\\SamsungS20Ultra";
 			String[] strList = basePath.split("\\\\");
 			String MobName = strList[strList.length - 1];

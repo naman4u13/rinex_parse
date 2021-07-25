@@ -1,31 +1,54 @@
 package com.RINEX_parser.ComputeUserPos.Regression.RobustRegression;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.ddogleg.fitting.modelset.ModelGenerator;
-
-import com.RINEX_parser.ComputeUserPos.Regression.LS;
-import com.RINEX_parser.models.Satellite;
+import org.ejml.simple.SimpleMatrix;
+import org.ejml.simple.SimpleSVD;
 
 public class StateGenerator implements ModelGenerator<StateModel, Point> {
-	private final static double SpeedofLight = 299792458;
 
 	@Override
 	public boolean generate(List<Point> dataSet, StateModel output) {
-		ArrayList<Satellite> SV = dataSet.stream().map(i -> i.getSat())
-				.collect(Collectors.toCollection(ArrayList::new));
 
-		double[] PR = SV.stream().mapToDouble(i -> i.getPseudorange()).toArray();
-		LS ls = new LS(SV, new double[] { 0, 0, 0 }, null);
-		try {
-			output.setXYZ(ls.getEstECEF(PR));
-		} catch (Exception e) {
-			// TODO: handle exception
-			return false;
+		int len = dataSet.size();
+		double[][] _h = new double[len][];
+		double[] _y = new double[len];
+		for (int i = 0; i < len; i++) {
+			Point pt = dataSet.get(i);
+			_h[i] = pt.getH();
+			_y[i] = pt.getY();
 		}
-		output.setB(SpeedofLight * ls.getRcvrClkOff());
+
+		SimpleMatrix h = new SimpleMatrix(_h);
+		SimpleMatrix y = new SimpleMatrix(len, 1, false, _y);
+
+		SimpleSVD<SimpleMatrix> svd = new SimpleSVD<SimpleMatrix>(h.getMatrix(), true);
+
+		double[] singularVal = svd.getSingularValues();
+		int n = singularVal.length;
+		double eps = Math.ulp(1.0);
+		double[][] _Wplus = new double[n][n];
+		double maxW = Double.MIN_VALUE;
+		for (int i = 0; i < n; i++) {
+			maxW = Math.max(singularVal[i], maxW);
+		}
+		double tolerance = Math.max(h.numRows(), h.numCols()) * eps * maxW;
+		for (int i = 0; i < n; i++) {
+			double val = singularVal[i];
+			if (val < tolerance) {
+				continue;
+			}
+			_Wplus[i][i] = 1 / val;
+		}
+		SimpleMatrix Wplus = new SimpleMatrix(_Wplus);
+		Wplus = Wplus.transpose();
+		SimpleMatrix U = svd.getU();
+		SimpleMatrix V = svd.getV();
+		SimpleMatrix Ut = U.transpose();
+		SimpleMatrix x = V.mult(Wplus).mult(Ut).mult(y);
+		output.setXYZ(new double[] { x.get(0), x.get(1), x.get(2) });
+		output.setB(x.get(3));
 		return true;
 	}
 

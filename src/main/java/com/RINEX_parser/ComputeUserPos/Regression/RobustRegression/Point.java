@@ -1,17 +1,27 @@
 package com.RINEX_parser.ComputeUserPos.Regression.RobustRegression;
 
-import com.RINEX_parser.models.Satellite;
-
 public class Point {
 
-	private Satellite sat;
+	private double[] h;
+	private double y;
+	private int index;
 
-	Point(Satellite sat) {
-		this.sat = sat;
+	Point(double[] h, double y, int index) {
+		this.h = h;
+		this.y = y;
+		this.index = index;
 	}
 
-	public Satellite getSat() {
-		return sat;
+	public double[] getH() {
+		return h;
+	}
+
+	public double getY() {
+		return y;
+	}
+
+	public int getIndex() {
+		return index;
 	}
 
 }

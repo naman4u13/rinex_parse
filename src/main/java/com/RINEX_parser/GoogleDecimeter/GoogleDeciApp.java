@@ -122,7 +122,7 @@ public class GoogleDeciApp {
 			String RTKlib_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\RTKlib\\decimeter_5_samsung119.pos";
 
 			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\google\\result\\" + mobName + "_" + date + "\\"
-					+ "robust2";
+					+ "robust3";
 			File output = new File(path + ".txt");
 
 			PrintStream stream;
@@ -357,7 +357,7 @@ public class GoogleDeciApp {
 				trueLLHlist.add(trueUserLLH);
 
 			}
-			SatUtil.computeErr(SVlist, geoid, ionoCoeff, ionex, rxPCO[0]);
+			ArrayList<double[]> rxList = SatUtil.computeErr(SVlist, geoid, ionoCoeff, ionex, rxPCO[0]);
 			if (estimatorType == 6) {
 				return csvRes;
 			}
@@ -468,22 +468,24 @@ public class GoogleDeciApp {
 			}
 			if (estimatorType == 10) {
 				RangeEdit.RemoveErr(SVlist, false, false);
+				int count1 = 0;
+				int count2 = 0;
 				for (int i = 0; i < SVlist.size(); i++) {
+
 					Calendar time = timeList.get(i);
 					ArrayList<Satellite> SV = SVlist.get(i);
 					ArrayList<Satellite> inlierSV = null;
 					try {
-						inlierSV = RobustFit.process(SV);
-						System.err.println(i);
-						if (i == 93) {
-							System.out.println();
-						}
+						inlierSV = RobustFit.process(SV, Arrays.copyOf(rxList.get(i), 3), rxList.get(i)[3]);
 
 					} catch (Exception e) {
 						// TODO: handle exception
+						count1++;
+						System.err.println(e);
 						continue;
 					}
 					if (inlierSV.size() < minSat) {
+						count2++;
 						System.err.println("inlier Satellite count is less than - " + minSat);
 						continue;
 					}
@@ -499,6 +501,7 @@ public class GoogleDeciApp {
 							.add(estimateError(Map.of("TropoCorr", wls.getEstECEF(PR)), trueLLHlist.get(i), time));
 
 				}
+				System.err.println("Robust failed = " + count1 + "  satCount fail = " + count2);
 			}
 
 			if (useRTKlib) {
