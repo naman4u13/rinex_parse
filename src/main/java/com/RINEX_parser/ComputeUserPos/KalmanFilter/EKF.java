@@ -139,9 +139,9 @@ public class EKF {
 					pVal = xp[1];
 				} else {
 					// PR and CP prealignment
-
+					pVal = 1e8;
 					double PR = sat.getPseudorange();
-					double CP = sat.getCarrier_wavelength() * sat.getCycle();
+					double CP = sat.getPhase();
 
 					xVal = CP - PR;
 
@@ -163,6 +163,7 @@ public class EKF {
 
 			double[] estECEF = new double[] { x.get(0), x.get(1), x.get(2) };
 			ecefList.add(estECEF);
+			ambStateMap.clear();
 			for (int j = 0; j < SVcount; j++) {
 				Satellite sat = SV.get(j);
 				String svid = String.valueOf(sat.getSSI()) + String.valueOf(sat.getSVID());
@@ -171,10 +172,6 @@ public class EKF {
 					double pVal = P.get(5 + j, 5 + j);
 					ambStateMap.put(svid, new double[] { xVal, pVal });
 
-				} else {
-					if (ambStateMap.containsKey(svid)) {
-						ambStateMap.remove(svid);
-					}
 				}
 			}
 			if (!MatrixFeatures_DDRM.isPositiveDefinite(P.getMatrix())) {
@@ -273,7 +270,8 @@ public class EKF {
 		SimpleMatrix x = kfObj.getState();
 		double[] estECEF = new double[] { x.get(0) + PCO[0], x.get(1) + PCO[1], x.get(2) + PCO[2], x.get(3) };
 		double[][] unitLOS = SatUtil.getUnitLOS(SV, estECEF);
-		// H is the Jacobian matrix of partial derivatives Observation StateModel(h) of with
+		// H is the Jacobian matrix of partial derivatives Observation StateModel(h) of
+		// with
 		// respect to x
 		double[][] H = new double[SVcount][5];
 		IntStream.range(0, SVcount).forEach(i -> {
@@ -308,7 +306,8 @@ public class EKF {
 		double[] estECEF = new double[] { x.get(0) + PCO[0], x.get(1) + PCO[1], x.get(2) + PCO[2] };
 		double rxClkOff = x.get(3);// in meters
 		double[][] unitLOS = SatUtil.getUnitLOS(SV, estECEF);
-		// H is the Jacobian matrix of partial derivatives Observation StateModel(h) of with
+		// H is the Jacobian matrix of partial derivatives Observation StateModel(h) of
+		// with
 		// respect to x
 		double[][] H = new double[SVcount][4];
 		IntStream.range(0, SVcount).forEach(i -> {
@@ -374,15 +373,15 @@ public class EKF {
 			}
 			H[(i * 2) + 1][5 + i] = 1;
 			z[2 * i][0] = sat.getPseudorange();
-			z[(2 * i) + 1][0] = sat.getCarrier_wavelength() * sat.getCycle();
+			z[(2 * i) + 1][0] = sat.getPhase();
 			double approxPR = Math.sqrt(IntStream.range(0, 3).mapToDouble(j -> estECEF[j] - satECI[j]).map(j -> j * j)
 					.reduce(0, (j, k) -> j + k)) + estRxClkOff + (M_wet * resTropo);
 			double approxCP = approxPR + ambiguity[i];
 
 			ze[2 * i][0] = approxPR;
 			ze[(2 * i) + 1][0] = approxCP;
-			R[2 * i][2 * i] = prObsNoiseVar;// Math.pow(sat.getPrUncM(), 2);
-			R[(2 * i) + 1][(2 * i) + 1] = cpObsNoiseVar;// Math.pow(sat.getGnssLog().getAdrUncM() * 100, 2);
+			R[2 * i][2 * i] = Math.pow(sat.getPrUncM(), 2);
+			R[(2 * i) + 1][(2 * i) + 1] = Math.pow(sat.getPrUncM(), 2) / 1e4;
 
 		}
 

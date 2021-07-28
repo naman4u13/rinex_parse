@@ -29,7 +29,6 @@ import com.RINEX_parser.SingleFreq;
 import com.RINEX_parser.ComputeUserPos.KalmanFilter.EKF;
 import com.RINEX_parser.ComputeUserPos.Regression.LS;
 import com.RINEX_parser.ComputeUserPos.Regression.WLS;
-import com.RINEX_parser.ComputeUserPos.Regression.RobustRegression.RobustFit;
 import com.RINEX_parser.fileParser.Antenna;
 import com.RINEX_parser.fileParser.Bias;
 import com.RINEX_parser.fileParser.Clock;
@@ -122,7 +121,7 @@ public class GoogleDeciApp {
 			String RTKlib_path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\input_files\\complementary\\RTKlib\\decimeter_5_samsung119.pos";
 
 			String path = "C:\\Users\\Naman\\Desktop\\rinex_parse_files\\google\\result\\" + mobName + "_" + date + "\\"
-					+ "robust3";
+					+ "smoothed2";
 			File output = new File(path + ".txt");
 
 			PrintStream stream;
@@ -357,7 +356,7 @@ public class GoogleDeciApp {
 				trueLLHlist.add(trueUserLLH);
 
 			}
-			ArrayList<double[]> rxList = SatUtil.computeErr(SVlist, geoid, ionoCoeff, ionex, rxPCO[0]);
+			SatUtil.computeErr(SVlist, geoid, ionoCoeff, ionex, rxPCO[0]);
 			if (estimatorType == 6) {
 				return csvRes;
 			}
@@ -368,12 +367,12 @@ public class GoogleDeciApp {
 				EKF dynamicEkf = new EKF(SVlist, rxPCO[0], null, ionoCoeff, ionex, geoid, timeList);
 				ArrayList<double[]> estECEFList = null;
 				if (usePhase) {
-					SFcycleSlip.process(SVlist, 1);
+					DopplerAidedCS.process(SVlist);
 					WLS wls = new WLS(SVlist.get(0), rxPCO[0], ionoCoeff, timeList.get(0), ionex, geoid);
 					double[] initialECEF = wls.getTropoCorrECEF();
 
 					RangeEdit.RemoveErr(SVlist, false, false);
-					RangeEdit.alignPhase(SVlist);
+					RangeEdit.alignPhase2(SVlist);
 					estECEFList = dynamicEkf.computeDynamicPPP(trueLLHlist, initialECEF);
 				} else {
 					estECEFList = dynamicEkf.computeDynamicSPP(trueLLHlist);
@@ -392,6 +391,7 @@ public class GoogleDeciApp {
 				// SFcycleSlip.process(SVlist, 1);
 
 				HashMap<String, ArrayList<Double>> deltaMap = DopplerAidedCS.process(SVlist);
+				SFcycleSlip.process(SVlist, 1);
 				HashMap<String, ArrayList<Double>> csMap = new HashMap<String, ArrayList<Double>>();
 				for (int i = 0; i < SVlist.size(); i++) {
 					for (int j = 0; j < SVlist.get(i).size(); j++) {
@@ -401,8 +401,8 @@ public class GoogleDeciApp {
 					}
 				}
 				ArrayList<Double> deltaList = new ArrayList<Double>();
-				for (String SVID : deltaMap.keySet()) {
-					ArrayList<Double> data = deltaMap.get(SVID);
+				for (String SVID : csMap.keySet()) {
+					ArrayList<Double> data = csMap.get(SVID);
 					deltaList.addAll(data);
 					GraphPlotter chart = new GraphPlotter("Cycle Slip - " + SVID, "Cycle Slip - " + SVID, data, SVID);
 
@@ -410,22 +410,22 @@ public class GoogleDeciApp {
 					RefineryUtilities.positionFrameRandomly(chart);
 					chart.setVisible(true);
 				}
-				Collections.sort(deltaList);
-				int n = deltaList.size();
-				double median = 0;
-				if (deltaList.size() % 2 == 0)
-					median = (deltaList.get(n / 2) + deltaList.get((n / 2) - 1)) / 2;
-				else
-					median = deltaList.get(n / 2);
-
-				double Q1 = deltaList.get((int) (n / 4.0));
-				double Q3 = deltaList.get((int) (3.0 * n / 4.0));
-				GraphPlotter chart = new GraphPlotter("DopplerPhaseVariation ", "DPV", deltaList,
-						"size - " + n + "  median - " + median + "  Q1 - " + Q1 + "  Q3 - " + Q3);
-				System.out.println("size - " + n + "  median - " + median + "  Q1 - " + Q1 + "  Q3 - " + Q3);
-				chart.pack();
-				RefineryUtilities.positionFrameRandomly(chart);
-				chart.setVisible(true);
+//				Collections.sort(deltaList);
+//				int n = deltaList.size();
+//				double median = 0;
+//				if (deltaList.size() % 2 == 0)
+//					median = (deltaList.get(n / 2) + deltaList.get((n / 2) - 1)) / 2;
+//				else
+//					median = deltaList.get(n / 2);
+//
+//				double Q1 = deltaList.get((int) (n / 4.0));
+//				double Q3 = deltaList.get((int) (3.0 * n / 4.0));
+//				GraphPlotter chart = new GraphPlotter("DopplerPhaseVariation ", "DPV", deltaList,
+//						"size - " + n + "  median - " + median + "  Q1 - " + Q1 + "  Q3 - " + Q3);
+//				System.out.println("size - " + n + "  median - " + median + "  Q1 - " + Q1 + "  Q3 - " + Q3);
+//				chart.pack();
+//				RefineryUtilities.positionFrameRandomly(chart);
+//				chart.setVisible(true);
 
 			}
 
@@ -438,14 +438,16 @@ public class GoogleDeciApp {
 			}
 			// Doppler Smoothing
 			if (estimatorType == 8 || estimatorType == 9) {
-
+				String smooth = "Smoothed";
 				if (estimatorType == 8) {
 					RangeEdit.RemoveErr(SVlist, true, false);
+					smooth = "Doppler" + smooth;
 				}
 				if (estimatorType == 9) {
 
 					DopplerAidedCS.process(SVlist);
 					RangeEdit.RemoveErr(SVlist, false, true);
+					smooth = "Carrier" + smooth;
 				}
 
 				if (timeList.size() != SVlist.size()) {
@@ -458,50 +460,13 @@ public class GoogleDeciApp {
 					double[] PR = SV.stream().mapToDouble(j -> j.getPseudorange()).toArray();
 					WLS wls = new WLS(SV, rxPCO[0], ionoCoeff, time, ionex, geoid);
 					LS ls = new LS(SV, rxPCO[0], ionoCoeff, time, ionex, geoid);
-					ErrMap.computeIfAbsent("LS DopplerSmoothed", k -> new ArrayList<HashMap<String, Double>>())
+					ErrMap.computeIfAbsent("LS " + smooth, k -> new ArrayList<HashMap<String, Double>>())
 							.add(estimateError(Map.of("TropoCorr", ls.getEstECEF(PR)), trueLLHlist.get(i), time));
 
-					ErrMap.computeIfAbsent("WLS DopplerSmoothed", k -> new ArrayList<HashMap<String, Double>>())
+					ErrMap.computeIfAbsent("WLS " + smooth, k -> new ArrayList<HashMap<String, Double>>())
 							.add(estimateError(Map.of("TropoCorr", wls.getEstECEF(PR)), trueLLHlist.get(i), time));
 
 				}
-			}
-			if (estimatorType == 10) {
-				RangeEdit.RemoveErr(SVlist, false, false);
-				int count1 = 0;
-				int count2 = 0;
-				for (int i = 0; i < SVlist.size(); i++) {
-
-					Calendar time = timeList.get(i);
-					ArrayList<Satellite> SV = SVlist.get(i);
-					ArrayList<Satellite> inlierSV = null;
-					try {
-						inlierSV = RobustFit.process(SV, Arrays.copyOf(rxList.get(i), 3), rxList.get(i)[3]);
-
-					} catch (Exception e) {
-						// TODO: handle exception
-						count1++;
-						System.err.println(e);
-						continue;
-					}
-					if (inlierSV.size() < minSat) {
-						count2++;
-						System.err.println("inlier Satellite count is less than - " + minSat);
-						continue;
-					}
-
-					double[] PR = inlierSV.stream().mapToDouble(j -> j.getPseudorange()).toArray();
-					LS ls = new LS(inlierSV, rxPCO[0], ionoCoeff, time, ionex, geoid);
-					WLS wls = new WLS(inlierSV, rxPCO[0], ionoCoeff, time, ionex, geoid);
-
-					ErrMap.computeIfAbsent("LS Robust", k -> new ArrayList<HashMap<String, Double>>())
-							.add(estimateError(Map.of("TropoCorr", ls.getEstECEF(PR)), trueLLHlist.get(i), time));
-
-					ErrMap.computeIfAbsent("WLS Robust", k -> new ArrayList<HashMap<String, Double>>())
-							.add(estimateError(Map.of("TropoCorr", wls.getEstECEF(PR)), trueLLHlist.get(i), time));
-
-				}
-				System.err.println("Robust failed = " + count1 + "  satCount fail = " + count2);
 			}
 
 			if (useRTKlib) {

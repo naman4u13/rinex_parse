@@ -49,13 +49,8 @@ public class KF {
 		SimpleMatrix H = new SimpleMatrix(_H);
 		SimpleMatrix Ht = H.transpose();
 		SimpleMatrix K = null;
-		try {
-			// Kalman Gain
-			K = P.mult(Ht).mult(((H.mult(P).mult(Ht)).plus(R)).invert());
-		} catch (Exception e) {
-			// TODO: handle exception
-			System.out.println();
-		}
+
+		K = P.mult(Ht).mult(((H.mult(P).mult(Ht)).plus(R)).invert());
 
 		// Posterior State Estimate
 		x = x.plus((K.mult(z.minus(ze))));
@@ -83,7 +78,8 @@ public class KF {
 
 			double[] estECEF = new double[] { x.get(0) + PCO[0], x.get(1) + PCO[1], x.get(2) + PCO[2], x.get(3) };
 			double[][] unitLOS = SatUtil.getUnitLOS(satECI, estECEF);
-			// H is the Jacobian matrix of partial derivatives Observation StateModel(h) of with
+			// H is the Jacobian matrix of partial derivatives Observation StateModel(h) of
+			// with
 			// respect to x
 			double[][] _H = new double[SVcount][5];
 			IntStream.range(0, SVcount).forEach(j -> {

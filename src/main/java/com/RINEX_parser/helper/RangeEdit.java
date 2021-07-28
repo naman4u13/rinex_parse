@@ -1,13 +1,9 @@
 package com.RINEX_parser.helper;
 
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.HashMap;
 
-import org.jfree.ui.RefineryUtilities;
-
 import com.RINEX_parser.models.Satellite;
-import com.RINEX_parser.utility.GraphPlotter;
 import com.RINEX_parser.utility.Interpolator;
 
 public class RangeEdit {
@@ -231,6 +227,32 @@ public class RangeEdit {
 		}
 	}
 
+	public static void alignPhase2(ArrayList<ArrayList<Satellite>> SVlist) {
+		HashMap<String, Double> map = new HashMap<String, Double>();
+		for (ArrayList<Satellite> SV : SVlist) {
+			HashMap<String, Double> cMap = new HashMap<String, Double>();
+			for (Satellite sat : SV) {
+				String svid = String.valueOf(sat.getSSI()) + String.valueOf(sat.getSVID());
+				double PR = sat.getPseudorange();
+				double CP = sat.getPhase();
+				if (sat.isLocked()) {
+					if (map.containsKey(svid)) {
+						CP = CP + map.get(svid);
+					} else {
+						double delta = PR - CP;
+						CP += delta;
+						cMap.put(svid, delta);
+					}
+
+				}
+				sat.setPhase(CP);
+
+			}
+			map.clear();
+			map.putAll(cMap);
+		}
+	}
+
 	private static void dopplerCorrect(HashMap<String, ArrayList<Satellite>> satMap) {
 		HashMap<String, ArrayList<Double>> resMap = new HashMap<String, ArrayList<Double>>();
 		double thresh = 1e5;
@@ -289,107 +311,6 @@ public class RangeEdit {
 //			RefineryUtilities.positionFrameRandomly(chart);
 //			chart.setVisible(true);
 //		}
-	}
-
-	public static void out(ArrayList<ArrayList<Satellite>> SVlist, int minSat, ArrayList<Calendar> timeList) {
-		HashMap<String, ArrayList<Satellite>> satMap = new HashMap<String, ArrayList<Satellite>>();
-
-		for (ArrayList<Satellite> SV : SVlist) {
-
-			for (Satellite sat : SV) {
-				String svid = String.valueOf(sat.getSSI()) + String.valueOf(sat.getSVID());
-				if (sat.isOutlier()) {
-					System.err.println();
-				}
-				satMap.computeIfAbsent(svid, k -> new ArrayList<Satellite>()).add(sat);
-			}
-		}
-
-		HashMap<String, ArrayList<Double>> resMap = new HashMap<String, ArrayList<Double>>();
-		double thresh = 1000;
-		for (String svid : satMap.keySet()) {
-			ArrayList<Satellite> satList = satMap.get(svid);
-			double[] pr = satList.stream().mapToDouble(i -> i.getPseudorange()).toArray();
-			int n = satList.size();
-			// Not enough satellites
-			if (n < 11) {
-				continue;
-			}
-			for (int i = 0; i < n; i++) {
-				double[] X = new double[10];
-				double[] Y = new double[10];
-				int start = 0;
-				int end = 0;
-				double x = satList.get(i).gettRX();
-				if (i >= 5 && i <= n - 6) {
-
-					start = i - 5;
-					end = i + 6;
-
-				} else if (i < 5) {
-					start = 0;
-					end = 11;
-
-				} else {
-					start = n - 11;
-					end = n;
-
-				}
-				int index = 0;
-				for (int j = start; j < end; j++) {
-					if (j == i) {
-						continue;
-					}
-
-					X[index] = satList.get(j).gettRX();
-					Y[index] = pr[j];
-					index++;
-				}
-				double y = Interpolator.lagrange(X, Y, x, false)[0];
-				resMap.computeIfAbsent(svid, k -> new ArrayList<Double>()).add(Math.abs(y - pr[i]));
-				if (Math.abs(y - pr[i]) > thresh) {
-
-					satList.get(i).setOutlier(true);
-
-				}
-			}
-		}
-
-		for (String SVID : resMap.keySet()) {
-			GraphPlotter chart = new GraphPlotter(" Res" + SVID, "Res - " + SVID, resMap.get(SVID), timeList, SVID);
-			chart.pack();
-			RefineryUtilities.positionFrameRandomly(chart);
-			chart.setVisible(true);
-		}
-		int n = SVlist.size();
-		for (int i = n - 1; i >= 0; i--) {
-			ArrayList<Satellite> SV = SVlist.get(i);
-			// ArrayList<Satellite> temp = new ArrayList<Satellite>(SV);
-
-			for (int j = SV.size() - 1; j >= 0; j--) {
-				if (SV.get(j).isOutlier()) {
-					SV.remove(j);
-				}
-			}
-
-//			if (temp.size() != SV.size()) {
-//				LS ls = new LS(temp, new double[] { 0, 0, 0 }, timeList.get(i));
-//				double[] ecef1 = ls.getEstECEF();
-//				ls = new LS(SV, new double[] { 0, 0, 0 }, timeList.get(i));
-//				double[] ecef2 = ls.getEstECEF();
-//				double[] ll1 = ECEFtoLatLon.ecef2lla(ecef1);
-//				double[] ll2 = ECEFtoLatLon.ecef2lla(ecef2);
-//				double ECEFerr = Math
-//						.sqrt(IntStream.range(0, 3).mapToDouble(j -> ecef1[j] - ecef2[j]).map(j -> j * j).sum());
-//				double LLerr = LatLonUtil.getHaversineDistance(ll1, ll2);
-//				System.err.println();
-//			}
-			if (SV.size() < minSat) {
-				SVlist.remove(i);
-				timeList.remove(i);
-			}
-
-		}
 	}
 
 }
