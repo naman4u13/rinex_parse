@@ -356,7 +356,7 @@ public class GoogleDeciApp {
 				trueLLHlist.add(trueUserLLH);
 
 			}
-			SatUtil.computeErr(SVlist, geoid, ionoCoeff, ionex, rxPCO[0]);
+			ArrayList<double[]> rxList = SatUtil.computeErr(SVlist, geoid, ionoCoeff, ionex, rxPCO[0]);
 			if (estimatorType == 6) {
 				return csvRes;
 			}
@@ -369,17 +369,21 @@ public class GoogleDeciApp {
 				if (usePhase) {
 					DopplerAidedCS.process(SVlist);
 					WLS wls = new WLS(SVlist.get(0), rxPCO[0], ionoCoeff, timeList.get(0), ionex, geoid);
-					double[] initialECEF = wls.getTropoCorrECEF();
-
+					double[] intialECEF = wls.getTropoCorrECEF();
+					double rxClkOff = wls.getRcvrClkOff();
 					RangeEdit.RemoveErr(SVlist, false, false);
-					RangeEdit.alignPhase2(SVlist);
-					estECEFList = dynamicEkf.computeDynamicPPP(trueLLHlist, initialECEF);
+//					RangeEdit.alignPhase2(SVlist);
+//					estECEFList = dynamicEkf.computeDynamicPPP(trueLLHlist, intialECEF);
+					estECEFList = dynamicEkf.computePhaseConnPPP(trueLLHlist, rxList);
 				} else {
 					estECEFList = dynamicEkf.computeDynamicSPP(trueLLHlist);
 				}
-				for (int i = 0; i < SVlist.size() - 1; i++) {
+				for (int i = 2; i < SVlist.size() - 1; i++) {
 
-					double[] estECEF = estECEFList.get(i);
+					double[] estECEF = estECEFList.get(i - 2);
+					if (estECEF == null) {
+						continue;
+					}
 					ErrMap.get("EKF")
 							.add(estimateError(Map.of("TropoCorr", estECEF), trueLLHlist.get(i), timeList.get(i)));
 				}

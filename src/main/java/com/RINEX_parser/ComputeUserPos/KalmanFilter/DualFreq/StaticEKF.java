@@ -85,7 +85,7 @@ public class StaticEKF {
 		System.out.println("Intial Estimate Error Covariance - " + IntStream.range(0, P.length)
 				.mapToObj(i -> String.valueOf(_P[i][i])).reduce("", (i, j) -> i + " " + j));
 
-		kfObj.setState(x, P);
+		kfObj.setState_ProcessCov(x, P);
 	}
 
 	public ArrayList<double[]> compute() {
@@ -199,7 +199,7 @@ public class StaticEKF {
 			}
 			order.clear();
 			order.putAll(cOrder);
-			kfObj.setState(_x, _P);
+			kfObj.setState_ProcessCov(_x, _P);
 			double currentTime = timeList.get(i).getTimeInMillis() / 1E3;
 			double deltaT = (int) (currentTime - time);
 			runFilter3(deltaT, SV, timeList.get(i));

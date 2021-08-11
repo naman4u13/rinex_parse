@@ -75,7 +75,7 @@ public class EKF {
 		System.out.println("Intial Estimate Error Covariance - " + IntStream.range(0, P.length)
 				.mapToObj(i -> String.valueOf(P[i][i])).reduce("", (i, j) -> i + " " + j));
 		prObsNoiseVar = 9;
-		kfObj.setState(x, P);
+		kfObj.setState_ProcessCov(x, P);
 		return iterateSPP(true, null);
 
 	}
@@ -89,7 +89,7 @@ public class EKF {
 		P[3][3] = 9e10;
 		prObsNoiseVar = 49;
 
-		kfObj.setState(x, P);
+		kfObj.setState_ProcessCov(x, P);
 		return iterateSPP(false, trueLLHlist);
 
 	}
@@ -103,9 +103,105 @@ public class EKF {
 		P[4][4] = 0.25;
 		prObsNoiseVar = 1000;
 		cpObsNoiseVar = 0.1;
-		kfObj.setState(x, P);
+		kfObj.setState_ProcessCov(x, P);
 		return iteratePPP(false, trueLLHlist);
 
+	}
+
+	// Phase-connnected PPP
+	public ArrayList<double[]> computePhaseConnPPP(ArrayList<double[]> trueLLHlist, ArrayList<double[]> rxList) {
+
+		if (trueLLHlist.size() != rxList.size()) {
+			System.err.println("FATAL ERROR: Length of llh list does not match in PhaseConn");
+		}
+		double[][] x = new double[][] { { rxList.get(1)[0] }, { rxList.get(1)[1] }, { rxList.get(1)[2] },
+				{ rxList.get(1)[3] }, { rxList.get(0)[0] }, { rxList.get(0)[1] }, { rxList.get(0)[2] },
+				{ rxList.get(0)[3] } };
+		double[][] P = new double[8][8];
+		IntStream.range(0, 4).forEach(i -> P[i][i] = 1e4);
+		IntStream.range(4, 8).forEach(i -> P[i][i] = 1e4);
+		kfObj.setState_ProcessCov(x, P);
+		return iteratePhaseConnPPP(trueLLHlist);
+
+	}
+
+	public ArrayList<double[]> iteratePhaseConnPPP(ArrayList<double[]> trueLLHlist) {
+		ArrayList<double[]> ecefList = new ArrayList<double[]>();
+		ArrayList<Satellite> SV0 = SVlist.get(1);
+		HashMap<String, Satellite> satMap = new HashMap<String, Satellite>();
+		for (int i = 0; i < SV0.size(); i++) {
+			Satellite sat = SV0.get(i);
+			String svid = String.valueOf(sat.getSSI()) + String.valueOf(sat.getSVID());
+			if (sat.isLocked()) {
+				satMap.put(svid, sat);
+			}
+
+		}
+		int count = 1;
+		for (int i = 2; i < SVlist.size(); i++) {
+			HashMap<String, Satellite> cSatMap = new HashMap<String, Satellite>();
+			System.out.println("Step/Itr - " + i);
+			ArrayList<Satellite> SV = SVlist.get(i);
+			int n = SV.size();
+			ArrayList<Double> dR = new ArrayList<Double>();
+			ArrayList<Double> dRcov = new ArrayList<Double>();
+			ArrayList<Satellite> validSV = new ArrayList<Satellite>();
+			ArrayList<double[]> h = new ArrayList<double[]>();
+			SimpleMatrix x = kfObj.getState();
+			for (int j = 0; j < n; j++) {
+				Satellite sat = SV.get(j);
+				String svid = String.valueOf(sat.getSSI()) + String.valueOf(sat.getSVID());
+				if (sat.isLocked()) {
+					if (satMap.containsKey(svid)) {
+
+						double[] x1 = new double[] { x.get(0), x.get(1), x.get(2) };
+						double[] x0 = new double[] { x.get(4), x.get(5), x.get(6) };
+						Satellite sat0 = satMap.get(svid);
+						double R1 = Math.sqrt(IntStream.range(0, 3).mapToDouble(k -> x1[k] - sat.getECI()[k])
+								.map(k -> k * k).reduce(0, (k, l) -> k + l)) + x.get(3);
+						double R0 = Math.sqrt(IntStream.range(0, 3).mapToDouble(k -> x0[k] - sat0.getECI()[k])
+								.map(k -> k * k).reduce(0, (k, l) -> k + l)) + x.get(7);
+						double[] H1 = SatUtil.getH(sat.getECI(), x1);
+						double[] H0 = SatUtil.getH(sat0.getECI(), x0);
+
+						double[] H = new double[8];
+						IntStream.range(0, 4).forEach(k -> {
+							H[k] = H1[k];
+							H[k + 4] = -H0[k];
+						});
+						h.add(H);
+						dR.add(sat.getPhase() - sat0.getPhase() - (R1 - R0));
+						double stdDev = 0.13 + (0.53 * Math.pow(Math.E, -Math.toDegrees(sat.getElevAzm()[0]) / 10));
+						dRcov.add(Math.pow(stdDev, 2));
+						validSV.add(sat);
+					}
+					cSatMap.put(svid, sat);
+				}
+			}
+			satMap.clear();
+			satMap.putAll(cSatMap);
+			if (validSV.size() < 4) {
+				System.err.println(count++);
+				ecefList.add(null);
+				continue;
+			}
+			kfObj.configurePhaseConn(dR, dRcov, h, validSV);
+			runFilterPhaseConn(validSV, timeList.get(i));
+			x = kfObj.getState();
+
+			double[] estECEF = new double[] { x.get(0), x.get(1), x.get(2) };
+			ecefList.add(estECEF);
+			if (!MatrixFeatures_DDRM.isPositiveDefinite(kfObj.getCovariance().getMatrix())) {
+
+				System.err.println("PositiveDefinite test Failed");
+				return null;
+			}
+			double[] estLLH = ECEFtoLatLon.ecef2lla(estECEF);
+			double err = LatLonUtil.getHaversineDistance(trueLLHlist.get(i), estLLH);
+			System.out.println("Pos Error - " + err);
+		}
+
+		return ecefList;
 	}
 
 	public ArrayList<double[]> iteratePPP(boolean isStatic, ArrayList<double[]> trueLLHlist) {
@@ -150,7 +246,7 @@ public class EKF {
 				_P.set(5 + j, 5 + j, pVal);
 
 			}
-			kfObj.setState(_x, _P);
+			kfObj.setState_ProcessCov(_x, _P);
 			double currentTime = timeList.get(i).getTimeInMillis() / 1E3;
 			double deltaT = (int) (currentTime - time);
 			if (isStatic) {
@@ -383,6 +479,34 @@ public class EKF {
 			R[2 * i][2 * i] = Math.pow(sat.getPrUncM(), 2);
 			R[(2 * i) + 1][(2 * i) + 1] = Math.pow(sat.getPrUncM(), 2) / 1e4;
 
+		}
+
+		kfObj.update(z, R, ze, H);
+
+	}
+
+	public void runFilterPhaseConn(ArrayList<Satellite> SV, Calendar time) {
+		int n = SV.size();
+		kfObj.predict();
+		SimpleMatrix x = kfObj.getState();
+		double[] estECEF = new double[] { x.get(0) + PCO[0], x.get(1) + PCO[1], x.get(2) + PCO[2], x.get(3) };
+
+		// H is the Jacobian matrix of partial derivatives Observation StateModel(h) of
+		// with
+		// respect to x
+		double[][] H = new double[n][8];
+		double[][] z = new double[n][1];
+		double[][] ze = new double[n][1];
+		double[][] R = new double[n][n];
+		for (int i = 0; i < n; i++) {
+			Satellite sat = SV.get(i);
+			double[] h = SatUtil.getH(sat.getECI(), estECEF);
+			H[i] = Arrays.copyOf(h, 8);
+			z[i][0] = sat.getPseudorange();
+
+			ze[i][0] = Math.sqrt(IntStream.range(0, 3).mapToDouble(j -> sat.getECI()[j] - estECEF[j]).map(j -> j * j)
+					.reduce(0, (j, k) -> j + k)) + (estECEF[3]);
+			R[i][i] = sat.getPrUncM();
 		}
 
 		kfObj.update(z, R, ze, H);

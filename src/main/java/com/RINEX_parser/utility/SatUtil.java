@@ -47,6 +47,20 @@ public class SatUtil {
 
 	}
 
+	public static double[] getH(double[] satXYZ, double[] userXYZ) {
+
+		double[] H = new double[4];
+
+		// Line of Sight vector
+		double[] LOS = IntStream.range(0, 3).mapToDouble(i -> satXYZ[i] - userXYZ[i]).toArray();
+		double GeometricRange = Math.sqrt(Arrays.stream(LOS).map(i -> i * i).reduce(0.0, (i, j) -> i + j));
+		// Converting LOS to unit vector
+		IntStream.range(0, 3).forEach(i -> H[i] = -LOS[i] / GeometricRange);
+		H[3] = 1;
+		return H;
+
+	}
+
 	public static double[] getUnitLOS(double[] satXYZ, double[] userXYZ) {
 
 		double[] unitLOS = new double[3];

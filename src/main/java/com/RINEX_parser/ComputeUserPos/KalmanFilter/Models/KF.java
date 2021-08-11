@@ -9,7 +9,7 @@ import com.RINEX_parser.utility.SatUtil;
 public class KF {
 
 	private final double SpeedofLight = 299792458;
-	private final double c2 = SpeedofLight * SpeedofLight;
+
 	// kinematics description
 	private SimpleMatrix F, Q;
 
@@ -18,16 +18,30 @@ public class KF {
 
 	public void configure(double[][] F, double[][] Q) {
 		this.F = new SimpleMatrix(F);
-		this.Q = new SimpleMatrix(Q).scale(c2);
+		this.Q = new SimpleMatrix(Q);
 
 	}
 
-	public void setState(double[][] x, double[][] P) {
+	public void configure(SimpleMatrix F, SimpleMatrix Q) {
+		this.F = F;
+		this.Q = Q;
+
+	}
+
+	public void setState_ProcessCov(double[][] x, double[][] P) {
 		this.x = new SimpleMatrix(x);
 		this.P = new SimpleMatrix(P);
 	}
 
-	public void setState(SimpleMatrix x, SimpleMatrix P) {
+	public void setState(SimpleMatrix x) {
+		this.x = x;
+	}
+
+	public void setProcessCov(SimpleMatrix P) {
+		this.P = P;
+	}
+
+	public void setState_ProcessCov(SimpleMatrix x, SimpleMatrix P) {
 		this.x = x;
 		this.P = P;
 	}
