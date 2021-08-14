@@ -18,17 +18,11 @@ public class ComputeIonoCorr {
 	public static double computeIonoCorr(double ElevAng_rad, double AzmAng_rad, double userLat_deg, double userLong_deg,
 			double tRX, IonoCoeff ionoCoeff, double freq, Calendar time) {
 
-		/*
-		 * double Central_Angle = (0.0137/(ElevAng+0.11))-0.022; double IPP_Lat =
-		 */
 		tRX = tRX % 86400;
-		// double ElevAng_rad = Math.toRadians(ElevAng_deg);
-		// double AzmAng_rad = Math.toRadians(AzmAng_deg);
 		double userLat_rad = Math.toRadians(userLat_deg);
 		double userLong_rad = Math.toRadians(userLong_deg);
 
 		double earth_central_angle = (0.0137 / ((ElevAng_rad / Math.PI) + 0.11)) - 0.022;
-		// double temp_earth_central_angle = earth_central_angle / Math.PI;
 		double IPP_lat = (userLat_rad / Math.PI) + (earth_central_angle * Math.cos(AzmAng_rad));
 		if (IPP_lat > 0.416) {
 			IPP_lat = 0.416;
@@ -84,7 +78,7 @@ public class ComputeIonoCorr {
 		KlobucharIonoModel kim = new KlobucharIonoModel(alpha, beta);
 		AbsoluteDate date = new AbsoluteDate(time.getTime(), TimeScalesFactory.getGPS());
 		GeodeticPoint pt = new GeodeticPoint(userLat_rad, userLong_rad, 0);
-
+		// Orekit API derivded Klobuchlar delay, used to validate estimated delay
 		double _delay = kim.pathDelay(date, pt, ElevAng_rad, AzmAng_rad, freq, null);
 		double delay = iono_corr * freqRatio;
 

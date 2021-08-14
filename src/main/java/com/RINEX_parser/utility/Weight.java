@@ -107,14 +107,3 @@ public class Weight {
 	}
 
 }
-
-/*
- * int n = SV.size(); double[] y = new double[n]; double[][] x = new
- * double[n][4]; for (int i = 0; i < n; i++) { Satellite sat = SV.get(i); double
- * z = sat.getPseudorange() + (SpeedofLight * sat.getSatClkOff()) -
- * sat.getIonoErr() - sat.getTropoErr(); double z_hat =
- * Math.sqrt(IntStream.range(0, 3).mapToDouble(j -> sat.getECI()[j] -
- * rxECEF[j]).map(j -> j * j) .reduce(0, (j, k) -> j + k)) + (SpeedofLight *
- * rxClkOff); final int _i = i; IntStream.range(0, 3).forEach(j -> x[_i][j] =
- * -(sat.getECI()[j] - rxECEF[j]) / z_hat); x[i][3] = 1; y[i] = z - z_hat; }
- */

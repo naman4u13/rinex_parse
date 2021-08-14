@@ -34,7 +34,7 @@ public class LatLonUtil {
 		// Used Mean Earth Radius
 		double r = 6371000;
 
-// calculate the result 
+		// calculate the result
 		return (c * r);
 	}
 

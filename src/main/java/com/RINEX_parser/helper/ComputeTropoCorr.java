@@ -134,13 +134,14 @@ public class ComputeTropoCorr {
 		// Compute Slant Delay
 		// Zenith Delay
 		computeZenithDelay(y);
-//		System.out.println("ZENITH DELAY = " + ZD[0] + " " + ZD[1] + " " + (ZD[0] + ZD[1]));
+
 	}
 
 	public double getSlantDelay(double E) {
 		// Map
 		double[] map = computeMappingFun(coeffDry, coeffWet, H, E);
 		double SD = (ZD[0] * map[0]) + (ZD[1] * map[1]);
+		// Orekit API derived mapping function, used to validate estimated mapping func
 		double[] _map = nmf.mappingFactors(E, H, null, date);
 		if (Math.abs(_map[0] - map[0]) > 0.1) {
 			System.err.println("Tropo Dry Coeff is different");

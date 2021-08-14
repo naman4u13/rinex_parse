@@ -15,7 +15,6 @@ public class SymbolToken {
 		while (m.find()) {
 			list.add(token.substring(start, m.start() + 1));
 
-			// System.out.println(param.substring(start, m.start() + 1));
 			start = m.start() + 1;
 		}
 		list.add(token.substring(start, token.length()));

@@ -33,13 +33,7 @@ public class ComputeEleAzm {
 		}
 		double AzmAngle = Math.abs(Math.atan(E / N));
 		AzmAngle += E > 0 ? (N < 0 ? Math.PI - (2 * AzmAngle) : 0) : (N < 0 ? -Math.PI : -(2 * AzmAngle));
-//		if (ElevAngle > (Math.PI / 2)) {
-//			System.out.println();
-//		} else if (AzmAngle > (Math.PI) || AzmAngle < (-Math.PI)) {
-//			System.out.println();
-//		} else if (ElevAngle < 0) {i->
-//			System.out.println();
-//		}
+
 		return new double[] { ElevAngle, AzmAngle };
 
 	}

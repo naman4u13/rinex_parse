@@ -11,6 +11,7 @@ import org.ejml.simple.SimpleMatrix;
 
 import com.RINEX_parser.models.Satellite;
 
+/*Work in Progress - not yet ready for the implementation*/
 public class RAIM {
 	private final static double SpeedofLight = 299792458;
 

@@ -84,8 +84,8 @@ public class LinearLeastSquare {
 	public void estimate(double[] PR, double[][] Weight) {
 		intialize();
 		process(PR, Weight);
-		// Below lines are commented out because they are computationally expensive
-		// It corrects SV ECEF to ECI transformation by removing rcvr clock bias
+//		Below lines are commented out because they are computationally expensive
+//		It corrects SV ECEF to ECI transformation by removing rcvr clock bias
 //		SV.stream().forEach(i -> i.updateECI(approxRcvrClkOff));
 //		HtWHinv = null;
 //		process(PR, Weight);
@@ -285,11 +285,7 @@ public class LinearLeastSquare {
 					ionoCorrSBAS[i] = sbasIonoCorr;
 				}
 			}
-			System.out.println();
-			System.out.println("SVID   KLOBUCHLAR   SBAS   RATIO");
-//			IntStream.range(0, SV.size()).forEach(i -> System.out.println(SV.get(i).getSVID() + "," + ionoCorrKlob[i]
-//					+ "," + ionoCorrSBAS[i] + "," + ionoCorrSBAS[i] / ionoCorrKlob[i]));
-			System.out.println();
+
 		} else if (ionex != null) {
 			// Geocentric Latitude
 			double gcLat = LatLonUtil.gd2gc(refLatLon[0], refLatLon[2]);
@@ -298,11 +294,6 @@ public class LinearLeastSquare {
 						SV.get(i).gettRX(), SV.get(i).getCarrier_frequency(), time);
 				ionoErr[i] = gimIonoCorr;
 			}
-//			ionoCorrKlob = IntStream
-//					.range(0, SVcount).mapToDouble(x -> ComputeIonoCorr.computeIonoCorr(EleAzm.get(x)[0],
-//							EleAzm.get(x)[1], refLatLon[0], refLatLon[1], SV.get(x).gettRX(), ionoCoeff, freq, time))
-//					.toArray();
-//			System.out.println();
 
 		} else {
 			if (Optional.ofNullable(ionoCoeff).isEmpty()) {
@@ -349,11 +340,7 @@ public class LinearLeastSquare {
 		ComputeTropoCorr tropo = new ComputeTropoCorr(refLatLon, time, geoid);
 		double[] tropoErr = IntStream.range(0, SV.size()).mapToDouble(x -> tropo.getSlantDelay(EleAzm.get(x)[0]))
 				.toArray();
-//		System.out.println("TROPO corrections");
-//		IntStream.range(0, tropoCorr.length)
-//				.forEach(i -> System.out.print("GPS" + SV.get(i).getSVID() + " - " + tropoCorr[i] + " "));
-//
-//		System.out.println("");
+
 		IntStream.range(0, SV.size()).forEach(i -> SV.get(i).setTropoErr(tropoErr[i]));
 		this.tropoCorrPR = IntStream.range(0, PR.length).mapToDouble(x -> PR[x] - tropoErr[x]).toArray();
 		return this.tropoCorrPR;

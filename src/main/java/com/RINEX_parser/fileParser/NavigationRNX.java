@@ -17,7 +17,7 @@ public class NavigationRNX {
 	public static Map<String, Object> rinex_nav_process(String path, boolean getIonoOnly) throws Exception {
 
 		File file = new File(path);
-		// HashMap<String, Object> resMap = new HashMap<String, Object>();
+
 		HashMap<Integer, ArrayList<NavigationMsg>> SV = new HashMap<Integer, ArrayList<NavigationMsg>>();
 		IonoCoeff ionoCoeff = new IonoCoeff();
 		TimeCorrection timeCorr = new TimeCorrection();

@@ -37,14 +37,11 @@ public class ECEFtoLatLon {
 			lat = Math.atan(((z + Math.pow(e2, 2) * b * Math.pow(Math.sin(theta), 3))
 					/ ((p - Math.pow(e, 2) * a * Math.pow(Math.cos(theta), 3)))));
 			theta = Math.atan((Math.tan(lat) * b) / (a));
-			// System.out.println("LAT = " + lat + " " + " LON = " + lon);
 
 		}
 
 		N = a / (Math.sqrt(1 - (Math.pow(e, 2) * Math.pow(Math.sin(lat), 2))));
 
-		// double m = (p / Math.cos(lat));
-		// height = m - N;
 		height = (p * Math.cos(lat)) + ((z + (Math.pow(e, 2) * N * Math.sin(lat))) * Math.sin(lat)) - N;
 
 		lon = lon * 180 / Math.PI;

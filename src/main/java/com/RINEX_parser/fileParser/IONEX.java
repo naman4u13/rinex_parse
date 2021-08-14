@@ -6,9 +6,6 @@ import java.util.Calendar;
 import java.util.Scanner;
 import java.util.stream.IntStream;
 
-import org.hipparchus.util.FastMath;
-import org.orekit.models.earth.ionosphere.GlobalIonosphereMapModel;
-
 import com.RINEX_parser.helper.ComputeIPP;
 import com.RINEX_parser.utility.LatLonUtil;
 import com.RINEX_parser.utility.StringUtil;
@@ -21,11 +18,8 @@ public class IONEX {
 	private double latDel;
 	private double lonDel;
 	private double exp;
-	private GlobalIonosphereMapModel gim;
 
 	public IONEX(String path) throws Exception {
-		gim = new GlobalIonosphereMapModel("igsg1000.20i");
-
 		process(path);
 	}
 
@@ -140,15 +134,6 @@ public class IONEX {
 
 		double ionoErr = (40.3 * (1E16) / Math.pow(freq, 2)) * stec;
 
-//		AbsoluteDate date = new AbsoluteDate(time.getTime(), TimeScalesFactory.getGPS());
-//		GeodeticPoint pt = new GeodeticPoint(Math.toRadians(IPP[0]), Math.toRadians(IPP[1]), 0);
-//		double _vtec = gim.getTEC(date, pt);
-//		// double _ionoErr = gim.pathDelay(date, pt, ElevAng_rad, freq);
-//		double _ionoErr = (40.3 * (1E16) / Math.pow(freq, 2)) * _vtec * Fpp;
-//		if (Math.abs(ionoErr - _ionoErr) > 0.1) {
-//			System.err.println("GIM Iono err is wrong - " + Math.abs(ionoErr - _ionoErr) + " Elevation - "
-//					+ Math.toDegrees(ElevAng_rad));
-//		}
 		return ionoErr;
 
 	}
@@ -172,10 +157,6 @@ public class IONEX {
 		int y1 = (int) Math.floor(y);
 		int y2 = y1 + 1;
 
-//		double _z = (lon / lonDel) + (180 / lonDel);
-//		int _z1 = (int) Math.floor(_z);
-//		int _z2 = _z1 + 1;
-
 		double z1 = (lon1 / lonDel) + (180 / lonDel);
 		int z11 = (int) Math.floor(z1);
 		int z12 = z11 + 1;
@@ -184,7 +165,6 @@ public class IONEX {
 		int z21 = (int) Math.floor(z2);
 		int z22 = z21 + 1;
 
-//		double p = _z - _z1;
 		double p1 = z1 - z11;
 		double p2 = z2 - z21;
 		double q = y - y1;
@@ -198,19 +178,7 @@ public class IONEX {
 		double e2 = ((1 - p2) * (1 - q) * E2[y1][z21]) + (p2 * (1 - q) * E2[y1][z22]) + ((1 - p2) * q * E2[y2][z21])
 				+ (p2 * q * E2[y2][z22]);
 
-//		double e1 = ((1 - p) * (1 - q) * E1[y1][_z1]) + (p * (1 - q) * E1[y1][_z2]) + ((1 - p) * q * E1[y2][_z1])
-//				+ (p * q * E1[y2][_z2]);
-//
-//		double e2 = ((1 - p) * (1 - q) * E2[y1][_z1]) + (p * (1 - q) * E2[y1][_z2]) + ((1 - p) * q * E2[y2][_z1])
-//				+ (p * q * E2[y2][_z2]);
-
 		double e = (((t2 - t) / interval) * e1) + (((t - t1) / interval) * e2);
-
-//		System.out.println("t " + t + " t1 " + t1 + " t2 " + t2 + " temp1 " + temp1 + " temp2 " + temp2 + " lon1 "
-//				+ lon1 + " lon2 " + lon2 + " x " + x + " x1 " + x1 + " x2 " + x2 + " y " + y + " y1 " + y1 + " y2 " + y2
-//				+ " z1 " + z1 + " z11 " + z11 + " z12 " + z12 + " z2 " + z2 + " z21 " + z21 + " z22 " + z22 + " e " + e
-//				+ " e1 " + e1 + " e2 " + e2 + " p1 " + p1 + " p2 " + p2 + " q " + q);
-
 		return e;
 	}
 
@@ -237,17 +205,6 @@ public class IONEX {
 			System.out.println("END OF TEC MAP");
 			System.out.println();
 		}
-	}
-
-	private double mappingFunction(final double elevation) {
-		// Calculate the zenith angle from the elevation
-		final double z = FastMath.abs(0.5 * FastMath.PI - elevation);
-		// Distance ratio
-		final double ratio = Re / (Re + h);
-		// Mapping function
-		final double coef = FastMath.sin(z) * ratio;
-		final double fz = 1.0 / FastMath.sqrt(1.0 - coef * coef);
-		return fz;
 	}
 
 }
