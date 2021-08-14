@@ -20,7 +20,7 @@ GNSS data processing software
 The 'rinex_parse' application is a GNSS data processing tool written in Java, It started out as a utility program to parse various IGS data and product file but eventually developed into a complete processing tool. Please note that the project uptill now has been developed only for personal R&D use and therefore is not ready to be consumed either as API, Service or Library. Still the modules/files responsible for a particular functionality are generally well written and can be used for reference. In case of any queries, please feel free to reach out.  
 
 ## Current Version
-Current version of the application can process on multi-constellation, multi-frequency data to estimate code based position solution. Only Standard Point Positioning(SPP) is supported. Following subheadings define the overall structure of the codebase - 
+Current version of the application can process on multi-constellation, multi-frequency data to estimate code based position solution. Only Standard Point Positioning(SPP) or Code-based positioning is supported. Following subheadings define the overall structure of the codebase - 
 
 ### Input Files/Parser<a name="parser"></a>
 Following files can be parsed and processed
@@ -66,7 +66,8 @@ Concerned [directory](https://github.com/naman4u13/rinex_parse/tree/master/src/m
 2. Time conversion between UTC time and GPS time
 3. Calculate Haversine Distance
 4. Lagrange Interpolator
-5. Transformation from ENU to ECEF coordinates 
+5. Transformation from ENU to ECEF coordinates
+
 Concerned [directory](https://github.com/naman4u13/rinex_parse/tree/master/src/main/java/com/RINEX_parser/utility)
 
 ### Models
@@ -77,7 +78,7 @@ Concerned [directory](https://github.com/naman4u13/rinex_parse/tree/master/src/m
 ## A Note on IGS products/Error correction models<a name="note"></a>
 1. SINEX files are used to compare the accuracy of the estimated position solutions. They are also used to derive Reciever's Antenna Reference Point(ARP) and Phase Centre Offset(PCO), incase RINEX Observation file does not specify them.
 2. DCB product file are used to derive to Satellite Code based Instrumental Bias or Inter-Signal Correction(ISC)
-3. [IONEX/GIM](https://github.com/naman4u13/rinex_parse/blob/master/src/main/java/com/RINEX_parser/fileParser/IONEX.java), precise [Orbit](https://github.com/naman4u13/rinex_parse/blob/master/src/main/java/com/RINEX_parser/fileParser/Orbit.java) and [Clock](https://github.com/naman4u13/rinex_parse/blob/master/src/main/java/com/RINEX_parser/fileParser/Clock.java) parser files are defined as a class and its object serve the function of both parsing as well performing interpolation to compute required parameter. 
+3. [IONEX/GIM](https://github.com/naman4u13/rinex_parse/blob/master/src/main/java/com/RINEX_parser/fileParser/IONEX.java), precise [Orbit](https://github.com/naman4u13/rinex_parse/blob/master/src/main/java/com/RINEX_parser/fileParser/Orbit.java) and [Clock](https://github.com/naman4u13/rinex_parse/blob/master/src/main/java/com/RINEX_parser/fileParser/Clock.java) parser files are defined as Java Classes and their Object perform both parsing as well as interpolation of parameters to compute required value. 
 4. [Antenna/ANTEX](https://github.com/naman4u13/rinex_parse/blob/master/src/main/java/com/RINEX_parser/fileParser/Antenna.java) parser class is used to compute Satellite Phase Center as well as Carrier Phase Windup correction.
 5. [Satellite Position computation](https://github.com/naman4u13/rinex_parse/blob/master/src/main/java/com/RINEX_parser/helper/ComputeSatPos.java) class/module also computes ECI coordinates of Satellite which helps in handling of Sagnac Effect.
 
@@ -113,9 +114,25 @@ Summary of observation model and data processing strategies. The results are for
 
 ### Position Error Plots/Graphs and Results<a name="plots"></a>
 
-<img src="https://github.com/naman4u13/rinex_parse/blob/master/imgs/IISC_singlefreq_regression.png" alt="image" title="a. LS and WLS based SF SPP solution" >
-<img src="https://github.com/naman4u13/rinex_parse/blob/master/imgs/IISC_singlefreq_EKF.png" alt="image"  title="b. EKF based SF SPP solution"> 
-<img src="https://github.com/naman4u13/rinex_parse/blob/master/imgs/IISC_dualfreq_EKF.png" alt="image"  title="c. EKF based DF SPP solution"> 
+<p align = "center">
+<img src="https://github.com/naman4u13/rinex_parse/blob/master/imgs/IISC_singlefreq_regression.png" alt="image" >
+</p>
+<p align = "center">
+<b>Fig.1 - LS and WLS based SF SPP solution</b>
+</p>
+
+<p align = "center">
+<img src="https://github.com/naman4u13/rinex_parse/blob/master/imgs/IISC_singlefreq_EKF.png" alt="image"> 
+</p>
+<p align = "center">
+<b>Fig.2 EKF based SF SPP solution</b>
+</p>
+<p align = "center">
+<img src="https://github.com/naman4u13/rinex_parse/blob/master/imgs/IISC_dualfreq_EKF.png" alt="image" > 
+</p>
+<p align = "center">
+<b>Fig.3 EKF based DF SPP solution</b>
+</p>
 
 RMS table
 | Estimator | 3D-RMS(in meter) |2D-RMS(in meter)|
