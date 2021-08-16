@@ -134,7 +134,7 @@ Summary of observation model and data processing strategies. The results are for
 <b>Fig.3 EKF based DF SPP solution</b>
 </p>
 
-RMS table
+**RMS table**
 | Estimator | 3D-RMS(in meter) |2D-RMS(in meter)|
 | -------- | ---- | ---- |
 | SF LS | 2.704 |1.220|
@@ -142,7 +142,7 @@ RMS table
 | SF EKF |0.643|0.558|
 |DF EKF |0.727|0.299|
 
-Converged Value at the end of data series
+**Converged Value at the end of data series**
 | Kalman Estimator | 3D-converged value(in meter) |2D-converged value(in meter)|
 | -------- | ---- | ---- |
 | SF EKF |0.506|0.423|
